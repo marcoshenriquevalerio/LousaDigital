@@ -525,6 +525,12 @@
     .fin-flash { animation: finFlash 1.1s ease; }
     @keyframes finFlash { 0%, 100% { filter: none; } 30% { filter: drop-shadow(0 0 14px #fbbf24); } }
     #finChartModal { z-index: 9995 !important; }
+    #finCardModal, #finTableModal { z-index: 9995 !important; }
+    .fin-cards-single { display: flex; min-height: 100%; }
+    .fin-cards-single .fin-card { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .fin-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 11px; border-radius: 999px; background: #1c1917; border: 1px solid #57534e; color: #e7e5e4; font-size: 13px; }
+    .fin-chip button { width: 18px; height: 18px; border-radius: 50%; color: #fca5a5; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+    .fin-chip button:hover { background: rgba(255,255,255,.12); }
     .fin-lbl { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fcd34d; margin-bottom: 6px; }
     .fsb { padding: 6px 12px; border-radius: 10px; font-size: 13px; border: 1px solid #57534e; background: #1c1917; color: #e7e5e4; transition: background .15s ease; }
     .fsb:hover { background: #292524; }
@@ -843,11 +849,68 @@
   <!-- FINANÇAS: botões que aparecem só nas lousas de finanças -->
   <div id="finDock">
     <span class="fin-dock-title"><i class="fa-solid fa-sack-dollar"></i> <span class="fin-dock-label">Finanças</span></span>
-    <button class="fin-dock-btn" onclick="finOpenTable()" title="Tabela de lançamentos"><i class="fa-solid fa-table-list"></i> Tabela</button>
-    <button class="fin-dock-btn" onclick="finOpenCards()" title="Cards com totais"><i class="fa-solid fa-wallet"></i> Cards</button>
+    <button class="fin-dock-btn" onclick="finOpenTable()" title="Adicionar uma tabela de lançamentos"><i class="fa-solid fa-table-list"></i> Tabela</button>
+    <button class="fin-dock-btn" onclick="finOpenCards()" title="Adicionar cards (escolha quais)"><i class="fa-solid fa-wallet"></i> Cards</button>
     <button class="fin-dock-btn" onclick="openFinChartModal()" title="Montar um gráfico"><i class="fa-solid fa-chart-column"></i> Gráficos</button>
   </div>
   <datalist id="finDestList"></datalist>
+
+  <!-- FINANÇAS: escolher cards individuais -->
+  <div id="finCardModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-2xl text-amber-300 font-bold"><i class="fa-solid fa-wallet mr-2"></i>Adicionar cards</h3>
+        <button onclick="closeFinCardModal()" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5 space-y-4">
+        <div><div class="fin-lbl">Resumo</div><div id="finCardOptsSummary" class="flex flex-wrap gap-1.5"></div></div>
+        <div><div class="fin-lbl">Por destino</div><div id="finCardOptsDest" class="flex flex-wrap gap-1.5"></div></div>
+        <div><div class="fin-lbl">Período</div><select id="finCardPeriod" class="fin-modal-in"></select></div>
+        <p class="text-[11px] text-stone-400 leading-snug">Marque os cards que quiser. Cada um vira uma peça separada na lousa, que você move e redimensiona sozinha.</p>
+      </div>
+      <div class="flex items-center justify-between gap-2.5 px-5 py-3 border-t border-stone-600">
+        <button onclick="finAddAllCards()" class="px-3 py-2 bg-stone-700 hover:bg-stone-600 text-stone-200 rounded-lg text-sm transition" title="Um único painel com todos os cards">Todos juntos</button>
+        <div class="flex gap-2.5">
+          <button onclick="closeFinCardModal()" class="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-stone-200 rounded-lg text-sm transition">Cancelar</button>
+          <button id="finCardOkBtn" onclick="confirmFinCards()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-lg text-sm transition">Adicionar card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINANÇAS: configurar tabela (nome, rodapé, categorias) -->
+  <div id="finTableModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-2xl text-amber-300 font-bold"><i class="fa-solid fa-table-list mr-2"></i><span id="finTableModalTitle">Nova tabela</span></h3>
+        <button onclick="closeFinTableModal()" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5 space-y-4">
+        <div>
+          <div class="fin-lbl">Nome da tabela</div>
+          <input id="finTableName" type="text" maxlength="60" placeholder="Ex.: Contas da casa" onkeydown="if(event.key==='Enter') confirmFinTable()" class="fin-modal-in">
+        </div>
+        <div>
+          <div class="fin-lbl">Rodapé (totais)</div>
+          <button id="finTableFootBtn" class="fsb" onclick="finTableToggleFoot()"></button>
+        </div>
+        <div>
+          <div class="fin-lbl">Categorias de destino</div>
+          <div id="finDestChips" class="flex flex-wrap gap-1.5 mb-2"></div>
+          <div class="flex gap-2">
+            <input id="finNewDest" type="text" maxlength="40" placeholder="Nova categoria (ex.: Pets, Assinaturas)" onkeydown="if(event.key==='Enter'){event.preventDefault();finAddDest();}" class="fin-modal-in">
+            <button onclick="finAddDest()" class="px-3 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition" title="Adicionar categoria"><i class="fa-solid fa-plus"></i></button>
+          </div>
+          <p class="text-[11px] text-stone-400 mt-2 leading-snug">As categorias valem para todas as tabelas e aparecem como sugestão no campo Destino. Remover da lista não apaga lançamentos já feitos.</p>
+        </div>
+        <p class="text-[11px] text-stone-400 leading-snug">Todas as tabelas, cards e gráficos usam os mesmos lançamentos: mudou em uma, atualiza nas outras.</p>
+      </div>
+      <div class="flex items-center justify-end gap-2.5 px-5 py-3 border-t border-stone-600">
+        <button onclick="closeFinTableModal()" class="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-stone-200 rounded-lg text-sm transition">Cancelar</button>
+        <button id="finTableOkBtn" onclick="confirmFinTable()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-lg text-sm transition">Criar tabela</button>
+      </div>
+    </div>
+  </div>
 
   <!-- FINANÇAS: montar gráfico personalizado -->
   <div id="finChartModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
@@ -894,6 +957,14 @@
             <div>
               <div class="fin-lbl">Título (opcional)</div>
               <input id="finChartTitleIn" type="text" placeholder="Ex.: Entradas × Saídas" class="fin-modal-in">
+            </div>
+          </div>
+          <div>
+            <div class="fin-lbl">Legendas <span class="normal-case font-normal opacity-70">(marcado = aparece)</span></div>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="fsb" data-fin-show data-v="x" onclick="finDraftShow('x')">Eixo X</button>
+              <button class="fsb" data-fin-show data-v="y" onclick="finDraftShow('y')">Eixo Y</button>
+              <button class="fsb" data-fin-show data-v="legend" onclick="finDraftShow('legend')">Séries (cores)</button>
             </div>
           </div>
         </div>
@@ -1295,7 +1366,7 @@
       // Limites de largura (200–650px; imagens: 80–1200px, sempre mantendo a proporção)
       const isSt = !!(note && note.type === 'sticker');
       const isFn = !!(note && isFinType(note.type));
-      newWidth = Math.max(isSt ? 40 : (isImg ? 80 : (isFn ? (note.type === 'fintable' ? 400 : 260) : 200)), Math.min(newWidth, isSt ? 500 : ((isImg || isFn) ? 1200 : 650)));
+      newWidth = Math.max(isSt ? 40 : (isImg ? 80 : (isFn ? finMinSize(note)[0] : 200)), Math.min(newWidth, isSt ? 500 : ((isImg || isFn) ? 1200 : 650)));
 
       activeResize.element.style.width = `${newWidth}px`;
 
@@ -1357,8 +1428,8 @@
       const board = getActiveBoard();
       const note = board.notes.find(n => n.id === activeCorner.noteId);
       const fin = !!(note && isFinType(note.type));
-      const newW = Math.max(fin ? (note.type === 'fintable' ? 400 : 260) : 60, Math.min(activeCorner.startW + (p.x - activeCorner.startX) / boardScale, fin ? 1200 : 800));
-      const newH = Math.max(fin ? 170 : 36, Math.min(activeCorner.startH + (p.y - activeCorner.startY) / boardScale, fin ? 900 : 600));
+      const newW = Math.max(fin ? finMinSize(note)[0] : 60, Math.min(activeCorner.startW + (p.x - activeCorner.startX) / boardScale, fin ? 1200 : 800));
+      const newH = Math.max(fin ? finMinSize(note)[1] : 36, Math.min(activeCorner.startH + (p.y - activeCorner.startY) / boardScale, fin ? 900 : 600));
 
       activeCorner.element.style.width = `${newW}px`;
       activeCorner.element.style.height = `${newH}px`;
@@ -2895,6 +2966,8 @@
       closePlannerModal();
       closeImageModal();
       closeFinChartModal();
+      closeFinCardModal();
+      closeFinTableModal();
       setLoginState('login');
     }
 
@@ -4214,9 +4287,14 @@
        ========================================================================= */
     const FIN_TYPES = ['fintable', 'fincards', 'finchart'];
     function isFinType(t) { return FIN_TYPES.indexOf(t) >= 0; }
+    /* tamanho mínimo [largura, altura] de cada peça de finanças (card individual pode ser bem pequeno) */
+    function finMinSize(note) {
+      if (note.type === 'fincards' && note.only) return [150, 84];
+      return [note.type === 'fintable' ? 400 : 260, 170];
+    }
 
     const FIN_PRESET_DESTS = ['Casa', 'Carro', 'Dívidas', 'Energia', 'Água', 'Aluguel', 'Mercado', 'Investimento',
-      'Internet', 'Telefone', 'Saúde', 'Educação', 'Transporte', 'Alimentação', 'Lazer', 'Salário', 'Freelance', 'Outros'];
+      'Internet', 'Telefone', 'Saúde', 'Educação', 'Transporte', 'Alimentação', 'Lazer', 'Salário', 'Freelance'];
 
     const FIN_EMOJI = [
       ['casa', '🏠'], ['carro', '🚗'], ['divida', '💳'], ['cartao', '💳'], ['energia', '💡'], ['luz', '💡'],
@@ -4254,6 +4332,12 @@
       if (!board.fin.trash) board.fin.trash = [];
       if (!board.fin.seq) board.fin.seq = board.fin.rows.length;
       return board.fin;
+    }
+    /* lista de categorias (destinos) sugeridas: editável pelo usuário */
+    function finDests() {
+      const f = finData();
+      if (!Array.isArray(f.dests)) f.dests = FIN_PRESET_DESTS.slice();
+      return f.dests;
     }
     function finIsFinance() { return getActiveBoard().kind === 'finance'; }
     function finNotes(type) { return getActiveBoard().notes.filter(n => type ? n.type === type : isFinType(n.type)); }
@@ -4375,7 +4459,7 @@
     function finUpdateDatalist() {
       const dl = byId('finDestList'); if (!dl) return;
       const seen = {}, out = [];
-      FIN_PRESET_DESTS.concat(finData().rows.map(r => finCleanDest(r.dest))).forEach(d => {
+      finDests().concat(finData().rows.map(r => finCleanDest(r.dest))).forEach(d => {
         const k = finNorm(d); if (!k || seen[k]) return; seen[k] = 1; out.push(d);
       });
       dl.innerHTML = out.map(d => `<option value="${escapeHtml(d)}"></option>`).join('');
@@ -4451,7 +4535,7 @@
           ${rows.length ? rows.map(finRowHtml).join('') : `<div class="fin-empty" data-ink>Nenhum lançamento ainda. Toque em “+ Novo lançamento”.</div>`}
         </div>
         <button class="fin-add chalk-ink font-chalk" style="font-size:${fs}px" onclick="finAddRow('${note.id}')"><span>＋</span> Novo lançamento</button>
-        <div id="finfoot_${note.id}" class="fin-foot chalk-ink font-chalk" data-ink style="font-size:${Math.max(12, Math.round(fs * 0.8))}px">${finFootHtml()}</div>`;
+        ${note.hideFoot ? '' : `<div id="finfoot_${note.id}" class="fin-foot chalk-ink font-chalk" data-ink style="font-size:${Math.max(12, Math.round(fs * 0.8))}px">${finFootHtml()}</div>`}`;
     }
 
     /* cards */
@@ -4480,14 +4564,27 @@
     }
     function finCardHtml(c) {
       return `<div class="fin-card" data-card="${escapeHtml(c.key)}" data-ink style="--c:${finHex(c.color)}">
-        <div class="fin-card-top"><span class="fin-emoji">${c.emoji}</span><span class="chalk-ink fin-card-title">${escapeHtml(c.title)}</span></div>
+        <div class="fin-card-top"><span class="chalk-ink fin-card-title">${escapeHtml(c.title)}</span></div>
         <div class="chalk-ink fin-card-val" style="color:${finHex(c.color)}">${escapeHtml(c.val)}</div>
         <div class="chalk-ink fin-card-sub">${escapeHtml(c.sub)}</div>
         ${c.pend ? `<div class="chalk-ink fin-card-sub" style="color:${finHex('yellow')}">${escapeHtml(c.pend)}</div>` : ''}
       </div>`;
     }
+    function finCardForKey(note, d) {
+      d = d || finCardsData(note);
+      let c = d.summary.find(x => x.key === note.only) || d.dests.find(x => x.key === note.only);
+      if (!c && String(note.only).indexOf('d:') === 0) {
+        c = { key: note.only, title: note.onlyLabel || 'Destino', val: finBRL(0), color: 'yellow', sub: '0 lançamentos', pend: '' };
+      }
+      return c || null;
+    }
     function finCardsBodyHtml(note) {
       const d = finCardsData(note), hidden = note.hiddenCards || [];
+      if (note.only) {
+        const c = finCardForKey(note, d);
+        if (!c || hidden.indexOf(c.key) >= 0) return `<div class="fin-empty" data-ink>Card apagado. Use o botão ⟲ da barra para trazê-lo de volta.</div>`;
+        return `<div class="fin-cards-single">${finCardHtml(c)}</div>`;
+      }
       const sum = d.summary.filter(c => hidden.indexOf(c.key) < 0), dst = d.dests.filter(c => hidden.indexOf(c.key) < 0);
       if (!sum.length && !dst.length) return `<div class="fin-empty" data-ink>Todos os cards foram apagados. Use o botão ⟲ da barra para trazê-los de volta.</div>`;
       return `<div class="fin-cards-grid">${sum.map(finCardHtml).join('')}</div>` +
@@ -4495,7 +4592,7 @@
           (d.hasRows ? '' : `<div class="fin-empty" data-ink>Preencha a tabela: um card aparece aqui para cada destino.</div>`));
     }
     function finCardsInner(note) {
-      return `${finTitleInput(note, '📊 Resumo financeiro')}
+      return `${note.only ? '' : finTitleInput(note, 'Resumo financeiro')}
         <div class="fin-cards-body font-chalk" style="font-size:${note.fs || 18}px">${finCardsBodyHtml(note)}</div>`;
     }
 
@@ -4516,6 +4613,7 @@
       } else {
         extra.push(`<button onclick="finChangeSize('${note.id}', -2)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button><button onclick="finChangeSize('${note.id}', 2)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>`);
       }
+      if (note.type === 'fintable') extra.push(`<button onclick="openFinTableModal('${note.id}')" class="chalk-btn text-[12px] px-1 rounded transition" title="Configurar tabela (nome, rodapé, categorias)"><i class="fa-solid fa-sliders"></i></button>`);
       const inner = note.type === 'fintable' ? finTableInner(note) : note.type === 'fincards' ? finCardsInner(note) : finChartInner(note);
       return `
         <div class="chalk-frame fin-frame rounded-lg p-3" style="color:${getChalkHex(note)}">
@@ -4582,18 +4680,32 @@
         finDropMasks(['fincards']);
         finUpdateDatalist();
       } else r[field] = el.value;
-      saveData(); finRefreshViews();
+      saveData(); finRefreshViews(); finSyncRowViews(id, el);
+    }
+    /* Com várias tabelas abertas, a mesma linha aparece em todas: replica a edição nas outras */
+    function finSyncRowViews(id, skipEl) {
+      const r = finRow(id); if (!r) return;
+      document.querySelectorAll('.chalk-note [data-row]').forEach(row => {
+        if (row.getAttribute('data-row') !== id) return;
+        const set = (sel, val) => {
+          const i = row.querySelector(sel);
+          if (i && i !== skipEl && i !== document.activeElement) i.value = val;
+        };
+        set('[data-cell="date"] input', r.date || '');
+        set('[data-cell="dest"] input', r.dest || '');
+        set('[data-cell="val"] input', r.value ? 'R$ ' + finFmtNum(r.value) : '');
+      });
     }
     function finLiveValue(id, el) {
       const r = finRow(id); if (!r) return;
       r.value = finParseMoney(el.value) || null;
-      saveData(); finRefreshViews();
+      saveData(); finRefreshViews(); finSyncRowViews(id, el);
     }
     function finCommitValue(id, el) {
       const r = finRow(id); if (!r) return;
       r.value = finParseMoney(el.value) || null;
       el.value = r.value ? 'R$ ' + finFmtNum(r.value) : '';
-      saveData(); finRefreshViews();
+      saveData(); finRefreshViews(); finSyncRowViews(id, el);
     }
     function finValKey(e, id) {
       if (e.key !== 'Enter') return;
@@ -4618,10 +4730,17 @@
       const sizes = { fintable: [680, 400], fincards: [640, 430], finchart: [500, 330] };
       const mn = byId('boardCanvas');
       const cw = mn ? mn.offsetWidth : 1000, ch = mn ? mn.offsetHeight : 600;
-      let w = Math.min(sizes[type][0], Math.max(300, cw - 30)), h = Math.min(sizes[type][1], Math.max(200, ch - 120));
+      const single = type === 'fincards' && !!(extra && extra.only);
+      const sz = single ? [230, 130] : sizes[type];
+      let w = single ? sz[0] : Math.min(sz[0], Math.max(300, cw - 30)), h = single ? sz[1] : Math.min(sz[1], Math.max(200, ch - 120));
       const off = (finNotes().length % 5) * 34;
       let x = 24 + off, y = 92 + off;
-      if (isMobileBar()) { const vc = visibleCenter(); x = vc.x - w / 2 + off; y = Math.max(92, vc.y - h / 2 + off); }
+      if (single) {
+        /* cards individuais entram lado a lado, em grade */
+        const k = finNotes('fincards').filter(n => n.only).length, per = Math.max(1, Math.floor((cw - 40) / (w + 12)));
+        x = 24 + (k % per) * (w + 12); y = 92 + Math.floor(k / per) * (h + 12);
+      }
+      if (isMobileBar() && !single) { const vc = visibleCenter(); x = vc.x - w / 2 + off; y = Math.max(92, vc.y - h / 2 + off); }
       x = Math.max(8, Math.min(x, cw - w - 8)); y = Math.max(70, Math.min(y, Math.max(70, ch - h - 8)));
       board.nextZIndex += 1;
       const note = Object.assign({
@@ -4633,23 +4752,125 @@
       saveData(); renderNotes();
       return note;
     }
-    function finOpenTable() {
-      if (!finIsFinance()) return;
-      const ex = finNotes('fintable')[0];
-      if (ex) {
-        setSelectedNote(ex.id);
-        const el = byId(ex.id);
-        if (el) { el.classList.remove('fin-flash'); void el.offsetWidth; el.classList.add('fin-flash'); }
-        return;
-      }
-      const fin = finData();
-      if (!fin.rows.length) {
-        fin.rows.push({ id: 'r' + Date.now().toString(36), seq: ++fin.seq, date: finToday(), cat: 'out', dest: '', value: null, done: false });
-      }
-      finCreatePiece('fintable');
-      finUpdateDatalist();
+    function finOpenTable() { openFinTableModal(); }
+    function finOpenCards() { openFinCardModal(); }
+
+    /* ---------- cards individuais ---------- */
+    let finCardSel = [];
+    function finCardOptions() {
+      const d = finCardsData({ period: 'all' }), seen = {}, dests = [];
+      d.dests.forEach(c => { seen[c.key] = 1; dests.push({ key: c.key, title: c.title }); });
+      finDests().forEach(name => {
+        const k = 'd:' + finNorm(name);
+        if (!seen[k]) { seen[k] = 1; dests.push({ key: k, title: finCleanDest(name) }); }
+      });
+      return { summary: d.summary.map(c => ({ key: c.key, title: c.title })), dests };
     }
-    function finOpenCards() { finCreatePiece('fincards', { period: 'all', hiddenCards: [] }); }
+    function finSyncCardOk() {
+      const b = byId('finCardOkBtn'); if (!b) return;
+      b.disabled = !finCardSel.length;
+      b.classList.toggle('opacity-40', !finCardSel.length);
+      b.innerText = finCardSel.length > 1 ? 'Adicionar ' + finCardSel.length + ' cards' : 'Adicionar card';
+    }
+    function finRenderCardOpts() {
+      const o = finCardOptions();
+      const btn = c => `<button class="fsb ${finCardSel.some(s => s.key === c.key) ? 'on' : ''}" data-key="${escapeHtml(c.key)}" data-label="${escapeHtml(c.title)}" onclick="finToggleCardSel(this)">${escapeHtml(c.title)}</button>`;
+      byId('finCardOptsSummary').innerHTML = o.summary.map(btn).join('');
+      byId('finCardOptsDest').innerHTML = o.dests.length ? o.dests.map(btn).join('') : '<span class="text-xs text-stone-500">Nenhum destino ainda. Preencha a tabela ou crie categorias.</span>';
+      finSyncCardOk();
+    }
+    function finToggleCardSel(el) {
+      const k = el.dataset.key, i = finCardSel.findIndex(s => s.key === k);
+      if (i >= 0) finCardSel.splice(i, 1); else finCardSel.push({ key: k, label: el.dataset.label });
+      el.classList.toggle('on', i < 0);
+      finSyncCardOk();
+    }
+    function openFinCardModal() {
+      if (!finIsFinance()) return;
+      finCardSel = [];
+      const months = finMonthsList();
+      byId('finCardPeriod').innerHTML = '<option value="all">Todo o período</option>' + months.map(m => `<option value="${m}">${finMonthLong(m)}</option>`).join('');
+      finRenderCardOpts();
+      byId('finCardModal').classList.remove('hidden');
+    }
+    function closeFinCardModal() { const m = byId('finCardModal'); if (m) m.classList.add('hidden'); finCardSel = []; }
+    function confirmFinCards() {
+      if (!finCardSel.length) return;
+      const period = byId('finCardPeriod').value || 'all', sel = finCardSel.slice();
+      sel.forEach(s => finCreatePiece('fincards', { period, hiddenCards: [], only: s.key, onlyLabel: s.label }));
+      closeFinCardModal();
+    }
+    function finAddAllCards() {
+      finCreatePiece('fincards', { period: byId('finCardPeriod').value || 'all', hiddenCards: [] });
+      closeFinCardModal();
+    }
+
+    /* ---------- várias tabelas (configuração: nome, rodapé, categorias) ---------- */
+    let finTableDraft = null;
+    function finRenderDestChips() {
+      const el = byId('finDestChips'); if (!el) return;
+      const list = finDests();
+      el.innerHTML = list.length
+        ? list.map((d, i) => `<span class="fin-chip">${escapeHtml(d)}<button onclick="finRemoveDest(${i})" title="Remover da lista"><i class="fa-solid fa-xmark"></i></button></span>`).join('')
+        : '<span class="text-xs text-stone-500">Nenhuma categoria. Adicione abaixo.</span>';
+    }
+    function finAddDest() {
+      const inp = byId('finNewDest'), v = finCleanDest(inp.value); if (!v) return;
+      const list = finDests();
+      if (!list.some(d => finNorm(d) === finNorm(v))) { list.push(v); saveData(); }
+      inp.value = ''; finRenderDestChips(); finUpdateDatalist(); inp.focus();
+    }
+    function finRemoveDest(i) {
+      finDests().splice(i, 1);
+      saveData(); finRenderDestChips(); finUpdateDatalist();
+    }
+    function openFinTableModal(editId) {
+      if (!finIsFinance()) return;
+      const n = editId ? findNote(editId) : null, count = finNotes('fintable').length;
+      finTableDraft = {
+        editId: n ? n.id : null,
+        hideFoot: n ? !!n.hideFoot : false
+      };
+      byId('finTableName').value = n ? (n.title == null ? '💰 Controle financeiro' : n.title) : (count ? 'Tabela ' + (count + 1) : 'Controle financeiro');
+      byId('finTableModalTitle').innerText = n ? 'Configurar tabela' : 'Nova tabela';
+      byId('finTableOkBtn').innerText = n ? 'Aplicar' : 'Criar tabela';
+      byId('finNewDest').value = '';
+      finSyncTableModal();
+      finRenderDestChips();
+      byId('finTableModal').classList.remove('hidden');
+      setTimeout(() => { const i = byId('finTableName'); if (i) { i.focus(); i.select(); } }, 30);
+    }
+    function finSyncTableModal() {
+      if (!finTableDraft) return;
+      const b = byId('finTableFootBtn');
+      b.classList.toggle('on', finTableDraft.hideFoot);
+      b.innerHTML = finTableDraft.hideFoot ? '<i class="fa-solid fa-eye-slash mr-1"></i>Rodapé oculto' : '<i class="fa-solid fa-eye mr-1"></i>Rodapé visível';
+    }
+    function finTableToggleFoot() { if (!finTableDraft) return; finTableDraft.hideFoot = !finTableDraft.hideFoot; finSyncTableModal(); }
+    function closeFinTableModal() { const m = byId('finTableModal'); if (m) m.classList.add('hidden'); finTableDraft = null; }
+    function confirmFinTable() {
+      const d = finTableDraft; if (!d) return;
+      const pend = byId('finNewDest').value.trim();
+      if (pend) finAddDest();   // categoria digitada e não confirmada também entra
+      const name = byId('finTableName').value.trim();
+      if (d.editId) {
+        const n = findNote(d.editId);
+        if (n) { n.title = name || 'Tabela'; n.hideFoot = d.hideFoot; finDropMask(n); saveData(); finRenderPiece(n); }
+      } else {
+        const fin = finData();
+        if (!fin.rows.length) {
+          fin.rows.push({ id: 'r' + Date.now().toString(36), seq: ++fin.seq, date: finToday(), cat: 'out', dest: '', value: null, done: false });
+        }
+        finCreatePiece('fintable', { title: name || ('Tabela ' + (finNotes('fintable').length + 1)), hideFoot: d.hideFoot });
+        finUpdateDatalist();
+      }
+      closeFinTableModal();
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (finTableDraft) closeFinTableModal();
+      else if (!byId('finCardModal').classList.contains('hidden')) closeFinCardModal();
+    });
 
     /* ---------- lousa de finanças ---------- */
     let finPrevBoardIdx = 0;
@@ -4793,7 +5014,7 @@
       let svg = open, legendH = 0;
 
       /* legenda */
-      const legendItems = type === 'pie' ? [] : metrics.map(k => ({ k, label: FIN_METRICS[k].label }));
+      const legendItems = (type === 'pie' || cfg.hideLegend) ? [] : metrics.map(k => ({ k, label: FIN_METRICS[k].label }));
       let legendSvg = '';
       if (legendItems.length > 1) {
         let lx = 6, ly = 10; const rowsL = [];
@@ -4813,7 +5034,7 @@
         let items = groups.map(g => ({ label: g.label, v: Math.abs(g[k]) / 100 })).filter(i => i.v > 0).sort((a, b) => b.v - a.v);
         if (items.length > 8) { const rest = items.slice(7).reduce((s, i) => s + i.v, 0); items = items.slice(0, 7).concat([{ label: 'Outros', v: rest }]); }
         const sum = items.reduce((s, i) => s + i.v, 0);
-        const lw = Math.min(230, Math.max(110, W * 0.42));
+        const lw = cfg.hideLegend ? 0 : Math.min(230, Math.max(110, W * 0.42));
         const R = Math.max(30, Math.min(H / 2 - 12, (W - lw) / 2 - 8));
         const cx = (W - lw) / 2 + 2, cy = H / 2;
         const ids = ['green', 'pink', 'blue', 'yellow', 'white'];
@@ -4834,7 +5055,7 @@
             finSvgText(lx + 19, ly + 1, finTrunc(it.label, Math.max(5, Math.floor((lw - 78) / 7.2))), { size: 14 }) +
             finSvgText(W - 2, ly + 1, Math.round(frac * 100) + '%', { size: 14, anchor: 'end' }) + '</g>';
         });
-        svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${arcs}</g>` + leg +
+        svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${arcs}</g>` + (cfg.hideLegend ? '' : leg) +
           finSvgText(cx, cy - 2, meta.label, { anchor: 'middle', size: Math.max(12, Math.min(16, R / 4.5)) }) +
           finSvgText(cx, cy + Math.max(14, R / 4), 'R$ ' + finCompact(sum), { anchor: 'middle', size: Math.max(12, Math.min(18, R / 4)) });
         return svg + '</svg>';
@@ -4842,11 +5063,11 @@
 
       /* barras / linhas */
       svg += legendSvg;
-      const n = groups.length, padL = 54, padR = 12;
+      const n = groups.length, padL = cfg.hideY ? 14 : 54, padR = 12;
       const pw = W - padL - padR, band = pw / n;
       const maxLen = Math.max.apply(null, groups.map(g => g.label.length));
-      const rot = band < maxLen * 7 && band < 90;
-      const padB = rot ? 56 : 30, padT = 12 + legendH, ph = Math.max(40, H - padT - padB);
+      const rot = !cfg.hideX && band < maxLen * 7 && band < 90;
+      const padB = cfg.hideX ? 10 : (rot ? 56 : 30), padT = 12 + legendH, ph = Math.max(40, H - padT - padB);
       const vals = [0]; groups.forEach(g => metrics.forEach(k => vals.push(g[k] / 100)));
       const nt = finNiceTicks(Math.min.apply(null, vals), Math.max.apply(null, vals), Math.max(2, Math.min(5, Math.floor(ph / 44))));
       const yOf = v => padT + ph - (v - nt.lo) / (nt.hi - nt.lo) * ph;
@@ -4854,7 +5075,7 @@
       nt.ticks.forEach(v => {
         const y = yOf(v);
         grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="currentColor" stroke-opacity="${v === 0 ? .55 : .16}" stroke-width="${v === 0 ? 1.8 : 1}"${v === 0 ? '' : ' stroke-dasharray="4 4"'}/>` +
-          finSvgText(padL - 7, y + 4, finCompact(v), { anchor: 'end', size: 12, opacity: .8 });
+          (cfg.hideY ? '' : finSvgText(padL - 7, y + 4, finCompact(v), { anchor: 'end', size: 12, opacity: .8 }));
       });
       svg += grid;
 
@@ -4867,7 +5088,7 @@
           xl += rot ? finSvgText(cx + 4, H - padB + 15, lab, { anchor: 'end', size: 12, rotate: -40, opacity: .9 }) : finSvgText(cx, H - padB + 17, lab, { anchor: 'middle', size: 13, opacity: .9 });
         }
       });
-      svg += xl;
+      if (!cfg.hideX) svg += xl;
 
       if (type === 'bar') {
         const bw = Math.min(46, (band * 0.76) / metrics.length);
@@ -4908,8 +5129,8 @@
       if (!finIsFinance()) return;
       const n = editId ? findNote(editId) : null;
       finDraft = n && n.cfg
-        ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all' }
-        : { editId: null, title: '', type: 'bar', x: 'date', metrics: ['in', 'out'], period: 'all' };
+        ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all', hideX: !!n.cfg.hideX, hideY: !!n.cfg.hideY, hideLegend: !!n.cfg.hideLegend }
+        : { editId: null, title: '', type: 'bar', x: 'date', metrics: ['in', 'out'], period: 'all', hideX: false, hideY: false, hideLegend: false };
       const months = finMonthsList();
       if (finDraft.period !== 'all' && months.indexOf(finDraft.period) < 0) months.push(finDraft.period);
       byId('finPeriodSel').innerHTML = '<option value="all">Todo o período</option>' + months.map(m => `<option value="${m}">${finMonthLong(m)}</option>`).join('');
@@ -4934,12 +5155,20 @@
       else finDraft.metrics.push(k);
       syncFinChartModal();
     }
+    function finDraftShow(k) {
+      if (!finDraft) return;
+      const key = { x: 'hideX', y: 'hideY', legend: 'hideLegend' }[k];
+      finDraft[key] = !finDraft[key];
+      syncFinChartModal();
+    }
     function syncFinChartModal() {
       if (!finDraft) return;
       const on = (sel, test) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', test(b.dataset.v)));
       on('#finChartModal [data-fin-type]', v => v === finDraft.type);
       on('#finChartModal [data-fin-x]', v => v === finDraft.x);
       on('#finChartModal [data-fin-met]', v => finDraft.metrics.indexOf(v) >= 0);
+      const showMap = { x: 'hideX', y: 'hideY', legend: 'hideLegend' };
+      on('#finChartModal [data-fin-show]', v => !finDraft[showMap[v]]);
       byId('finPeriodSel').value = finDraft.period;
       byId('finMetHint').innerText = finDraft.type === 'pie' ? 'A pizza mostra um valor por vez.' : 'Marque quantos quiser.';
       byId('finChartOkBtn').disabled = !finDraft.metrics.length;
@@ -4949,7 +5178,7 @@
     }
     function confirmFinChart() {
       if (!finDraft || !finDraft.metrics.length) return;
-      const cfg = { type: finDraft.type, x: finDraft.x, metrics: finDraft.metrics.slice(), period: finDraft.period };
+      const cfg = { type: finDraft.type, x: finDraft.x, metrics: finDraft.metrics.slice(), period: finDraft.period, hideX: !!finDraft.hideX, hideY: !!finDraft.hideY, hideLegend: !!finDraft.hideLegend };
       const title = byId('finChartTitleIn').value.trim();
       if (finDraft.editId) {
         const n = findNote(finDraft.editId);
