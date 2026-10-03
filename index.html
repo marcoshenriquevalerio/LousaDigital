@@ -1,0 +1,2497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quadro Verde Escolar Vintage - Lousa Interativa</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts: Patrick Hand, Caveat e Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&family=Patrick+Hand&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    .font-chalk {
+      font-family: 'Patrick Hand', 'Caveat', cursive;
+    }
+    .font-sans-ui {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Textura de Lousa Verde Escolar Vintage */
+    .chalkboard-bg {
+      background-color: #122b1e;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(38, 80, 58, 0.45) 0%, rgba(13, 33, 23, 0.95) 100%),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.012) 0px, rgba(255, 255, 255, 0.012) 2px, transparent 2px, transparent 4px);
+      box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
+    }
+
+    /* Moldura de Madeira Realista */
+    .wood-frame {
+      background: linear-gradient(135deg, #5a3219 0%, #3b1d0b 25%, #6e3f21 50%, #2e1506 75%, #4a2711 100%);
+      box-shadow: 
+        inset 0 0 10px rgba(0,0,0,0.8),
+        0 10px 25px rgba(0,0,0,0.5);
+      border: 3px solid #231105;
+    }
+
+    .wood-shelf {
+      background: linear-gradient(to bottom, #7a4625 0%, #4a2711 50%, #2e1506 100%);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 2px 2px rgba(255,255,255,0.2);
+    }
+
+    /* Texto estilo Giz */
+    .chalk-text {
+      color: rgba(245, 247, 248, 0.92);
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.6), 1px 1px 3px rgba(0, 0, 0, 0.8);
+      letter-spacing: 0.5px;
+    }
+
+    /* Fita Adesiva Estática no Topo */
+    .tape-effect {
+      background: rgba(255, 255, 255, 0.52);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      backdrop-filter: blur(1px);
+      border: 1px dashed rgba(255, 255, 255, 0.75);
+      transform: rotate(-1deg);
+      pointer-events: none;
+    }
+
+    /* Papel do Post-it Totalmente Estático (Sem Animação de Vento) */
+    .postit-paper {
+      box-shadow: 3px 8px 18px rgba(0,0,0,0.38);
+      transition: box-shadow 0.2s ease;
+    }
+
+    /* Indicador visual durante o arraste */
+    .is-dragging .postit-paper {
+      box-shadow: 0 22px 38px rgba(0,0,0,0.5) !important;
+      transform: scale(1.02);
+    }
+
+    /* Cores dos Post-its */
+    .postit-yellow { background: #fff89e; color: #3a3200; border-color: #eedd6b; }
+    .postit-pink   { background: #ffc4de; color: #4a0c27; border-color: #f79bc3; }
+    .postit-blue   { background: #c2f0ff; color: #08384d; border-color: #8ce1ff; }
+    .postit-green  { background: #cbf7d2; color: #0d4015; border-color: #99e6a6; }
+    .postit-orange { background: #ffe0b3; color: #4e2600; border-color: #fcc277; }
+    .postit-purple { background: #ebd4ff; color: #320a54; border-color: #d2a3f7; }
+
+    /* Scrollbars customizadas */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+
+    /* =========================================================================
+       ESTILO GIZ REALISTA (Checklist, Texto Livre, Setas e Formas)
+       ========================================================================= */
+    .chalk-ink {
+      text-shadow: 0 0 1.5px rgba(255, 255, 255, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.75);
+      letter-spacing: 0.5px;
+      filter: url(#chalkText);
+    }
+    .chalk-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+    /* Moldura tracejada discreta (só aparece quando a peça está selecionada) */
+    .chalk-frame {
+      border: 1px dashed transparent;
+      transition: border-color 0.2s ease;
+    }
+    .chalk-note.is-selected .chalk-frame,
+    .chalk-note.is-dragging .chalk-frame {
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    /* Barra de controles (cores, mover, excluir): flutua acima e fica oculta até selecionar */
+    .chalk-bar {
+      position: absolute; left: 0; right: 0; top: -30px; z-index: 20;
+      padding: 3px 10px; border-radius: 999px;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .chalk-note.is-selected .chalk-bar,
+    .chalk-note.is-dragging .chalk-bar { opacity: 1; pointer-events: auto; }
+
+    .shape-controls { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    .shape-controls-bg { background: rgba(0, 0, 0, 0.5); }
+    .chalk-note.is-selected .shape-controls,
+    .chalk-note.is-dragging .shape-controls { opacity: 1; pointer-events: auto; }
+
+    /* Fora de seleção: só a escrita fica visível */
+    .chalk-note:not(.is-selected) .resize-handle,
+    .chalk-note:not(.is-selected) .resize-corner { opacity: 0 !important; }
+    .chalk-note:not(.is-selected) .item-remove { display: none; }
+    .chalk-note:not(.is-selected) .chalk-add-row { display: none; }
+    .chalk-note:not(.is-selected) .chalk-input::placeholder { color: transparent; }
+
+    .chalk-dot { border-color: rgba(255, 255, 255, 0.35); }
+    .chalk-dot.ring-2 { --tw-ring-color: rgba(255, 255, 255, 0.8); }
+    .chalk-del { color: rgba(252, 165, 165, 0.85); }
+    .chalk-del:hover { color: #fca5a5; }
+    .chalk-rot { color: #e7e5e4; }
+    .chalk-rot:hover { color: #fff; }
+    .chalk-btn:hover { background: rgba(255, 255, 255, 0.12); }
+
+    /* Navegador de lousas dentro do cabeçalho */
+    .nav-pill { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.25); }
+    .nav-btn { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(146,64,14,0.5); color: #fde68a; border: 1px solid rgba(180,83,9,0.5); transition: background 0.2s ease, transform 0.1s ease; }
+    .nav-btn:hover { background: rgba(180,83,9,0.75); }
+    .nav-btn:active { transform: scale(0.95); }
+    .nav-btn:disabled { opacity: 0.3; pointer-events: none; }
+    .nav-add { background: #047857; border-color: #34d399; color: #fff; }
+    .nav-add:hover { background: #059669; }
+    .nav-del { background: rgba(127,29,29,0.4); color: #fca5a5; border-color: rgba(185,28,28,0.4); }
+    .nav-del:hover { background: rgba(153,27,27,0.7); }
+    .nav-name { color: #fef3c7; }
+    .nav-count { color: rgba(252,211,77,0.6); }
+
+    /* Linha de giz sob o título */
+    .chalk-line {
+      height: 3px;
+      background: currentColor;
+      opacity: 0.75;
+      border-radius: 2px;
+      filter: url(#chalkSoft);
+    }
+
+    .chalk-add { border-bottom: 2px dashed rgba(255, 255, 255, 0.3); }
+
+    /* Caixinha de giz + check riscado */
+    .chalk-check {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      filter: url(#chalkSoft);
+    }
+    .chalk-check svg { overflow: visible; display: block; }
+    .chalk-check .check-mark,
+    .chalk-check .check-mark2 {
+      stroke-dasharray: 44;
+      stroke-dashoffset: 0;
+      opacity: 0;
+    }
+    .chalk-check.is-done .check-mark  { opacity: 1; }
+    .chalk-check.is-done .check-mark2 { opacity: 0.5; }
+    .chalk-check.is-done.animate .check-mark  { animation: chalkDraw 0.5s ease-out both; }
+    .chalk-check.is-done.animate .check-mark2 { animation: chalkDraw 0.5s 0.08s ease-out both; }
+    @keyframes chalkDraw {
+      from { stroke-dashoffset: 44; }
+      to   { stroke-dashoffset: 0; }
+    }
+
+    /* Risco de giz sobre tarefa concluída */
+    .chalk-strike {
+      background-image: linear-gradient(currentColor, currentColor);
+      background-repeat: no-repeat;
+      background-position: 0 58%;
+      background-size: 100% 2.5px;
+      opacity: 0.6;
+    }
+    .chalk-strike.animate { animation: strikeDraw 0.45s 0.2s ease-out both; }
+    @keyframes strikeDraw {
+      from { background-size: 0% 2.5px; }
+      to   { background-size: 100% 2.5px; }
+    }
+
+    .is-dragging .shape-svg { opacity: 0.9; }
+
+    /* =========================================================================
+       TEMA CANETÃO (lousa branca moderna)
+       ========================================================================= */
+    body.theme-marker { background: #cbd5e1; }
+    .theme-marker .font-chalk { font-family: 'Kalam', 'Patrick Hand', cursive; }
+
+    .theme-marker .chalkboard-bg {
+      background-color: #f8fafc;
+      background-image: radial-gradient(circle at 30% 20%, #ffffff 0%, #eef2f7 100%);
+      box-shadow: inset 0 0 70px rgba(100, 116, 139, 0.28);
+    }
+    .theme-marker header.wood-frame {
+      background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 50%, #e2e8f0 100%);
+      border: 3px solid #94a3b8;
+      box-shadow: inset 0 0 6px rgba(255,255,255,0.9), 0 8px 20px rgba(15,23,42,0.25);
+    }
+    .theme-marker .wood-frame {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-color: #334155;
+    }
+    .theme-marker .wood-shelf {
+      background: linear-gradient(to bottom, #e2e8f0, #94a3b8);
+      box-shadow: 0 4px 10px rgba(15,23,42,0.3), inset 0 2px 2px rgba(255,255,255,0.7);
+    }
+    .theme-marker #headerBoardTitle { color: #0f172a; }
+    .theme-marker #headerSubtitle { color: #475569; }
+    .theme-marker header .fa-chalkboard { color: #0f172a; }
+    .theme-marker header > div:first-child > div:first-child { background: #ffffff; border-color: #94a3b8; }
+    .theme-marker header .h-6.w-px { background: #94a3b8; }
+
+    .theme-marker .nav-pill { background: rgba(255,255,255,0.75); border-color: #94a3b8; }
+    .theme-marker .nav-btn { background: #ffffff; color: #334155; border-color: #cbd5e1; }
+    .theme-marker .nav-btn:hover { background: #e2e8f0; }
+    .theme-marker .nav-add { background: #059669; border-color: #10b981; color: #fff; }
+    .theme-marker .nav-del { background: #ffffff; color: #dc2626; border-color: #fecaca; }
+    .theme-marker .nav-name { color: #0f172a; }
+    .theme-marker .nav-count { color: #64748b; }
+
+    .theme-marker .chalk-text { color: #334155; text-shadow: none; }
+    .theme-marker #emptyBoardMsg p { color: #475569; }
+
+    /* Escrita de canetão */
+    .theme-marker .chalk-ink { filter: none; text-shadow: none; font-weight: 700; letter-spacing: 0.2px; }
+    .theme-marker .chalk-input::placeholder { color: rgba(0, 0, 0, 0.35); }
+    .theme-marker .chalk-note.is-selected .chalk-frame,
+    .theme-marker .chalk-note.is-dragging .chalk-frame { border-color: rgba(15, 23, 42, 0.3); }
+    .theme-marker .chalk-bar,
+    .theme-marker .shape-controls-bg { background: rgba(255, 255, 255, 0.94); box-shadow: 0 2px 10px rgba(15,23,42,0.25); }
+    .theme-marker .chalk-dot { border-color: rgba(0, 0, 0, 0.25); }
+    .theme-marker .chalk-dot.ring-2 { --tw-ring-color: rgba(15, 23, 42, 0.7); }
+    .theme-marker .chalk-del { color: #dc2626; }
+    .theme-marker .chalk-del:hover { color: #b91c1c; }
+    .theme-marker .chalk-rot { color: #475569; }
+    .theme-marker .chalk-rot:hover { color: #0f172a; }
+    .theme-marker .chalk-btn:hover { background: rgba(0, 0, 0, 0.08); }
+    .theme-marker .chalk-line { filter: none; opacity: 0.9; }
+    .theme-marker .chalk-add { border-bottom-color: rgba(0, 0, 0, 0.25); }
+    .theme-marker .chalk-check { filter: none; }
+    .theme-marker .shape-svg { filter: none !important; }
+    .theme-marker .shape-svg g[filter] { filter: none; }
+    .theme-marker .shape-svg g[transform] { display: none; }
+
+    /* Post-its modernos */
+    .theme-marker .tape-effect { display: none; }
+    .theme-marker .postit-paper {
+      border-radius: 14px !important;
+      border-color: transparent;
+      box-shadow: 0 8px 22px rgba(15,23,42,0.14), 0 1px 3px rgba(15,23,42,0.1);
+    }
+    .theme-marker .postit-paper::before {
+      content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+      width: 36px; height: 12px; border-radius: 6px; background: #334155;
+      box-shadow: 0 2px 4px rgba(15,23,42,0.35);
+    }
+    .theme-marker .is-dragging .postit-paper { box-shadow: 0 18px 36px rgba(15,23,42,0.25) !important; }
+    /* =========================================================================
+       IMAGENS (vintage na lousa / moderno no quadro branco)
+       ========================================================================= */
+    .img-card { position: relative; width: 100%; }
+    .img-frame { position: relative; width: 100%; overflow: hidden; background: rgba(0,0,0,0.12); }
+    .img-frame img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; user-select: none; }
+    .img-caption { display: block; width: 100%; margin-top: 8px; background: transparent; border: 0; resize: none; outline: none; text-align: center; line-height: 1.25; overflow: hidden; min-height: 1.6em; }
+    .chalk-note:not(.is-selected) .img-caption::placeholder { color: transparent; }
+
+    /* Vintage (lousa) */
+    .img-vintage { background: linear-gradient(135deg, #f4ead2 0%, #e6d6b0 100%); padding: 10px 10px 8px; border: 1px solid #c9b48a; border-radius: 2px; box-shadow: 3px 9px 20px rgba(0,0,0,0.5), inset 0 0 22px rgba(139,94,40,0.28); transform: rotate(-1deg); }
+    .img-vintage .img-frame { box-shadow: 0 0 0 1px rgba(60,40,15,0.55); }
+    .img-vintage .img-frame img { filter: sepia(0.4) contrast(1.05) saturate(0.85) brightness(0.97); }
+    .img-vintage .img-caption { color: #3d2a14; font-family: 'Patrick Hand', 'Caveat', cursive; }
+    .img-vintage .img-caption::placeholder { color: rgba(61,42,20,0.45); }
+    .img-vintage::before, .img-vintage::after { content: ''; position: absolute; top: -9px; width: min(64px, 30%); height: 18px; background: rgba(255,250,225,0.6); border: 1px dashed rgba(255,255,255,0.7); box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 2; pointer-events: none; }
+    .img-vintage::before { left: -12px; transform: rotate(-38deg); }
+    .img-vintage::after  { right: -12px; transform: rotate(38deg); }
+
+    /* Moderno (quadro branco) */
+    .img-modern { background: #ffffff; padding: 8px; border-radius: 16px; box-shadow: 0 10px 26px rgba(15,23,42,0.18), 0 1px 3px rgba(15,23,42,0.12); }
+    .img-modern .img-frame { border-radius: 10px; }
+    .img-modern .img-caption { color: #1f2937; font-family: 'Kalam', 'Patrick Hand', cursive; font-weight: 700; }
+    .img-modern .img-caption::placeholder { color: rgba(0,0,0,0.35); }
+    .img-modern::before { content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 36px; height: 12px; border-radius: 6px; background: #334155; box-shadow: 0 2px 4px rgba(15,23,42,0.35); z-index: 2; pointer-events: none; }
+
+    /* Barra de controles da imagem (aparece só quando selecionada) */
+    .img-bar { position: absolute; left: 50%; top: -42px; transform: translateX(-50%); z-index: 25; display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; background: rgba(0,0,0,0.62); color: #f5f5f4; white-space: nowrap; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    .chalk-note.is-selected .img-bar, .chalk-note.is-dragging .img-bar { opacity: 1; pointer-events: auto; }
+    .img-bar-in .img-bar { top: 8px; }
+    .img-bar-btn { padding: 2px 8px; border-radius: 8px; font-weight: 600; transition: background 0.2s ease; }
+    .img-bar-btn:hover { background: rgba(255,255,255,0.18); }
+    .img-range { width: 96px; accent-color: #fbbf24; cursor: pointer; }
+    .img-corner { background: rgba(0,0,0,0.6); color: #fff; border-radius: 999px; }
+    .theme-marker .img-bar { background: rgba(255,255,255,0.96); color: #0f172a; box-shadow: 0 2px 10px rgba(15,23,42,0.25); }
+    .theme-marker .img-bar-btn:hover { background: rgba(0,0,0,0.08); }
+    .theme-marker .img-range { accent-color: #1d4ed8; }
+  </style>
+</head>
+<body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
+
+  <!-- FILTROS SVG: textura de giz (bordas irregulares + falhas de pó de giz) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <!-- Para textos -->
+      <filter id="chalkText" x="-3%" y="-8%" width="106%" height="116%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G" result="disp"/>
+        <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="8" result="grain"/>
+        <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2 1.85" result="grainAlpha"/>
+        <feComposite in="disp" in2="grainAlpha" operator="in"/>
+      </filter>
+      <!-- Para ícones pequenos (caixinha, linhas) -->
+      <filter id="chalkSoft" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="5" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.9" xChannelSelector="R" yChannelSelector="G" result="disp"/>
+        <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="11" result="grain"/>
+        <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2 1.9" result="grainAlpha"/>
+        <feComposite in="disp" in2="grainAlpha" operator="in"/>
+      </filter>
+      <!-- Para formas e setas -->
+      <filter id="chalkShape" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="2" result="wobble"/>
+        <feDisplacementMap in="SourceGraphic" in2="wobble" scale="3" xChannelSelector="R" yChannelSelector="G" result="wob"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="noise"/>
+        <feDisplacementMap in="wob" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="disp"/>
+        <feTurbulence type="fractalNoise" baseFrequency="1.0" numOctaves="1" seed="9" result="grain"/>
+        <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2 1.8" result="grainAlpha"/>
+        <feComposite in="disp" in2="grainAlpha" operator="in"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- TOPO: Barra de Ferramentas e Botões Principais -->
+  <header class="wood-frame shrink-0 sticky top-0 z-40 px-3 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xl">
+    
+    <!-- Lado Esquerdo: Identificador da Lousa -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-emerald-950/90 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-inner">
+        <i class="fa-solid fa-chalkboard text-xl"></i>
+      </div>
+      
+      <div class="flex flex-col">
+        <h1 id="headerBoardTitle" class="font-chalk text-2xl font-bold text-amber-200 tracking-wide">Lousa 1</h1>
+        <span id="headerSubtitle" class="text-[11px] text-amber-300/70 -mt-1 font-medium">Quadro Verde Vintage</span>
+      </div>
+    </div>
+
+    <!-- Lado Direito: Ferramentas / Criar Notas / Modais / Fullscreen -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button onclick="createNewNote('text')" class="bg-amber-100 hover:bg-amber-200 text-amber-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-amber-300">
+        <i class="fa-solid fa-sticky-note text-amber-700"></i>
+        <span>+ Post-it</span>
+      </button>
+
+      <button onclick="createNewNote('checklist')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-emerald-300">
+        <i class="fa-solid fa-list-check text-emerald-700"></i>
+        <span>+ Tarefas</span>
+      </button>
+
+      <!-- NOVO: Texto livre em giz -->
+      <button onclick="createNewNote('chalktext')" class="bg-stone-100 hover:bg-white text-stone-900 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-stone-300">
+        <i class="fa-solid fa-pen text-stone-700"></i>
+        <span>+ Texto Giz</span>
+      </button>
+
+      <!-- Imagem (galeria / câmera) -->
+      <button onclick="pickImage()" class="bg-rose-100 hover:bg-rose-200 text-rose-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-rose-300">
+        <i class="fa-solid fa-image text-rose-700"></i>
+        <span>+ Imagem</span>
+      </button>
+
+      <!-- NOVO: Menu de setas e formas geométricas -->
+      <div class="relative">
+        <button onclick="toggleShapeMenu(event)" class="bg-stone-100 hover:bg-white text-stone-900 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-stone-300">
+          <i class="fa-solid fa-shapes text-stone-700"></i>
+          <span>Formas</span>
+          <i class="fa-solid fa-caret-down text-[10px] text-stone-600"></i>
+        </button>
+      </div>
+
+      <button onclick="openCalendarModal()" class="bg-sky-100 hover:bg-sky-200 text-sky-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-sky-300">
+        <i class="fa-solid fa-calendar-days text-sky-700"></i>
+        <span>Calendário</span>
+      </button>
+
+      <button onclick="openPlannerModal()" class="bg-purple-100 hover:bg-purple-200 text-purple-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-purple-300">
+        <i class="fa-solid fa-calendar-week text-purple-700"></i>
+        <span>Planner 7 Dias</span>
+      </button>
+
+      <div class="h-6 w-px bg-amber-900/50 mx-0.5 hidden md:block"></div>
+
+      <!-- Navegador de lousas (no cabeçalho) -->
+      <div class="nav-pill">
+        <button id="btnPrevBoard" onclick="navigateBoard(-1)" class="nav-btn" title="Lousa Anterior">
+          <i class="fa-solid fa-chevron-left text-xs"></i>
+        </button>
+        <div class="flex flex-col items-center px-1 min-w-[72px]">
+          <span id="widgetBoardName" class="nav-name font-chalk text-base font-bold whitespace-nowrap leading-tight">Lousa 1</span>
+          <span id="widgetBoardCount" class="nav-count text-[10px] font-semibold leading-none">1 de 1</span>
+        </div>
+        <button id="btnNextBoard" onclick="navigateBoard(1)" class="nav-btn" title="Próxima Lousa">
+          <i class="fa-solid fa-chevron-right text-xs"></i>
+        </button>
+        <button onclick="createNewBoard()" class="nav-btn nav-add" title="Criar Nova Lousa Limpa">
+          <i class="fa-solid fa-plus text-xs"></i>
+        </button>
+        <button id="btnDeleteBoard" onclick="confirmDeleteCurrentBoard()" class="nav-btn nav-del" title="Excluir Esta Lousa">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Alternar estilo: Giz <-> Canetão -->
+      <button onclick="toggleTheme()" id="themeBtn" class="bg-stone-100 hover:bg-white text-stone-900 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-stone-300" title="Alternar estilo da lousa">
+        <i id="themeBtnIcon" class="fa-solid fa-pen-fancy text-stone-700"></i>
+        <span id="themeBtnLabel">Modo Canetão</span>
+      </button>
+
+      <!-- Botão de Alternar Tela Cheia (Fullscreen API) -->
+      <button onclick="toggleFullscreen()" id="fullscreenBtn" class="bg-stone-800 hover:bg-stone-700 text-amber-200 px-3 py-1.5 rounded-lg text-xs sm:text-sm transition border border-stone-600 flex items-center gap-1.5" title="Expandir / Reduzir Tela Cheia">
+        <i class="fa-solid fa-expand"></i>
+        <span class="hidden lg:inline">Expandir</span>
+      </button>
+
+      <!-- Botão Limpar Lousa Atual -->
+      <button onclick="confirmClearBoard()" class="bg-red-900/60 hover:bg-red-800 text-red-100 p-2 rounded-lg text-xs sm:text-sm flex items-center justify-center transition border border-red-700/50" title="Limpar Lousa Atual">
+        <i class="fa-solid fa-broom"></i>
+      </button>
+
+      <!-- Usuário logado, status de sincronização e sair -->
+      <div id="userChip" class="hidden nav-pill">
+        <span id="syncStatus" class="px-1 text-sm text-emerald-400" title="Salvo na nuvem"><i class="fa-solid fa-cloud"></i></span>
+        <img id="userPhoto" class="w-8 h-8 rounded-full border border-amber-400/40 hidden" alt="" referrerpolicy="no-referrer">
+        <span id="userName" class="nav-name text-xs font-semibold max-w-[140px] truncate hidden xl:inline"></span>
+        <button onclick="doLogout()" class="nav-btn nav-del" title="Sair da conta">
+          <i class="fa-solid fa-right-from-bracket text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NOVO: Painel flutuante de formas (posicionado via JS) -->
+  <div id="shapeMenu" class="hidden fixed z-50 wood-frame rounded-xl p-2 grid grid-cols-4 gap-1.5 shadow-2xl" style="width:232px; top:70px; left:8px;">
+    <button onclick="createNewShape('arrow')"    title="Seta"          class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">→</button>
+    <button onclick="createNewShape('curve')"    title="Seta curva"    class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">↷</button>
+    <button onclick="createNewShape('line')"     title="Linha"         class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">―</button>
+    <button onclick="createNewShape('rect')"     title="Retângulo"     class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">▭</button>
+    <button onclick="createNewShape('circle')"   title="Círculo"       class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">◯</button>
+    <button onclick="createNewShape('triangle')" title="Triângulo"     class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">△</button>
+    <button onclick="createNewShape('diamond')"  title="Losango"       class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">◇</button>
+    <button onclick="createNewShape('star')"     title="Estrela"       class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">☆</button>
+  </div>
+
+  <!-- MAIN: Área da Lousa Verde Escolar Vintage -->
+  <main id="boardCanvas" class="chalkboard-bg flex-1 min-h-0 relative w-full overflow-hidden p-4 sm:p-8">
+    
+    <!-- Elementos Decorativos em Giz -->
+    <div class="absolute bottom-16 right-8 pointer-events-none opacity-20 font-chalk text-xl chalk-text select-none hidden lg:block text-right">
+      "Passo a passo se vai longe..." ✎
+    </div>
+
+    <!-- Mensagem de Tela Vazia -->
+    <div id="emptyBoardMsg" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-40 text-center p-6">
+      <i class="fa-solid fa-hand-pointer text-5xl chalk-text mb-3 animate-bounce"></i>
+      <h2 class="font-chalk text-3xl chalk-text mb-1">Esta Lousa está vazia!</h2>
+      <p class="text-sm text-emerald-100 max-w-sm">Adicione novos Post-its ou crie/navegue por outras telas usando o controle no canto inferior direito.</p>
+    </div>
+
+    <!-- Container onde são renderizados os Post-its -->
+    <div id="notesContainer" class="relative w-full h-full"></div>
+
+  </main>
+
+  <!-- Calha de Giz Inferior Decorativa -->
+  <div class="wood-shelf shrink-0 h-4 w-full relative z-30 flex items-center justify-center gap-6">
+    <div class="w-12 h-2 bg-stone-100/90 rounded-full shadow-inner transform -rotate-1"></div>
+    <div class="w-10 h-2 bg-amber-200/90 rounded-full shadow-inner transform rotate-2"></div>
+    <div class="w-8 h-2 bg-rose-200/90 rounded-full shadow-inner transform -rotate-2"></div>
+    <div class="w-14 h-2 bg-sky-200/90 rounded-full shadow-inner transform rotate-1"></div>
+  </div>
+
+  <!-- MODAL: CALENDÁRIO DINÂMICO -->
+  <div id="calendarModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-800 border-2 border-stone-600 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="wood-frame p-4 flex items-center justify-between border-b border-amber-900/50">
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-calendar-days text-amber-400 text-xl"></i>
+          <h2 class="font-chalk text-2xl text-amber-100 font-bold">Calendário de Anotações</h2>
+        </div>
+        <button onclick="closeCalendarModal()" class="text-stone-300 hover:text-white bg-stone-700/50 hover:bg-stone-700 w-8 h-8 rounded-full flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-stone-900/90">
+        <div class="lg:col-span-7 flex flex-col">
+          <div class="flex items-center justify-between mb-4 bg-stone-800 p-2.5 rounded-xl border border-stone-700">
+            <button onclick="changeMonth(-1)" class="p-2 hover:bg-stone-700 rounded-lg text-amber-300 transition">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <span id="calMonthYearTitle" class="font-bold text-lg text-amber-100 capitalize">Mês Ano</span>
+            <button onclick="changeMonth(1)" class="p-2 hover:bg-stone-700 rounded-lg text-amber-300 transition">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-stone-400 mb-2">
+            <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+          </div>
+
+          <div id="calDaysGrid" class="grid grid-cols-7 gap-1.5 flex-1"></div>
+        </div>
+
+        <div class="lg:col-span-5 bg-stone-800/80 rounded-xl p-4 border border-stone-700 flex flex-col">
+          <div class="border-b border-stone-700 pb-3 mb-3 flex items-center justify-between">
+            <h3 class="font-chalk text-xl text-amber-300 font-bold flex items-center gap-2">
+              <i class="fa-regular fa-clock"></i>
+              <span id="selectedDateTitle">Dia Selecionado</span>
+            </h3>
+            <span id="selectedDateBadge" class="text-xs bg-emerald-900/80 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-700/50">Hoje</span>
+          </div>
+
+          <div id="dayEventsList" class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[160px] max-h-[260px]"></div>
+
+          <div class="mt-4 pt-3 border-t border-stone-700 flex gap-2">
+            <input type="text" id="newEventInput" placeholder="Nova anotação neste dia..." class="flex-1 bg-stone-900 border border-stone-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 text-stone-100">
+            <button onclick="addEventToSelectedDate()" class="bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-4 py-2 rounded-lg text-sm transition">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PLANNER SEMANAL (PRÓXIMOS 7 DIAS) -->
+  <div id="plannerModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-800 border-2 border-stone-600 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="wood-frame p-4 flex items-center justify-between border-b border-amber-900/50">
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-calendar-week text-purple-400 text-xl"></i>
+          <div>
+            <h2 class="font-chalk text-2xl text-purple-100 font-bold">Planner Semanal (Próximos 7 Dias)</h2>
+            <p class="text-xs text-stone-300">Sincronizado diretamente com seu calendário desta lousa</p>
+          </div>
+        </div>
+        <button onclick="closePlannerModal()" class="text-stone-300 hover:text-white bg-stone-700/50 hover:bg-stone-700 w-8 h-8 rounded-full flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto flex-1 bg-stone-900/90">
+        <div id="plannerDaysGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA DE LOGIN / CARREGAMENTO -->
+  <div id="loginScreen" class="fixed inset-0 z-[100] chalkboard-bg flex items-center justify-center p-4">
+    <div class="wood-frame rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
+      <div class="w-16 h-16 mx-auto rounded-full bg-emerald-950/90 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-inner mb-4">
+        <i class="fa-solid fa-chalkboard text-3xl"></i>
+      </div>
+      <h1 class="font-chalk text-4xl font-bold text-amber-200 tracking-wide">Lousa Digital</h1>
+
+      <!-- Carregando -->
+      <div id="loadingBox">
+        <p id="loadingText" class="text-sm text-amber-100/80 mt-4">Conectando...</p>
+        <i class="fa-solid fa-circle-notch fa-spin text-amber-300 text-2xl mt-4"></i>
+      </div>
+
+      <!-- Login -->
+      <div id="loginBox" class="hidden">
+        <p class="text-sm text-amber-100/80 mt-3">Entre com sua conta Google para acessar a sua lousa pessoal.</p>
+        <button onclick="doLogin()" class="mt-6 w-full bg-white hover:bg-stone-100 text-stone-800 font-semibold py-2.5 px-4 rounded-lg shadow flex items-center justify-center gap-3 transition active:scale-95">
+          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span>Entrar com Google</span>
+        </button>
+        <p id="loginMsg" class="hidden mt-4 text-sm text-red-300"></p>
+      </div>
+
+      <!-- Erro -->
+      <div id="errorBox" class="hidden">
+        <p id="errorText" class="text-sm text-red-300 mt-4"></p>
+        <div class="flex items-center justify-center gap-2 mt-5">
+          <button onclick="retryLoad()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-lg text-sm transition">Tentar novamente</button>
+          <button onclick="doLogout()" class="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-stone-200 rounded-lg text-sm transition">Sair</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seletor de arquivo (oculto) -->
+  <input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="onImageFileChosen(event)">
+
+  <!-- MODAL: ADICIONAR IMAGEM -->
+  <div id="imageModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-xl w-full max-w-md p-5 shadow-2xl flex flex-col gap-4">
+      <h3 class="font-chalk text-2xl text-amber-300 font-bold">Adicionar imagem</h3>
+      <div class="bg-stone-900 rounded-lg p-2 flex items-center justify-center">
+        <img id="imagePreview" class="max-h-56 max-w-full rounded object-contain" alt="Pré-visualização">
+      </div>
+      <p id="imageInfo" class="text-xs text-stone-400"></p>
+      <p id="imageModalError" class="hidden text-sm text-red-400"></p>
+      <div class="grid grid-cols-2 gap-2.5">
+        <button id="btnImgOnly" onclick="confirmAddImage(false)" class="px-3 py-2.5 bg-stone-700 hover:bg-stone-600 text-stone-100 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-image"></i> Só foto
+        </button>
+        <button id="btnImgCaption" onclick="confirmAddImage(true)" class="px-3 py-2.5 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-closed-captioning"></i> Foto + texto
+        </button>
+      </div>
+      <button onclick="closeImageModal()" class="text-sm text-stone-400 hover:text-stone-200 transition">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE DIÁLOGO CUSTOMIZADO (SUBSTITUI ALERT E CONFIRM) -->
+  <div id="customDialogModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-xl w-full max-w-md p-5 shadow-2xl flex flex-col gap-4">
+      <h3 id="dialogTitle" class="font-chalk text-2xl text-amber-300 font-bold">Título</h3>
+      <p id="dialogMessage" class="text-sm text-stone-300 leading-relaxed">Mensagem de confirmação...</p>
+      
+      <div id="dialogInputContainer" class="hidden">
+        <input type="text" id="dialogInput" class="w-full bg-stone-900 border border-stone-600 rounded-lg p-2.5 text-stone-100 text-sm focus:outline-none focus:border-amber-400">
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-2">
+        <button id="dialogCancelBtn" onclick="closeCustomDialog()" class="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-stone-200 rounded-lg text-sm transition">Cancelar</button>
+        <button id="dialogConfirmBtn" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-lg text-sm transition">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       ESTADO DA APLICAÇÃO & GERENCIAMENTO DE MÚLTIPLAS LOUSAS (LOCALSTORAGE)
+       ========================================================================= */
+    const LEGACY_STORAGE_KEY = 'vintage_chalkboard_v4_data'; // versão antiga (só localStorage)
+    const LOCAL_PREFIX = 'lousa_digital_v5_';                // cache local por usuário
+
+    let appData = {
+      activeBoardIndex: 0,
+      boards: []
+    };
+
+    const POSTIT_COLORS = [
+      { id: 'yellow', label: 'Amarelo', class: 'postit-yellow' },
+      { id: 'pink',   label: 'Rosa',    class: 'postit-pink' },
+      { id: 'blue',   label: 'Azul',    class: 'postit-blue' },
+      { id: 'green',  label: 'Verde',   class: 'postit-green' },
+      { id: 'orange', label: 'Laranja', class: 'postit-orange' },
+      { id: 'purple', label: 'Roxo',    class: 'postit-purple' }
+    ];
+
+    /* Cores de giz (para checklist, texto livre e formas) */
+    const CHALK_COLORS = [
+      { id: 'white',  label: 'Giz Branco',  hex: '#f5f7f8' },
+      { id: 'yellow', label: 'Giz Amarelo', hex: '#fff0a0' },
+      { id: 'pink',   label: 'Giz Rosa',    hex: '#ffc4de' },
+      { id: 'blue',   label: 'Giz Azul',    hex: '#bfe9ff' },
+      { id: 'green',  label: 'Giz Verde',   hex: '#c9f5cf' }
+    ];
+
+    /* Cores de canetão (tema lousa branca) — mesmos ids das cores de giz */
+    const MARKER_COLORS = [
+      { id: 'white',  label: 'Preto',   hex: '#1f2937' },
+      { id: 'yellow', label: 'Laranja', hex: '#d97706' },
+      { id: 'pink',   label: 'Rosa',    hex: '#e11d74' },
+      { id: 'blue',   label: 'Azul',    hex: '#1d4ed8' },
+      { id: 'green',  label: 'Verde',   hex: '#15803d' }
+    ];
+
+    function getPalette() {
+      return appData.theme === 'marker' ? MARKER_COLORS : CHALK_COLORS;
+    }
+
+    /* Peça (checklist / texto livre / forma) atualmente selecionada */
+    let selectedNoteId = null;
+
+    let currentCalDate = new Date();
+    let selectedCalDateStr = getFormattedDateKey(new Date());
+
+    /* Guarda qual tarefa acabou de ser marcada (para animar o "riscar" com giz) */
+    let lastToggled = null;
+
+    /* saveData agora grava no cache local (por usuário) e agenda o envio ao Firebase */
+    function saveData() {
+      if (!appReady || !currentUser) return;
+      appData.updatedAt = Date.now();
+      try {
+        localStorage.setItem(localKey(), JSON.stringify(appData));
+      } catch (e) {
+        console.warn('Cache local indisponível:', e);
+      }
+      scheduleCloudSave();
+    }
+
+    function createInitialDefaultBoard() {
+      const todayStr = getFormattedDateKey(new Date());
+      appData = {
+        activeBoardIndex: 0,
+        boards: [
+          {
+            id: 'board_' + Date.now(),
+            name: 'Lousa 1',
+            nextZIndex: 10,
+            notes: [
+              {
+                id: 'note_demo_1',
+                type: 'text',
+                color: 'yellow',
+                x: 40,
+                y: 50,
+                width: 320,
+                zIndex: 1,
+                content: 'Bem-vindo ao Quadro Vintage! 📌\n\n- Arraste para mover.\n- Redimensione na lateral direita.\n- Use as setas e o + no canto inferior para criar e alternar entre várias lousas!'
+              },
+              {
+                id: 'note_demo_2',
+                type: 'checklist',
+                color: 'green',
+                chalk: 'white',
+                x: 400,
+                y: 60,
+                width: 340,
+                zIndex: 2,
+                title: '📋 Minha Lista de Tarefas',
+                items: [
+                  { text: 'Redimensionar o post-it na lateral', done: false },
+                  { text: 'Criar uma nova lousa no botão (+)', done: false },
+                  { text: 'Conferir o Calendário e Planner', done: true }
+                ]
+              }
+            ],
+            calendarEvents: {
+              [todayStr]: ['Organizar quadro de tarefas']
+            }
+          }
+        ]
+      };
+      saveData();
+    }
+
+    function getActiveBoard() {
+      if (!appData.boards || appData.boards.length === 0) {
+        createInitialDefaultBoard();
+      }
+      if (appData.activeBoardIndex < 0 || appData.activeBoardIndex >= appData.boards.length) {
+        appData.activeBoardIndex = 0;
+      }
+      return appData.boards[appData.activeBoardIndex];
+    }
+
+    /* CONTROLE DAS LOUSAS (Navegação < > e Criação +) */
+    function navigateBoard(delta) {
+      const newIdx = appData.activeBoardIndex + delta;
+      if (newIdx >= 0 && newIdx < appData.boards.length) {
+        appData.activeBoardIndex = newIdx;
+        saveData();
+        renderNotes();
+      }
+    }
+
+    function createNewBoard() {
+      const count = appData.boards.length + 1;
+      const newBoard = {
+        id: 'board_' + Date.now(),
+        name: `Lousa ${count}`,
+        nextZIndex: 5,
+        notes: [],
+        calendarEvents: {}
+      };
+      appData.boards.push(newBoard);
+      appData.activeBoardIndex = appData.boards.length - 1;
+      saveData();
+      renderNotes();
+    }
+
+    function confirmDeleteCurrentBoard() {
+      if (appData.boards.length <= 1) {
+        showCustomDialog({
+          title: 'Atenção',
+          message: 'Você precisa manter pelo menos uma lousa ativa no quadro.',
+          hasInput: false
+        });
+        return;
+      }
+
+      const board = getActiveBoard();
+      showCustomDialog({
+        title: 'Excluir Lousa',
+        message: `Tem certeza que deseja apagar a "${board.name}" e todas as suas anotações?`,
+        hasInput: false,
+        onConfirm: () => {
+          purgeImages(board.notes);
+          appData.boards.splice(appData.activeBoardIndex, 1);
+          if (appData.activeBoardIndex >= appData.boards.length) {
+            appData.activeBoardIndex = appData.boards.length - 1;
+          }
+          saveData();
+          renderNotes();
+        }
+      });
+    }
+
+    function updateBoardWidgetControls() {
+      const currentBoard = getActiveBoard();
+      const total = appData.boards.length;
+      const currentIdx = appData.activeBoardIndex;
+
+      document.getElementById('headerBoardTitle').innerText = currentBoard.name;
+      document.getElementById('widgetBoardName').innerText = currentBoard.name;
+      document.getElementById('widgetBoardCount').innerText = `${currentIdx + 1} de ${total}`;
+
+      const btnPrev = document.getElementById('btnPrevBoard');
+      const btnNext = document.getElementById('btnNextBoard');
+      const btnDelete = document.getElementById('btnDeleteBoard');
+
+      btnPrev.disabled = (currentIdx === 0);
+      btnNext.disabled = (currentIdx === total - 1);
+      btnDelete.style.display = total > 1 ? 'flex' : 'none';
+    }
+
+    /* =========================================================================
+       SISTEMA DE ARRASTE (DRAG) & REDIMENSIONAMENTO LATERIAL (RESIZE HORIZONTAL)
+       ========================================================================= */
+    let activeDrag = null;
+    let activeResize = null;
+    let activeCorner = null;
+
+    function getClientXY(e) {
+      const t = e.touches && e.touches[0];
+      return {
+        x: t ? t.clientX : e.clientX,
+        y: t ? t.clientY : e.clientY
+      };
+    }
+
+    function initDragAndDrop(element, noteId) {
+      const handles = element.querySelectorAll('.drag-handle');
+      if (!handles.length) return;
+
+      const onPointerDown = (e) => {
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner')) {
+          return;
+        }
+
+        const board = getActiveBoard();
+        board.nextZIndex += 1;
+        element.style.zIndex = board.nextZIndex;
+
+        const note = board.notes.find(n => n.id === noteId);
+        if (note) note.zIndex = board.nextZIndex;
+
+        const rect = element.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+        activeDrag = {
+          element,
+          noteId,
+          offsetX: clientX - rect.left,
+          offsetY: clientY - rect.top
+        };
+
+        element.classList.add('is-dragging');
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('touchmove', onPointerMove, { passive: false });
+        document.addEventListener('touchend', onPointerUp);
+      };
+
+      handles.forEach(handle => {
+        handle.addEventListener('pointerdown', onPointerDown);
+        handle.addEventListener('touchstart', onPointerDown, { passive: true });
+      });
+    }
+
+    function onPointerMove(e) {
+      if (!activeDrag) return;
+      if (e.preventDefault && e.cancelable) e.preventDefault();
+
+      const boardEl = document.getElementById('boardCanvas');
+      const boardRect = boardEl.getBoundingClientRect();
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      let x = clientX - boardRect.left - activeDrag.offsetX;
+      let y = clientY - boardRect.top - activeDrag.offsetY;
+
+      x = Math.max(10, Math.min(x, boardRect.width - activeDrag.element.offsetWidth - 10));
+      y = Math.max(10, Math.min(y, boardRect.height - activeDrag.element.offsetHeight - 10));
+
+      activeDrag.element.style.left = `${x}px`;
+      activeDrag.element.style.top = `${y}px`;
+
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === activeDrag.noteId);
+      if (note) {
+        note.x = x;
+        note.y = y;
+      }
+    }
+
+    function onPointerUp() {
+      if (!activeDrag) return;
+      activeDrag.element.classList.remove('is-dragging');
+      activeDrag.element.classList.toggle('img-bar-in', parseFloat(activeDrag.element.style.top) < 52);
+      activeDrag = null;
+
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('touchmove', onPointerMove);
+      document.removeEventListener('touchend', onPointerUp);
+
+      saveData();
+    }
+
+    /* REDIMENSIONAMENTO LATERIAL (LARGURA DO POST-IT) */
+    function initHorizontalResize(element, noteId) {
+      const handles = element.querySelectorAll('.resize-handle');
+      
+      handles.forEach(handle => {
+        const onResizeDown = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+
+          const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+          const startWidth = element.offsetWidth;
+
+          activeResize = {
+            element,
+            noteId,
+            startX: clientX,
+            startWidth,
+            direction: handle.dataset.dir // 'left' ou 'right'
+          };
+
+          document.addEventListener('pointermove', onResizeMove);
+          document.addEventListener('pointerup', onResizeUp);
+          document.addEventListener('touchmove', onResizeMove, { passive: false });
+          document.addEventListener('touchend', onResizeUp);
+        };
+
+        handle.addEventListener('pointerdown', onResizeDown);
+        handle.addEventListener('touchstart', onResizeDown, { passive: false });
+      });
+    }
+
+    function onResizeMove(e) {
+      if (!activeResize) return;
+      if (e.preventDefault && e.cancelable) e.preventDefault();
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const deltaX = clientX - activeResize.startX;
+      let newWidth = activeResize.startWidth;
+
+      if (activeResize.direction === 'right') {
+        newWidth += deltaX;
+      } else {
+        newWidth -= deltaX;
+      }
+
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === activeResize.noteId);
+      const isImg = !!(note && note.type === 'image');
+
+      // Limites de largura (200–650px; imagens: 80–1200px, sempre mantendo a proporção)
+      newWidth = Math.max(isImg ? 80 : 200, Math.min(newWidth, isImg ? 1200 : 650));
+
+      activeResize.element.style.width = `${newWidth}px`;
+
+      if (note) {
+        note.width = newWidth;
+        if (note.type === 'shape') updateShapeSvg(activeResize.element, note);
+        if (isImg) syncImageUI(activeResize.element, note);
+      }
+    }
+
+    function onResizeUp() {
+      if (!activeResize) return;
+      activeResize = null;
+
+      document.removeEventListener('pointermove', onResizeMove);
+      document.removeEventListener('pointerup', onResizeUp);
+      document.removeEventListener('touchmove', onResizeMove);
+      document.removeEventListener('touchend', onResizeUp);
+
+      saveData();
+    }
+
+    /* REDIMENSIONAMENTO PELO CANTO (LARGURA + ALTURA) — usado nas formas */
+    function initCornerResize(element, noteId) {
+      const handle = element.querySelector('.resize-corner');
+      if (!handle) return;
+
+      const onCornerDown = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const p = getClientXY(e);
+        activeCorner = {
+          element,
+          noteId,
+          startX: p.x,
+          startY: p.y,
+          startW: element.offsetWidth,
+          startH: element.offsetHeight
+        };
+
+        document.addEventListener('pointermove', onCornerMove);
+        document.addEventListener('pointerup', onCornerUp);
+        document.addEventListener('touchmove', onCornerMove, { passive: false });
+        document.addEventListener('touchend', onCornerUp);
+      };
+
+      handle.addEventListener('pointerdown', onCornerDown);
+      handle.addEventListener('touchstart', onCornerDown, { passive: false });
+    }
+
+    function onCornerMove(e) {
+      if (!activeCorner) return;
+      if (e.preventDefault && e.cancelable) e.preventDefault();
+
+      const p = getClientXY(e);
+      const newW = Math.max(60, Math.min(activeCorner.startW + (p.x - activeCorner.startX), 800));
+      const newH = Math.max(36, Math.min(activeCorner.startH + (p.y - activeCorner.startY), 600));
+
+      activeCorner.element.style.width = `${newW}px`;
+      activeCorner.element.style.height = `${newH}px`;
+
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === activeCorner.noteId);
+      if (note) {
+        note.width = newW;
+        note.height = newH;
+        updateShapeSvg(activeCorner.element, note);
+      }
+    }
+
+    function onCornerUp() {
+      if (!activeCorner) return;
+      activeCorner = null;
+
+      document.removeEventListener('pointermove', onCornerMove);
+      document.removeEventListener('pointerup', onCornerUp);
+      document.removeEventListener('touchmove', onCornerMove);
+      document.removeEventListener('touchend', onCornerUp);
+
+      saveData();
+    }
+
+    /* =========================================================================
+       CRIAÇÃO E RENDERIZAÇÃO DE POST-ITS
+       ========================================================================= */
+    function createNewNote(type = 'text') {
+      const board = getActiveBoard();
+      const id = 'note_' + Date.now();
+      const colors = ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      
+      const boardEl = document.getElementById('boardCanvas');
+      const boardWidth = boardEl ? boardEl.offsetWidth : 800;
+      const posX = Math.max(20, Math.min(boardWidth / 2 - 150 + (Math.random() * 80 - 40), boardWidth - 340));
+      const posY = 50 + (Math.random() * 60);
+
+      board.nextZIndex += 1;
+
+      const newNote = {
+        id,
+        type,
+        color: randomColor,
+        chalk: 'white',
+        x: posX,
+        y: posY,
+        width: type === 'chalktext' ? 360 : 320,
+        zIndex: board.nextZIndex,
+        content: (type === 'text' || type === 'chalktext') ? '' : undefined,
+        title: type === 'checklist' ? 'Lista de Tarefas' : undefined,
+        items: type === 'checklist' ? [] : undefined,
+        fontSize: type === 'chalktext' ? 32 : undefined
+      };
+
+      board.notes.push(newNote);
+      if (type !== 'text') selectedNoteId = id;
+      saveData();
+      renderNotes();
+
+      if (type === 'chalktext') {
+        const ta = document.getElementById(`input_${id}`);
+        if (ta) ta.focus();
+      }
+    }
+
+    /* ---------- Helpers de estilo giz ---------- */
+    function getChalkHex(note) {
+      const pal = getPalette();
+      const c = pal.find(c => c.id === note.chalk) || pal[0];
+      return c.hex;
+    }
+
+    function chalkColorDotsHtml(note) {
+      const current = note.chalk || 'white';
+      return `
+        <div class="flex items-center gap-1">
+          ${getPalette().map(c => `
+            <button onclick="changeChalkColor('${note.id}', '${c.id}')"
+                    class="chalk-dot w-3.5 h-3.5 rounded-full border hover:scale-125 transition ${current === c.id ? 'ring-2 scale-110' : ''}"
+                    style="background:${c.hex}"
+                    title="${c.label}"></button>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function chalkBarHtml(note, extraHtml = '') {
+      return `
+        <div class="drag-handle chalk-bar cursor-grab active:cursor-grabbing flex items-center justify-between gap-3 select-none">
+          ${chalkColorDotsHtml(note)}
+          <div class="flex items-center gap-2">
+            ${extraHtml}
+            <span class="text-xs opacity-60" title="Arraste para mover"><i class="fa-solid fa-grip-vertical"></i></span>
+            <button onclick="deleteNote('${note.id}')" class="chalk-del text-xs p-0.5 transition" title="Excluir">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function resizeHandlesHtml() {
+      return `
+        <div data-dir="left" class="resize-handle absolute top-0 left-0 w-2.5 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-black/30 hover:bg-black/5 rounded-l"></div>
+        <div data-dir="right" class="resize-handle absolute top-0 right-0 w-2.5 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-black/30 hover:bg-black/5 rounded-r">
+          <i class="fa-solid fa-ellipsis-vertical text-[10px]"></i>
+        </div>
+      `;
+    }
+
+    /* ---------- CHECKLIST EM GIZ (fundo transparente) ---------- */
+    function buildChalkChecklistHtml(note) {
+      const items = note.items || [];
+      return `
+        <div class="chalk-frame rounded-lg p-3" style="color:${getChalkHex(note)}">
+          ${chalkBarHtml(note)}
+
+          <input type="text"
+                 value="${escapeHtml(note.title || '')}"
+                 onchange="updateChecklistTitle('${note.id}', this.value)"
+                 placeholder="Título..."
+                 class="chalk-ink chalk-input w-full bg-transparent border-0 font-chalk text-3xl font-bold focus:outline-none pb-1"
+                 style="color:inherit">
+          <div class="chalk-line mb-2"></div>
+
+          <div class="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+            ${items.map((item, idx) => {
+              const anim = !!(lastToggled && lastToggled.id === note.id && lastToggled.idx === idx && item.done);
+              return `
+                <div class="flex items-center gap-2.5 group/item">
+                  <button class="chalk-check ${item.done ? 'is-done' : ''} ${anim ? 'animate' : ''}"
+                          onclick="toggleChecklistItem('${note.id}', ${idx})" title="Marcar / desmarcar">
+                    <svg viewBox="0 0 30 30" width="30" height="30" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 6.5 L22.5 5.5 L23.5 23 L5.5 24 Z" stroke-width="2.4"/>
+                      <path d="M4.5 5.5 L23 6.5 L22.5 24.5 L4 23 Z" stroke-width="1.2" opacity="0.5"/>
+                      <path class="check-mark" d="M7 15 L13 22 L28 3" stroke-width="3"/>
+                      <path class="check-mark2" d="M8 16 L13.5 22.5 L27 5" stroke-width="1.5"/>
+                    </svg>
+                  </button>
+                  <span class="flex-1 font-chalk text-2xl leading-snug"><span class="chalk-ink ${item.done ? 'chalk-strike' : ''} ${anim ? 'animate' : ''}">${escapeHtml(item.text)}</span></span>
+                  <button onclick="removeChecklistItem('${note.id}', ${idx})" class="item-remove chalk-del opacity-0 group-hover/item:opacity-100 text-xs transition" title="Remover tarefa">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="chalk-add-row flex items-center gap-2 pt-3">
+            <input type="text"
+                   id="new_item_input_${note.id}"
+                   onkeydown="if(event.key==='Enter') addChecklistItem('${note.id}')"
+                   placeholder="+ Adicionar tarefa..."
+                   class="chalk-ink chalk-input chalk-add flex-1 bg-transparent border-0 px-1 py-0.5 font-chalk text-xl focus:outline-none"
+                   style="color:inherit">
+            <button onclick="addChecklistItem('${note.id}')" class="chalk-ink font-chalk text-2xl px-2 hover:scale-110 transition" title="Adicionar tarefa">+</button>
+          </div>
+        </div>
+        ${resizeHandlesHtml()}
+      `;
+    }
+
+    /* ---------- TEXTO LIVRE EM GIZ ---------- */
+    function buildChalkTextHtml(note) {
+      const fs = note.fontSize || 32;
+      const extra = `
+        <button onclick="changeFontSize('${note.id}', -4)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button>
+        <button onclick="changeFontSize('${note.id}', 4)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>
+      `;
+      return `
+        <div class="chalk-frame rounded-lg p-2" style="color:${getChalkHex(note)}">
+          ${chalkBarHtml(note, extra)}
+          <textarea id="input_${note.id}"
+                    oninput="onNoteTextInput('${note.id}', this)"
+                    placeholder="Escreva em giz..."
+                    class="chalk-ink chalk-input w-full bg-transparent border-none resize-none focus:outline-none font-chalk leading-snug overflow-hidden"
+                    style="font-size:${fs}px; min-height:52px; color:inherit">${escapeHtml(note.content || '')}</textarea>
+        </div>
+        ${resizeHandlesHtml()}
+      `;
+    }
+
+    /* ---------- SETAS E FORMAS GEOMÉTRICAS EM GIZ ---------- */
+    const SHAPE_DEFAULTS = {
+      arrow:    { w: 180, h: 60 },
+      curve:    { w: 180, h: 110 },
+      line:     { w: 180, h: 40 },
+      rect:     { w: 180, h: 110 },
+      circle:   { w: 140, h: 120 },
+      triangle: { w: 150, h: 130 },
+      diamond:  { w: 150, h: 130 },
+      star:     { w: 140, h: 135 }
+    };
+
+    function arrowHeadPath(x, y, ang, size) {
+      const a1 = ang + Math.PI * 0.82;
+      const a2 = ang - Math.PI * 0.82;
+      const x1 = (x + Math.cos(a1) * size).toFixed(1);
+      const y1 = (y + Math.sin(a1) * size).toFixed(1);
+      const x2 = (x + Math.cos(a2) * size).toFixed(1);
+      const y2 = (y + Math.sin(a2) * size).toFixed(1);
+      return `M${x1} ${y1} L${x.toFixed(1)} ${y.toFixed(1)} L${x2} ${y2}`;
+    }
+
+    function shapeInnerHtml(note) {
+      const w = Math.round(note.width || 160);
+      const h = Math.round(note.height || 80);
+      const p = 8;
+      let d = '';
+
+      switch (note.shape) {
+        case 'line': {
+          d = `<path d="M${p} ${h / 2} L${w - p} ${h / 2}"/>`;
+          break;
+        }
+        case 'arrow': {
+          const y = h / 2;
+          const s = Math.max(8, Math.min(22, h / 2 - 4, w / 3));
+          d = `<path d="M${p} ${y} L${w - p} ${y}"/><path d="${arrowHeadPath(w - p, y, 0, s)}"/>`;
+          break;
+        }
+        case 'curve': {
+          const sx = p, sy = h - p - 2;
+          const c1x = p + w * 0.05, c1y = p;
+          const c2x = w * 0.55, c2y = p;
+          const ex = w - p - 6, ey = h * 0.5;
+          const ang = Math.atan2(ey - c2y, ex - c2x);
+          const s = Math.max(8, Math.min(20, w / 4, h / 3));
+          d = `<path d="M${sx} ${sy} C${c1x.toFixed(1)} ${c1y} ${c2x.toFixed(1)} ${c2y} ${ex} ${ey.toFixed(1)}"/><path d="${arrowHeadPath(ex, ey, ang, s)}"/>`;
+          break;
+        }
+        case 'rect': {
+          d = `<rect x="${p}" y="${p}" width="${Math.max(1, w - 2 * p)}" height="${Math.max(1, h - 2 * p)}" rx="4"/>`;
+          break;
+        }
+        case 'circle': {
+          d = `<ellipse cx="${w / 2}" cy="${h / 2}" rx="${Math.max(1, w / 2 - p)}" ry="${Math.max(1, h / 2 - p)}"/>`;
+          break;
+        }
+        case 'triangle': {
+          d = `<path d="M${w / 2} ${p} L${w - p} ${h - p} L${p} ${h - p} Z"/>`;
+          break;
+        }
+        case 'diamond': {
+          d = `<path d="M${w / 2} ${p} L${w - p} ${h / 2} L${w / 2} ${h - p} L${p} ${h / 2} Z"/>`;
+          break;
+        }
+        case 'star': {
+          const cx = w / 2, cy = h / 2 + 2;
+          const rx = Math.max(1, w / 2 - p), ry = Math.max(1, h / 2 - p);
+          const pts = [];
+          for (let i = 0; i < 10; i++) {
+            const a = -Math.PI / 2 + i * Math.PI / 5;
+            const r = i % 2 === 0 ? 1 : 0.42;
+            pts.push(`${(cx + Math.cos(a) * rx * r).toFixed(1)},${(cy + Math.sin(a) * ry * r).toFixed(1)}`);
+          }
+          d = `<polygon points="${pts.join(' ')}"/>`;
+          break;
+        }
+        default:
+          d = '';
+      }
+
+      /* Traço principal + traço fantasma levemente deslocado (efeito de giz passado duas vezes) */
+      return `
+        <g filter="url(#chalkShape)">
+          <rect width="${w}" height="${h}" fill="none" stroke="none"/>
+          <g fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">${d}</g>
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" transform="translate(1.4 -1.1)">${d}</g>
+        </g>
+      `;
+    }
+
+    function updateShapeSvg(element, note) {
+      const svg = element.querySelector('.shape-svg');
+      if (!svg) return;
+      const w = Math.round(note.width || 160);
+      const h = Math.round(note.height || 80);
+      svg.setAttribute('width', w);
+      svg.setAttribute('height', h);
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      svg.innerHTML = shapeInnerHtml(note);
+    }
+
+    function buildShapeHtml(note) {
+      const w = Math.round(note.width || 160);
+      const h = Math.round(note.height || 80);
+      const rot = note.rotation || 0;
+      return `
+        <div class="drag-handle chalk-frame cursor-grab active:cursor-grabbing w-full h-full relative rounded" style="color:${getChalkHex(note)}">
+          <svg class="shape-svg block" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
+               style="overflow:visible; transform:rotate(${rot}deg); filter:drop-shadow(0 0 2px rgba(255,255,255,0.3));">
+            ${shapeInnerHtml(note)}
+          </svg>
+        </div>
+
+        <div class="shape-controls shape-controls-bg absolute top-1 right-1 z-20 flex items-center gap-2 rounded-full px-2 py-1">
+          ${chalkColorDotsHtml(note)}
+          <button onclick="rotateShape('${note.id}')" class="chalk-rot transition" title="Girar 45°">
+            <i class="fa-solid fa-rotate-right text-[11px]"></i>
+          </button>
+          <button onclick="deleteNote('${note.id}')" class="chalk-del transition" title="Excluir">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+
+        ${resizeHandlesHtml()}
+        <div class="resize-corner absolute -right-1 -bottom-1 w-6 h-6 z-20 cursor-nwse-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-white/70 transition" title="Redimensionar">
+          <span style="font-size:13px; line-height:1;">◢</span>
+        </div>
+      `;
+    }
+
+    function createNewShape(kind) {
+      closeShapeMenu();
+      const board = getActiveBoard();
+      const id = 'note_' + Date.now();
+      const def = SHAPE_DEFAULTS[kind] || { w: 160, h: 100 };
+
+      const boardEl = document.getElementById('boardCanvas');
+      const boardWidth = boardEl ? boardEl.offsetWidth : 800;
+      const posX = Math.max(20, Math.min(boardWidth / 2 - def.w / 2 + (Math.random() * 80 - 40), boardWidth - def.w - 20));
+      const posY = 80 + (Math.random() * 80);
+
+      board.nextZIndex += 1;
+
+      selectedNoteId = id;
+      board.notes.push({
+        id,
+        type: 'shape',
+        shape: kind,
+        chalk: 'white',
+        x: posX,
+        y: posY,
+        width: def.w,
+        height: def.h,
+        rotation: 0,
+        zIndex: board.nextZIndex
+      });
+
+      saveData();
+      renderNotes();
+    }
+
+    function rotateShape(id) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note) {
+        note.rotation = ((note.rotation || 0) + 45) % 360;
+        saveData();
+        renderNotes();
+      }
+    }
+
+    function changeChalkColor(id, colorId) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note) {
+        note.chalk = colorId;
+        saveData();
+        renderNotes();
+      }
+    }
+
+    function changeFontSize(id, delta) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note) {
+        note.fontSize = Math.max(16, Math.min((note.fontSize || 32) + delta, 72));
+        saveData();
+        renderNotes();
+      }
+    }
+
+    /* Menu flutuante de formas */
+    function toggleShapeMenu(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('shapeMenu');
+      if (!menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+        return;
+      }
+      const r = e.currentTarget.getBoundingClientRect();
+      menu.style.top = `${r.bottom + 8}px`;
+      menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 240))}px`;
+      menu.classList.remove('hidden');
+    }
+
+    function closeShapeMenu() {
+      const menu = document.getElementById('shapeMenu');
+      if (menu) menu.classList.add('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#shapeMenu')) closeShapeMenu();
+    });
+
+    /* Seleção: clicar numa peça de giz mostra os controles; clicar fora oculta tudo */
+    function cleanupEmptyChalkText(id) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note && note.type === 'chalktext' && !(note.content || '').trim()) {
+        board.notes = board.notes.filter(n => n.id !== id);
+        saveData();
+        const el = document.getElementById(id);
+        if (el) el.remove();
+        const emptyMsg = document.getElementById('emptyBoardMsg');
+        if (emptyMsg && board.notes.length === 0) emptyMsg.classList.remove('hidden');
+      }
+    }
+
+    function setSelectedNote(id) {
+      const prev = selectedNoteId;
+      selectedNoteId = id;
+      document.querySelectorAll('.chalk-note.is-selected').forEach(el => {
+        if (el.id !== id) el.classList.remove('is-selected');
+      });
+      if (id) {
+        const el = document.getElementById(id);
+        if (el && el.classList.contains('chalk-note')) el.classList.add('is-selected');
+      }
+      if (prev && prev !== id) cleanupEmptyChalkText(prev);
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+      const n = e.target.closest && e.target.closest('.chalk-note');
+      setSelectedNote(n ? n.id : null);
+    }, true);
+
+    /* Tema: giz (padrão) <-> canetão (lousa branca) */
+    function applyTheme() {
+      const marker = appData.theme === 'marker';
+      document.body.classList.toggle('theme-marker', marker);
+      const sub = document.getElementById('headerSubtitle');
+      if (sub) sub.innerText = marker ? 'Quadro Branco Moderno' : 'Quadro Verde Vintage';
+      const lbl = document.getElementById('themeBtnLabel');
+      if (lbl) lbl.innerText = marker ? 'Modo Giz' : 'Modo Canetão';
+      const ico = document.getElementById('themeBtnIcon');
+      if (ico) ico.className = marker ? 'fa-solid fa-chalkboard text-stone-700' : 'fa-solid fa-pen-fancy text-stone-700';
+    }
+
+    function toggleTheme() {
+      appData.theme = appData.theme === 'marker' ? 'chalk' : 'marker';
+      saveData();
+      applyTheme();
+      renderNotes();
+    }
+
+    /* ---------- RENDERIZAÇÃO ---------- */
+    function renderNotes() {
+      const board = getActiveBoard();
+      const container = document.getElementById('notesContainer');
+      const emptyMsg = document.getElementById('emptyBoardMsg');
+      
+      container.innerHTML = '';
+      updateBoardWidgetControls();
+
+      if (board.notes.length === 0) {
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+      } else {
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+      }
+
+      board.notes.forEach(note => {
+        const wrapper = document.createElement('div');
+        const colorObj = POSTIT_COLORS.find(c => c.id === note.color) || POSTIT_COLORS[0];
+        const isChalk = (note.type === 'checklist' || note.type === 'chalktext' || note.type === 'shape' || note.type === 'image');
+        
+        wrapper.id = note.id;
+        wrapper.className = isChalk ? 'absolute group style-wrapper chalk-note' : 'absolute group style-wrapper';
+        wrapper.style.left = `${note.x}px`;
+        wrapper.style.top = `${note.y}px`;
+        wrapper.style.width = `${note.width || 320}px`;
+        wrapper.style.zIndex = note.zIndex || 1;
+        if (isChalk && note.id === selectedNoteId) wrapper.classList.add('is-selected');
+        if (note.type === 'shape') {
+          wrapper.style.height = `${note.height || 80}px`;
+        }
+
+        if (note.type === 'checklist') {
+          wrapper.innerHTML = buildChalkChecklistHtml(note);
+        } else if (note.type === 'chalktext') {
+          wrapper.innerHTML = buildChalkTextHtml(note);
+        } else if (note.type === 'shape') {
+          wrapper.innerHTML = buildShapeHtml(note);
+        } else if (note.type === 'image') {
+          wrapper.innerHTML = buildImageHtml(note);
+          if (note.y < 52) wrapper.classList.add('img-bar-in');
+        } else {
+          wrapper.innerHTML = `
+          <!-- FITA ADESIVA FIXA NO TOPO -->
+          <div class="tape-effect w-24 h-5 absolute -top-2.5 left-1/2 transform -translate-x-1/2 z-30"></div>
+
+          <!-- PAPEL DO POST-IT TOTALMENTE ESTÁTICO (SEM VENTO) -->
+          <div class="postit-paper ${colorObj.class} rounded-b-md rounded-tr-md p-4 pt-3 border flex flex-col w-full h-full relative">
+            
+            <!-- Barra Superior / Header do Post-it -->
+            <div class="drag-handle cursor-grab active:cursor-grabbing flex items-center justify-between pb-2 mb-2 border-b border-black/10 select-none">
+              <!-- Seletor de Cores -->
+              <div class="flex items-center gap-1">
+                ${POSTIT_COLORS.map(c => `
+                  <button onclick="changeNoteColor('${note.id}', '${c.id}')" 
+                          class="w-3.5 h-3.5 rounded-full border border-black/20 ${c.class} hover:scale-125 transition ${note.color === c.id ? 'ring-2 ring-black/40 scale-110' : ''}" 
+                          title="${c.label}">
+                  </button>
+                `).join('')}
+              </div>
+
+              <!-- Mover & Excluir -->
+              <div class="flex items-center gap-2">
+                <span class="text-xs opacity-40" title="Arraste para mover"><i class="fa-solid fa-grip-vertical"></i></span>
+                <button onclick="deleteNote('${note.id}')" class="text-xs text-red-800/60 hover:text-red-900 p-0.5 transition" title="Excluir Post-it">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Conteúdo: Texto de Alongamento Vertical Autônomo -->
+            <textarea id="input_${note.id}" 
+                      oninput="onNoteTextInput('${note.id}', this)"
+                      placeholder="Escreva aqui..." 
+                      class="w-full bg-transparent border-none resize-none focus:outline-none font-chalk text-xl leading-relaxed min-h-[110px] placeholder:text-black/30 text-inherit overflow-hidden">${note.content || ''}</textarea>
+          </div>
+
+          <!-- ALÇAS LATERAIS DE REDIMENSIONAMENTO (LARGURA HORIZONTAL) -->
+          <div data-dir="left" class="resize-handle absolute top-0 left-0 w-2.5 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-black/30 hover:bg-black/5 rounded-l"></div>
+          <div data-dir="right" class="resize-handle absolute top-0 right-0 w-2.5 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-black/30 hover:bg-black/5 rounded-r">
+            <i class="fa-solid fa-ellipsis-vertical text-[10px]"></i>
+          </div>
+        `;
+        }
+
+        container.appendChild(wrapper);
+
+        if (note.type === 'text' || note.type === 'chalktext' || note.type === 'image') {
+          const ta = wrapper.querySelector('textarea');
+          if (ta) autoResizeTextarea(ta);
+        }
+
+        initDragAndDrop(wrapper, note.id);
+        initHorizontalResize(wrapper, note.id);
+        if (note.type === 'shape') initCornerResize(wrapper, note.id);
+        if (note.type === 'image') initImageCornerResize(wrapper, note.id);
+      });
+
+      hydrateImages();
+      lastToggled = null;
+    }
+
+    function onNoteTextInput(id, textarea) {
+      autoResizeTextarea(textarea);
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note) {
+        note.content = textarea.value;
+        saveData();
+      }
+    }
+
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
+
+    function changeNoteColor(id, colorId) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note) {
+        note.color = colorId;
+        saveData();
+        renderNotes();
+      }
+    }
+
+    function deleteNote(id) {
+      const board = getActiveBoard();
+      const gone = board.notes.find(n => n.id === id);
+      if (gone && gone.imageId) removeImage(gone.imageId);
+      board.notes = board.notes.filter(n => n.id !== id);
+      saveData();
+      renderNotes();
+    }
+
+    function updateChecklistTitle(id, newTitle) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note) {
+        note.title = newTitle;
+        saveData();
+      }
+    }
+
+    function addChecklistItem(id) {
+      const input = document.getElementById(`new_item_input_${id}`);
+      if (!input || !input.value.trim()) return;
+
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note) {
+        if (!note.items) note.items = [];
+        note.items.push({ text: input.value.trim(), done: false });
+        saveData();
+        renderNotes();
+        const again = document.getElementById(`new_item_input_${id}`);
+        if (again) again.focus();
+      }
+    }
+
+    function toggleChecklistItem(id, itemIndex) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note && note.items && note.items[itemIndex]) {
+        note.items[itemIndex].done = !note.items[itemIndex].done;
+        lastToggled = note.items[itemIndex].done ? { id, idx: itemIndex } : null;
+        saveData();
+        renderNotes();
+      }
+    }
+
+    function removeChecklistItem(id, itemIndex) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (note && note.items) {
+        note.items.splice(itemIndex, 1);
+        saveData();
+        renderNotes();
+      }
+    }
+
+    /* =========================================================================
+       BOTÃO DE EXPANDIR A TELA (FULLSCREEN API)
+       ========================================================================= */
+    function toggleFullscreen() {
+      const btn = document.getElementById('fullscreenBtn');
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          if (btn) btn.innerHTML = '<i class="fa-solid fa-compress"></i><span class="hidden lg:inline">Reduzir</span>';
+        }).catch(err => console.log(err));
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().then(() => {
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-expand"></i><span class="hidden lg:inline">Expandir</span>';
+          });
+        }
+      }
+    }
+
+    /* =========================================================================
+       MÓDULO DE CALENDÁRIO E PLANNER
+       ========================================================================= */
+    function openCalendarModal() {
+      document.getElementById('calendarModal').classList.remove('hidden');
+      renderCalendar();
+    }
+
+    function closeCalendarModal() {
+      document.getElementById('calendarModal').classList.add('hidden');
+    }
+
+    function changeMonth(delta) {
+      currentCalDate.setMonth(currentCalDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const board = getActiveBoard();
+      const year = currentCalDate.getFullYear();
+      const month = currentCalDate.getMonth();
+
+      const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      document.getElementById('calMonthYearTitle').innerText = `${monthNames[month]} ${year}`;
+
+      const grid = document.getElementById('calDaysGrid');
+      grid.innerHTML = '';
+
+      const firstDayIdx = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let i = 0; i < firstDayIdx; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'h-10 sm:h-11 rounded-lg bg-stone-900/30';
+        grid.appendChild(emptyCell);
+      }
+
+      const todayStr = getFormattedDateKey(new Date());
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(year, month, day);
+        const dateStr = getFormattedDateKey(dateObj);
+        const hasEvents = board.calendarEvents && board.calendarEvents[dateStr] && board.calendarEvents[dateStr].length > 0;
+        const isSelected = dateStr === selectedCalDateStr;
+        const isToday = dateStr === todayStr;
+
+        const dayBtn = document.createElement('button');
+        dayBtn.onclick = () => { selectedCalDateStr = dateStr; renderCalendar(); };
+        dayBtn.className = `h-10 sm:h-11 rounded-lg flex flex-col items-center justify-between p-1 text-xs font-bold transition relative border ${
+          isSelected 
+            ? 'bg-amber-500 text-stone-950 border-amber-300 shadow-lg scale-105' 
+            : isToday 
+              ? 'bg-emerald-900/60 text-emerald-200 border-emerald-500/50' 
+              : 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700'
+        }`;
+
+        dayBtn.innerHTML = `
+          <span>${day}</span>
+          ${hasEvents ? `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-stone-900' : 'bg-amber-400 animate-pulse'} mb-0.5"></span>` : '<span class="h-1.5"></span>'}
+        `;
+
+        grid.appendChild(dayBtn);
+      }
+
+      renderSelectedDayEvents();
+    }
+
+    function renderSelectedDayEvents() {
+      const board = getActiveBoard();
+      const container = document.getElementById('dayEventsList');
+      const titleEl = document.getElementById('selectedDateTitle');
+      const badgeEl = document.getElementById('selectedDateBadge');
+      
+      const [y, m, d] = selectedCalDateStr.split('-');
+      titleEl.innerText = `${d}/${m}/${y}`;
+      badgeEl.innerText = selectedCalDateStr === getFormattedDateKey(new Date()) ? 'Hoje' : 'Data';
+
+      container.innerHTML = '';
+      const events = (board.calendarEvents && board.calendarEvents[selectedCalDateStr]) || [];
+
+      if (events.length === 0) {
+        container.innerHTML = `<div class="text-center py-6 text-stone-500 font-chalk text-base">Nenhuma anotação neste dia.</div>`;
+        return;
+      }
+
+      events.forEach((evtText, idx) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'flex items-center justify-between bg-stone-900 p-2 rounded border border-stone-700/60 group';
+        itemEl.innerHTML = `
+          <span class="text-xs text-stone-200 font-chalk text-base leading-snug flex-1 pr-2">${escapeHtml(evtText)}</span>
+          <button onclick="removeCalendarEvent('${selectedCalDateStr}', ${idx})" class="text-stone-500 hover:text-red-400 p-0.5 transition">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        `;
+        container.appendChild(itemEl);
+      });
+    }
+
+    function addEventToSelectedDate() {
+      const input = document.getElementById('newEventInput');
+      if (!input || !input.value.trim()) return;
+
+      const board = getActiveBoard();
+      if (!board.calendarEvents) board.calendarEvents = {};
+      if (!board.calendarEvents[selectedCalDateStr]) {
+        board.calendarEvents[selectedCalDateStr] = [];
+      }
+
+      board.calendarEvents[selectedCalDateStr].push(input.value.trim());
+      input.value = '';
+
+      saveData();
+      renderCalendar();
+    }
+
+    function removeCalendarEvent(dateStr, index) {
+      const board = getActiveBoard();
+      if (board.calendarEvents && board.calendarEvents[dateStr]) {
+        board.calendarEvents[dateStr].splice(index, 1);
+        if (board.calendarEvents[dateStr].length === 0) delete board.calendarEvents[dateStr];
+        saveData();
+        renderCalendar();
+      }
+    }
+
+    /* PLANNER SEMANAL (PROXIMOS 7 DIAS) */
+    function openPlannerModal() {
+      document.getElementById('plannerModal').classList.remove('hidden');
+      renderPlanner();
+    }
+
+    function closePlannerModal() {
+      document.getElementById('plannerModal').classList.add('hidden');
+    }
+
+    function renderPlanner() {
+      const board = getActiveBoard();
+      const grid = document.getElementById('plannerDaysGrid');
+      grid.innerHTML = '';
+
+      const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      const today = new Date();
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+
+        const dateStr = getFormattedDateKey(d);
+        const dayOfWeek = dayNames[d.getDay()];
+        const dayNum = String(d.getDate()).padStart(2, '0');
+        const monthNum = String(d.getMonth() + 1).padStart(2, '0');
+
+        const isToday = i === 0;
+        const events = (board.calendarEvents && board.calendarEvents[dateStr]) || [];
+
+        const col = document.createElement('div');
+        col.className = `bg-stone-800 rounded-xl border flex flex-col min-h-[300px] shadow-md overflow-hidden ${
+          isToday ? 'border-purple-500/80 ring-2 ring-purple-500/20' : 'border-stone-700'
+        }`;
+
+        col.innerHTML = `
+          <div class="p-2.5 border-b border-stone-700 flex flex-col items-center justify-center ${
+            isToday ? 'bg-purple-950/60 text-purple-200' : 'bg-stone-800/90 text-stone-300'
+          }">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">${isToday ? 'HOJE' : dayOfWeek}</span>
+            <span class="font-chalk text-xl font-bold">${dayNum}/${monthNum}</span>
+          </div>
+
+          <div class="p-2 flex-1 overflow-y-auto space-y-1.5 min-h-[160px] bg-stone-900/40">
+            ${events.length === 0 ? `
+              <div class="text-center py-6 text-stone-600 font-chalk text-xs">Sem notas</div>
+            ` : events.map((evt, idx) => `
+              <div class="bg-stone-900/90 p-1.5 rounded border border-stone-700/80 font-chalk text-sm leading-snug flex items-start justify-between gap-1 group">
+                <span class="text-stone-200 break-words flex-1">• ${escapeHtml(evt)}</span>
+                <button onclick="removePlannerItem('${dateStr}', ${idx})" class="opacity-0 group-hover:opacity-100 text-stone-500 hover:text-red-400 transition text-xs p-0.5">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="p-2 border-t border-stone-700/80 bg-stone-800/80">
+            <input type="text" 
+                   id="planner_input_${dateStr}" 
+                   onkeydown="if(event.key==='Enter') addPlannerItem('${dateStr}')"
+                   placeholder="+ Nota..." 
+                   class="w-full bg-stone-900 text-xs px-2 py-1 rounded border border-stone-700 focus:outline-none focus:border-purple-400 text-stone-200">
+          </div>
+        `;
+
+        grid.appendChild(col);
+      }
+    }
+
+    function addPlannerItem(dateStr) {
+      const input = document.getElementById(`planner_input_${dateStr}`);
+      if (!input || !input.value.trim()) return;
+
+      const board = getActiveBoard();
+      if (!board.calendarEvents) board.calendarEvents = {};
+      if (!board.calendarEvents[dateStr]) board.calendarEvents[dateStr] = [];
+
+      board.calendarEvents[dateStr].push(input.value.trim());
+      saveData();
+      renderPlanner();
+    }
+
+    function removePlannerItem(dateStr, index) {
+      const board = getActiveBoard();
+      if (board.calendarEvents && board.calendarEvents[dateStr]) {
+        board.calendarEvents[dateStr].splice(index, 1);
+        if (board.calendarEvents[dateStr].length === 0) delete board.calendarEvents[dateStr];
+        saveData();
+        renderPlanner();
+      }
+    }
+
+    /* =========================================================================
+       SISTEMA DE DIÁLOGOS CUSTOMIZADOS (SEM USO DE ALERT/CONFIRM)
+       ========================================================================= */
+    let dialogConfirmCallback = null;
+
+    function showCustomDialog({ title, message, hasInput = false, inputValue = '', onConfirm = null }) {
+      document.getElementById('dialogTitle').innerText = title;
+      document.getElementById('dialogMessage').innerText = message;
+      
+      const inputContainer = document.getElementById('dialogInputContainer');
+      const input = document.getElementById('dialogInput');
+
+      if (hasInput) {
+        inputContainer.classList.remove('hidden');
+        input.value = inputValue;
+      } else {
+        inputContainer.classList.add('hidden');
+      }
+
+      dialogConfirmCallback = onConfirm;
+
+      const modal = document.getElementById('customDialogModal');
+      modal.classList.remove('hidden');
+
+      const confirmBtn = document.getElementById('dialogConfirmBtn');
+      confirmBtn.onclick = () => {
+        if (dialogConfirmCallback) {
+          dialogConfirmCallback(hasInput ? input.value : true);
+        }
+        closeCustomDialog();
+      };
+    }
+
+    function closeCustomDialog() {
+      document.getElementById('customDialogModal').classList.add('hidden');
+      dialogConfirmCallback = null;
+    }
+
+    function confirmClearBoard() {
+      const board = getActiveBoard();
+      showCustomDialog({
+        title: 'Limpar Lousa',
+        message: `Deseja apagar todos os post-its e tarefas da "${board.name}"?`,
+        hasInput: false,
+        onConfirm: () => {
+          purgeImages(board.notes);
+          board.notes = [];
+          board.calendarEvents = {};
+          saveData();
+          renderNotes();
+        }
+      });
+    }
+
+    function getFormattedDateKey(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    /* =========================================================================
+       FIREBASE: LOGIN GOOGLE E SINCRONIZAÇÃO (a ponte fica em firebase.js -> window.FB)
+       ========================================================================= */
+    let currentUser = null;
+    let appReady = false;
+    let saveTimer = null;
+
+    const byId = (id) => document.getElementById(id);
+    const localKey = () => LOCAL_PREFIX + (currentUser ? currentUser.uid : 'anon');
+
+    function setLoginState(state, msg) {
+      const scr = byId('loginScreen');
+      if (state === 'hidden') { scr.classList.add('hidden'); return; }
+      scr.classList.remove('hidden');
+      byId('loadingBox').classList.toggle('hidden', state !== 'loading');
+      byId('loginBox').classList.toggle('hidden', state !== 'login');
+      byId('errorBox').classList.toggle('hidden', state !== 'error');
+      if (state === 'loading' && msg) byId('loadingText').innerText = msg;
+      if (state === 'error') byId('errorText').innerText = msg || 'Ocorreu um erro.';
+      if (state === 'login') byId('loginMsg').classList.add('hidden');
+    }
+
+    function showLoginMsg(msg) {
+      const el = byId('loginMsg');
+      if (!msg) { el.classList.add('hidden'); return; }
+      el.innerText = msg;
+      el.classList.remove('hidden');
+    }
+
+    function authErrorMsg(err) {
+      const c = (err && err.code) || '';
+      if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return '';
+      if (c === 'auth/popup-blocked') return 'O navegador bloqueou a janela de login. Libere pop-ups para este site e tente de novo.';
+      if (c === 'auth/unauthorized-domain') return 'Este domínio não está autorizado no Firebase. Adicione-o em Authentication > Settings > Authorized domains.';
+      if (c === 'auth/operation-not-allowed') return 'O login com Google não está ativado no Firebase (Authentication > Sign-in method).';
+      if (c === 'auth/network-request-failed') return 'Sem conexão. Verifique sua internet.';
+      return 'Não foi possível entrar. ' + (c || (err && err.message) || '');
+    }
+
+    function firestoreErrorMsg(err) {
+      const c = (err && err.code) || '';
+      if (c === 'permission-denied') return 'Sem permissão no Firestore. Confira se o banco foi criado e se as regras de segurança foram publicadas.';
+      if (c === 'unavailable') return 'Sem conexão com o servidor. Verifique sua internet e tente novamente.';
+      return 'Erro ao carregar seus dados. ' + (c || (err && err.message) || '');
+    }
+
+    async function doLogin() {
+      if (!window.FB) { showLoginMsg('O Firebase ainda não carregou. Aguarde um instante e tente de novo.'); return; }
+      showLoginMsg('');
+      try {
+        await FB.login();
+      } catch (err) {
+        console.error('Erro no login:', err);
+        showLoginMsg(authErrorMsg(err));
+      }
+    }
+
+    async function doLogout() {
+      try { if (saveTimer) await flushCloudSave(); } catch (e) {}
+      try { localStorage.removeItem(localKey()); } catch (e) {}
+      if (window.FB) {
+        try { await FB.logout(); } catch (e) { console.error(e); }
+      } else {
+        handleSignedOut();
+      }
+    }
+
+    function retryLoad() {
+      if (currentUser) handleSignedIn(currentUser);
+      else location.reload();
+    }
+
+    function setSyncStatus(state, detail) {
+      const el = byId('syncStatus');
+      if (!el) return;
+      const map = {
+        pending: ['fa-cloud-arrow-up', 'text-amber-400 animate-pulse', 'Salvando...'],
+        saving:  ['fa-cloud-arrow-up', 'text-amber-400 animate-pulse', 'Salvando...'],
+        saved:   ['fa-cloud', 'text-emerald-400', 'Salvo na nuvem'],
+        error:   ['fa-triangle-exclamation', 'text-red-500', 'Erro ao salvar' + (detail ? ': ' + detail : '')]
+      };
+      const m = map[state] || map.saved;
+      el.className = 'px-1 text-sm ' + m[1];
+      el.title = m[2];
+      el.innerHTML = '<i class="fa-solid ' + m[0] + '"></i>';
+    }
+
+    function scheduleCloudSave() {
+      setSyncStatus('pending');
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(flushCloudSave, 900);
+    }
+
+    async function flushCloudSave() {
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      if (!window.FB || !currentUser || !appReady) return;
+      setSyncStatus('saving');
+      try {
+        await FB.saveAppData(appData);
+        setSyncStatus(saveTimer ? 'pending' : 'saved');
+      } catch (err) {
+        console.error('Erro ao salvar na nuvem:', err);
+        setSyncStatus('error', err && err.message);
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && saveTimer) flushCloudSave();
+    });
+
+    function updateUserChip() {
+      const chip = byId('userChip');
+      if (!chip || !currentUser) return;
+      chip.classList.remove('hidden');
+      const ph = byId('userPhoto');
+      if (currentUser.photo) { ph.src = currentUser.photo; ph.classList.remove('hidden'); }
+      else ph.classList.add('hidden');
+      const nm = byId('userName');
+      nm.innerText = currentUser.name || currentUser.email || '';
+      nm.title = currentUser.email || '';
+    }
+
+    async function handleSignedIn(user) {
+      currentUser = user;
+      appReady = false;
+      setLoginState('loading', 'Carregando sua lousa...');
+
+      let cloud = null;
+      try {
+        cloud = await FB.loadAppData();
+      } catch (err) {
+        console.error('Erro ao carregar do Firebase:', err);
+        setLoginState('error', firestoreErrorMsg(err));
+        return;
+      }
+
+      let local = null;
+      try {
+        const sv = localStorage.getItem(localKey());
+        if (sv) local = JSON.parse(sv);
+      } catch (e) {}
+
+      let chosen = null;
+      if (cloud && local) chosen = ((local.updatedAt || 0) > (cloud.updatedAt || 0)) ? local : cloud;
+      else chosen = cloud || local;
+
+      // Primeira vez no Firebase: aproveita a lousa antiga salva só neste navegador
+      let migrated = false;
+      if (!chosen) {
+        try {
+          const old = localStorage.getItem(LEGACY_STORAGE_KEY);
+          if (old) { chosen = JSON.parse(old); migrated = true; }
+        } catch (e) {}
+      }
+
+      if (chosen && chosen.boards && chosen.boards.length) {
+        appData = chosen;
+        if (!(appData.activeBoardIndex >= 0 && appData.activeBoardIndex < appData.boards.length)) appData.activeBoardIndex = 0;
+      } else {
+        createInitialDefaultBoard();
+      }
+
+      appReady = true;
+      if (migrated) { try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch (e) {} }
+      if (!cloud || chosen !== cloud) saveData();   // garante a versão atual na nuvem
+
+      selectedNoteId = null;
+      updateUserChip();
+      applyTheme();
+      renderNotes();
+      setSyncStatus('saved');
+      setLoginState('hidden');
+    }
+
+    function handleSignedOut() {
+      currentUser = null;
+      appReady = false;
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      Object.keys(imageURLs).forEach(k => { URL.revokeObjectURL(imageURLs[k]); delete imageURLs[k]; });
+      appData = { activeBoardIndex: 0, boards: [] };
+      document.body.classList.remove('theme-marker');
+      const c = byId('notesContainer');
+      if (c) c.innerHTML = '';
+      byId('userChip').classList.add('hidden');
+      closeCalendarModal();
+      closePlannerModal();
+      closeImageModal();
+      setLoginState('login');
+    }
+
+    window.addEventListener('fb-auth', (e) => {
+      const u = e.detail && e.detail.user;
+      if (u) handleSignedIn(u);
+      else handleSignedOut();
+    });
+
+    /* =========================================================================
+       IMAGENS (guardadas em base64 no Firestore; vintage na lousa, moderno no quadro branco)
+       ========================================================================= */
+    const imageURLs = {};      // id -> blob URL (só para exibir rápido)
+    const imageLoading = {};
+    const MAX_IMG_CHARS = 800000; // limite do documento do Firestore é ~1 MB
+    let pendingImage = null;
+
+    function findNote(id) {
+      return getActiveBoard().notes.find(n => n.id === id);
+    }
+
+    function dataUrlToBlobUrl(dataUrl) {
+      const parts = dataUrl.split(',');
+      const mime = (parts[0].match(/data:(.*?);/) || [])[1] || 'image/jpeg';
+      const bin = atob(parts[1]);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return URL.createObjectURL(new Blob([arr], { type: mime }));
+    }
+
+    /* Reduz a foto (mantendo a proporção) e converte para base64 abaixo do limite do Firestore */
+    function processImageFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('read'));
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = () => reject(new Error('decode'));
+          img.onload = () => {
+            let maxDim = 1280, quality = 0.85;
+            for (let i = 0; i < 8; i++) {
+              const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+              const w = Math.max(1, Math.round(img.naturalWidth * scale));
+              const h = Math.max(1, Math.round(img.naturalHeight * scale));
+              const c = document.createElement('canvas');
+              c.width = w; c.height = h;
+              const ctx = c.getContext('2d');
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, w, h);
+              ctx.drawImage(img, 0, 0, w, h);
+              const out = c.toDataURL('image/jpeg', quality);
+              if (out.length <= MAX_IMG_CHARS) { resolve({ dataUrl: out, width: w, height: h }); return; }
+              maxDim = Math.round(maxDim * 0.82);
+              quality = Math.max(0.6, quality - 0.05);
+            }
+            reject(new Error('toobig'));
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function pickImage() {
+      byId('imageFileInput').click();
+    }
+
+    async function onImageFileChosen(e) {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showCustomDialog({ title: 'Imagem', message: 'Escolha um arquivo de imagem (JPG, PNG, WebP...).' });
+        return;
+      }
+      try {
+        pendingImage = await processImageFile(file);
+      } catch (err) {
+        console.error(err);
+        showCustomDialog({ title: 'Imagem', message: 'Não consegui processar essa imagem. Tente outra foto.' });
+        return;
+      }
+      byId('imagePreview').src = pendingImage.dataUrl;
+      byId('imageInfo').innerText = `${pendingImage.width} × ${pendingImage.height} px · ${Math.round(pendingImage.dataUrl.length / 1024)} KB (salva em base64)`;
+      byId('imageModalError').classList.add('hidden');
+      byId('btnImgOnly').disabled = false;
+      byId('btnImgCaption').disabled = false;
+      byId('imageModal').classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+      byId('imageModal').classList.add('hidden');
+      pendingImage = null;
+    }
+
+    async function confirmAddImage(withCaption) {
+      if (!pendingImage || !currentUser) return;
+      const btnA = byId('btnImgOnly'), btnB = byId('btnImgCaption'), errEl = byId('imageModalError');
+      btnA.disabled = true; btnB.disabled = true;
+      errEl.classList.add('hidden');
+
+      const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      try {
+        await FB.saveImage(imageId, pendingImage.dataUrl);
+      } catch (err) {
+        console.error('Erro ao enviar imagem:', err);
+        errEl.innerText = 'Não foi possível enviar a imagem. ' + ((err && (err.code || err.message)) || '');
+        errEl.classList.remove('hidden');
+        btnA.disabled = false; btnB.disabled = false;
+        return;
+      }
+
+      imageURLs[imageId] = dataUrlToBlobUrl(pendingImage.dataUrl);
+
+      const board = getActiveBoard();
+      const boardEl = byId('boardCanvas');
+      const boardWidth = boardEl ? boardEl.offsetWidth : 800;
+      const width = 300;
+      const id = 'note_' + Date.now();
+      board.nextZIndex += 1;
+
+      board.notes.push({
+        id,
+        type: 'image',
+        imageId,
+        aspect: pendingImage.width / pendingImage.height,
+        width,
+        showCaption: !!withCaption,
+        caption: '',
+        x: Math.max(20, Math.min(boardWidth / 2 - width / 2 + (Math.random() * 80 - 40), boardWidth - width - 40)),
+        y: 60 + Math.random() * 60,
+        zIndex: board.nextZIndex
+      });
+
+      selectedNoteId = id;
+      saveData();
+      renderNotes();
+      closeImageModal();
+
+      if (withCaption) {
+        const ta = byId('input_' + id);
+        if (ta) ta.focus();
+      }
+    }
+
+    function imgCaptionSize(w) {
+      return Math.round(Math.max(12, Math.min(30, w / 13)));
+    }
+
+    function buildImageHtml(note) {
+      const marker = appData.theme === 'marker';
+      const url = imageURLs[note.imageId] || '';
+      const w = Math.round(note.width || 300);
+      const aspect = note.aspect || 1.5;
+      const showCap = note.showCaption !== false;
+
+      return `
+        <div class="img-bar">
+          <button onclick="toggleImageCaption('${note.id}')" class="img-bar-btn" title="${showCap ? 'Remover o texto (só foto)' : 'Adicionar texto embaixo'}">
+            <i class="fa-solid ${showCap ? 'fa-image' : 'fa-closed-captioning'}"></i> ${showCap ? 'Só foto' : 'Texto'}
+          </button>
+          <button onclick="stepImageSize('${note.id}', -1)" class="img-bar-btn" title="Diminuir"><i class="fa-solid fa-minus"></i></button>
+          <input type="range" class="img-range" min="80" max="1200" step="10" value="${w}"
+                 oninput="liveImageWidth('${note.id}', this.value)" onchange="commitImageWidth()" title="Tamanho">
+          <button onclick="stepImageSize('${note.id}', 1)" class="img-bar-btn" title="Aumentar"><i class="fa-solid fa-plus"></i></button>
+          <button onclick="deleteNote('${note.id}')" class="img-bar-btn chalk-del" title="Excluir imagem"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="img-card ${marker ? 'img-modern' : 'img-vintage'} drag-handle cursor-grab active:cursor-grabbing">
+          <div class="img-frame" style="aspect-ratio:${aspect}">
+            <img data-img-id="${note.imageId}" ${url ? `src="${url}"` : ''} draggable="false" alt="">
+          </div>
+          ${showCap ? `
+            <textarea id="input_${note.id}"
+                      oninput="onImageCaptionInput('${note.id}', this)"
+                      placeholder="Escreva sobre a foto..."
+                      class="img-caption"
+                      style="font-size:${imgCaptionSize(w)}px">${escapeHtml(note.caption || '')}</textarea>
+          ` : ''}
+        </div>
+
+        ${resizeHandlesHtml()}
+        <div class="img-corner resize-corner absolute -right-2 -bottom-2 w-7 h-7 z-20 cursor-nwse-resize opacity-0 group-hover:opacity-100 flex items-center justify-center transition" title="Redimensionar (mantém a proporção)">
+          <span style="font-size:13px; line-height:1;">◢</span>
+        </div>
+      `;
+    }
+
+    /* Busca no Firestore as imagens que ainda não estão em memória */
+    function hydrateImages() {
+      document.querySelectorAll('img[data-img-id]').forEach(img => {
+        const id = img.dataset.imgId;
+        if (imageURLs[id]) {
+          if (img.getAttribute('src') !== imageURLs[id]) img.src = imageURLs[id];
+          return;
+        }
+        if (imageLoading[id] || !window.FB || !currentUser) return;
+        imageLoading[id] = true;
+        FB.loadImage(id)
+          .then(d => { if (d) imageURLs[id] = dataUrlToBlobUrl(d); })
+          .catch(err => console.error('Erro ao carregar imagem:', err))
+          .finally(() => { delete imageLoading[id]; if (imageURLs[id]) hydrateImages(); });
+      });
+    }
+
+    function removeImage(imageId) {
+      if (imageURLs[imageId]) { URL.revokeObjectURL(imageURLs[imageId]); delete imageURLs[imageId]; }
+      if (window.FB && currentUser) FB.deleteImage(imageId).catch(err => console.error('Erro ao apagar imagem:', err));
+    }
+
+    function purgeImages(notes) {
+      (notes || []).forEach(n => { if (n.imageId) removeImage(n.imageId); });
+    }
+
+    function syncImageUI(el, note) {
+      const cap = el.querySelector('.img-caption');
+      if (cap) { cap.style.fontSize = imgCaptionSize(note.width) + 'px'; autoResizeTextarea(cap); }
+      const r = el.querySelector('.img-range');
+      if (r) r.value = Math.round(note.width);
+    }
+
+    function liveImageWidth(id, v) {
+      const note = findNote(id);
+      const el = byId(id);
+      if (!note || !el) return;
+      note.width = Math.max(80, Math.min(Number(v), 1200));
+      el.style.width = note.width + 'px';
+      syncImageUI(el, note);
+    }
+
+    function commitImageWidth() {
+      saveData();
+    }
+
+    function stepImageSize(id, dir) {
+      const note = findNote(id);
+      if (!note) return;
+      const factor = dir > 0 ? 1.15 : 1 / 1.15;
+      note.width = Math.max(80, Math.min(Math.round((note.width || 300) * factor), 1200));
+      saveData();
+      renderNotes();
+    }
+
+    function toggleImageCaption(id) {
+      const note = findNote(id);
+      if (!note) return;
+      note.showCaption = !note.showCaption;
+      selectedNoteId = id;
+      saveData();
+      renderNotes();
+      if (note.showCaption) {
+        const ta = byId('input_' + id);
+        if (ta) ta.focus();
+      }
+    }
+
+    function onImageCaptionInput(id, textarea) {
+      autoResizeTextarea(textarea);
+      const note = findNote(id);
+      if (note) {
+        note.caption = textarea.value;
+        saveData();
+      }
+    }
+
+    /* Redimensionar pelo canto: só muda a largura; a altura segue a proporção da foto */
+    let activeImgCorner = null;
+
+    function initImageCornerResize(element, noteId) {
+      const handle = element.querySelector('.img-corner');
+      if (!handle) return;
+
+      const onDown = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const p = getClientXY(e);
+        activeImgCorner = { element, noteId, startX: p.x, startW: element.offsetWidth };
+        document.addEventListener('pointermove', onImgCornerMove);
+        document.addEventListener('pointerup', onImgCornerUp);
+        document.addEventListener('touchmove', onImgCornerMove, { passive: false });
+        document.addEventListener('touchend', onImgCornerUp);
+      };
+
+      handle.addEventListener('pointerdown', onDown);
+      handle.addEventListener('touchstart', onDown, { passive: false });
+    }
+
+    function onImgCornerMove(e) {
+      if (!activeImgCorner) return;
+      if (e.preventDefault && e.cancelable) e.preventDefault();
+      const p = getClientXY(e);
+      const newW = Math.max(80, Math.min(activeImgCorner.startW + (p.x - activeImgCorner.startX), 1200));
+      activeImgCorner.element.style.width = newW + 'px';
+      const note = findNote(activeImgCorner.noteId);
+      if (note) {
+        note.width = newW;
+        syncImageUI(activeImgCorner.element, note);
+      }
+    }
+
+    function onImgCornerUp() {
+      if (!activeImgCorner) return;
+      activeImgCorner = null;
+      document.removeEventListener('pointermove', onImgCornerMove);
+      document.removeEventListener('pointerup', onImgCornerUp);
+      document.removeEventListener('touchmove', onImgCornerMove);
+      document.removeEventListener('touchend', onImgCornerUp);
+      saveData();
+    }
+
+    // Inicialização: a lousa só aparece depois do login (evento "fb-auth" vindo do firebase.js)
+    setTimeout(() => {
+      if (!window.FB) {
+        setLoginState('error', 'Não foi possível carregar o Firebase. Abra o site pelo endereço do GitHub Pages (https) e confira sua conexão.');
+      }
+    }, 8000);
+
+  </script>
+
+  <!-- Firebase (login Google + banco de dados) -->
+  <script type="module" src="firebase.js"></script>
+</body>
+</html>
