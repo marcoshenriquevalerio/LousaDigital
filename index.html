@@ -358,6 +358,33 @@
       #userName { display: inline !important; }
       #showHeaderBtn { top: auto; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     }
+    /* ===== Celular: lousa inteira em palco fixo (arrastar de lado / visão total) ===== */
+    .drag-handle, .resize-handle, .resize-corner { touch-action: none; }
+    @media (max-width: 899px) {
+      #boardViewport { overflow: auto !important; scrollbar-width: none; -webkit-overflow-scrolling: touch; display: flex; }
+      #boardViewport::-webkit-scrollbar { display: none; }
+    }
+    @media (max-width: 420px) { .tb { width: 38px; height: 38px; font-size: 15px; } }
+    @media (max-width: 345px) { .tb { width: 34px; height: 34px; font-size: 14px; } }
+
+    /* ===== Adesivos ===== */
+    .sticker-art { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; transform: rotate(var(--r, 0deg));
+      filter: drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) drop-shadow(0 -2.5px 0 #fff) drop-shadow(0 3px 4px rgba(0,0,0,.45)); }
+    .sticker-emoji { line-height: 1; text-align: center; user-select: none; }
+    .sticker-img { width: 100%; height: 100%; border-radius: 22%; overflow: hidden; position: relative; }
+    .sticker-img img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    .sticker-img::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 68%, rgba(0,0,0,.16) 100%); }
+    .sticker-paste { animation: stickerPaste .65s cubic-bezier(.2,.8,.3,1) both; }
+    @keyframes stickerPaste {
+      0%   { transform: rotate(calc(var(--r, 0deg) - 10deg)) scale(1.55) translateY(-22px); opacity: .25; }
+      55%  { transform: rotate(var(--r, 0deg)) scale(.9) translateY(0); opacity: 1; }
+      75%  { transform: rotate(var(--r, 0deg)) scale(1.04); }
+      100% { transform: rotate(var(--r, 0deg)) scale(1); }
+    }
+    .stk-btn { aspect-ratio: 1; border-radius: 10px; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center; font-size: 22px; line-height: 1; position: relative; transition: transform .12s ease, background .2s ease; }
+    .stk-btn:hover { background: rgba(255,255,255,.25); transform: scale(1.1); }
+    .stk-btn img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+    .stk-del { position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%; background: #b91c1c; color: #fff; font-size: 9px; display: flex; align-items: center; justify-content: center; }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -410,6 +437,7 @@
       <button onclick="createNewNote('chalktext')" class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300 " title="Texto livre (giz / canetão)"><i class="fa-solid fa-pen-nib"></i><span class="tb-label"></span></button>
       <button onclick="pickImage()" class="tb bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-300 " title="Adicionar imagem"><i class="fa-solid fa-image"></i><span class="tb-label"></span></button>
       <button onclick="toggleShapeMenu(event)" class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300 " title="Setas e formas"><i class="fa-solid fa-shapes"></i><span class="tb-label"></span></button>
+      <button onclick="toggleStickerMenu(event)" class="tb bg-yellow-100 hover:bg-yellow-200 text-yellow-600 border border-yellow-300" title="Adesivos"><i class="fa-solid fa-face-smile-beam"></i><span class="tb-label"></span></button>
       <button onclick="openCalendarModal()" class="tb bg-sky-100 hover:bg-sky-200 text-sky-700 border border-sky-300 " title="Calendário"><i class="fa-solid fa-calendar-days"></i><span class="tb-label"></span></button>
       <button onclick="openPlannerModal()" class="tb bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300 desk-only" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label"></span></button>
       <button id="moreBtn" onclick="toggleMore(event)" class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Mais opções"><i class="fa-solid fa-ellipsis"></i></button>
@@ -457,7 +485,7 @@
   </div>
 
   <!-- MAIN: Área da Lousa Verde Escolar Vintage -->
-  <main id="boardCanvas" class="chalkboard-bg flex-1 min-h-0 relative w-full overflow-hidden p-4 sm:p-8">
+  <div id="boardViewport" class="chalkboard-bg flex-1 min-h-0 w-full relative overflow-hidden"><div id="boardSizer" style="position:relative;width:100%;height:100%"><main id="boardCanvas" class="relative overflow-hidden p-4 sm:p-8" style="width:100%;height:100%;transform-origin:0 0">
     
     <!-- Elementos Decorativos em Giz -->
     <div class="absolute bottom-16 right-8 pointer-events-none opacity-20 font-chalk text-xl chalk-text select-none hidden lg:block text-right">
@@ -474,7 +502,7 @@
     <!-- Container onde são renderizados os Post-its -->
     <div id="notesContainer" class="relative w-full h-full"></div>
 
-  </main>
+  </main></div></div>
 
   <!-- Calha de Giz Inferior Decorativa -->
   <div class="wood-shelf shrink-0 h-4 w-full relative z-30 flex items-center justify-center gap-6">
@@ -594,6 +622,15 @@
       </div>
     </div>
   </div>
+
+  <div id="stickerMenu" class="hidden fixed z-50 wood-frame rounded-xl p-2.5 shadow-2xl" style="width:310px;max-width:calc(100vw - 16px);top:70px;left:8px">
+    <div class="text-[11px] font-semibold text-amber-200/80 px-1 pb-1">Adesivos</div>
+    <div id="stickerGrid" class="grid grid-cols-7 gap-1 overflow-y-auto" style="max-height:34vh"></div>
+    <div class="text-[11px] font-semibold text-amber-200/80 px-1 pt-2 pb-1">Meus adesivos</div>
+    <div id="myStickerGrid" class="grid grid-cols-5 gap-1.5"></div>
+    <button onclick="byId('stickerFileInput').click()" class="mt-2 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-wand-magic-sparkles"></i> Criar adesivo de uma imagem</button>
+  </div>
+  <input type="file" id="stickerFileInput" accept="image/*" class="hidden" onchange="onStickerFileChosen(event)">
 
   <!-- Seletor de arquivo (oculto) -->
   <input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="onImageFileChosen(event)">
@@ -864,8 +901,8 @@
         activeDrag = {
           element,
           noteId,
-          offsetX: clientX - rect.left,
-          offsetY: clientY - rect.top
+          offsetX: (clientX - rect.left) / boardScale,
+          offsetY: (clientY - rect.top) / boardScale
         };
 
         element.classList.add('is-dragging');
@@ -892,11 +929,11 @@
       const clientX = e.clientX || (e.touches && e.touches[0].clientX);
       const clientY = e.clientY || (e.touches && e.touches[0].clientY);
 
-      let x = clientX - boardRect.left - activeDrag.offsetX;
-      let y = clientY - boardRect.top - activeDrag.offsetY;
+      let x = (clientX - boardRect.left) / boardScale - activeDrag.offsetX;
+      let y = (clientY - boardRect.top) / boardScale - activeDrag.offsetY;
 
-      x = Math.max(10, Math.min(x, boardRect.width - activeDrag.element.offsetWidth - 10));
-      y = Math.max(10, Math.min(y, boardRect.height - activeDrag.element.offsetHeight - 10));
+      x = Math.max(10, Math.min(x, boardRect.width / boardScale - activeDrag.element.offsetWidth - 10));
+      y = Math.max(10, Math.min(y, boardRect.height / boardScale - activeDrag.element.offsetHeight - 10));
 
       activeDrag.element.style.left = `${x}px`;
       activeDrag.element.style.top = `${y}px`;
@@ -959,7 +996,7 @@
       if (e.preventDefault && e.cancelable) e.preventDefault();
 
       const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const deltaX = clientX - activeResize.startX;
+      const deltaX = (clientX - activeResize.startX) / boardScale;
       let newWidth = activeResize.startWidth;
 
       if (activeResize.direction === 'right') {
@@ -973,7 +1010,8 @@
       const isImg = !!(note && note.type === 'image');
 
       // Limites de largura (200–650px; imagens: 80–1200px, sempre mantendo a proporção)
-      newWidth = Math.max(isImg ? 80 : 200, Math.min(newWidth, isImg ? 1200 : 650));
+      const isSt = !!(note && note.type === 'sticker');
+      newWidth = Math.max(isSt ? 40 : (isImg ? 80 : 200), Math.min(newWidth, isSt ? 500 : (isImg ? 1200 : 650)));
 
       activeResize.element.style.width = `${newWidth}px`;
 
@@ -981,6 +1019,7 @@
         note.width = newWidth;
         if (note.type === 'shape') updateShapeSvg(activeResize.element, note);
         if (isImg) syncImageUI(activeResize.element, note);
+        if (isSt) syncStickerUI(activeResize.element, note);
       }
     }
 
@@ -1030,8 +1069,8 @@
       if (e.preventDefault && e.cancelable) e.preventDefault();
 
       const p = getClientXY(e);
-      const newW = Math.max(60, Math.min(activeCorner.startW + (p.x - activeCorner.startX), 800));
-      const newH = Math.max(36, Math.min(activeCorner.startH + (p.y - activeCorner.startY), 600));
+      const newW = Math.max(60, Math.min(activeCorner.startW + (p.x - activeCorner.startX) / boardScale, 800));
+      const newH = Math.max(36, Math.min(activeCorner.startH + (p.y - activeCorner.startY) / boardScale, 600));
 
       activeCorner.element.style.width = `${newW}px`;
       activeCorner.element.style.height = `${newH}px`;
@@ -1147,16 +1186,17 @@
     /* ---------- CHECKLIST EM GIZ (fundo transparente) ---------- */
     function buildChalkChecklistHtml(note) {
       const items = note.items || [];
+      const ls = note.listSize || 24, cb = Math.round(ls * 1.25);
       return `
         <div class="chalk-frame rounded-lg p-3" style="color:${getChalkHex(note)}">
-          ${chalkBarHtml(note)}
+          ${chalkBarHtml(note, `<button onclick="changeListSize('${note.id}', -2)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button><button onclick="changeListSize('${note.id}', 2)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>`)}
 
           <input type="text"
                  value="${escapeHtml(note.title || '')}"
                  onchange="updateChecklistTitle('${note.id}', this.value)"
                  placeholder="Título..."
-                 class="chalk-ink chalk-input w-full bg-transparent border-0 font-chalk text-3xl font-bold focus:outline-none pb-1"
-                 style="color:inherit">
+                 class="chalk-ink chalk-input w-full bg-transparent border-0 font-chalk font-bold focus:outline-none pb-1"
+                 style="color:inherit; font-size:${Math.round(ls * 1.25)}px">
           <div class="chalk-line mb-2"></div>
 
           <div class="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
@@ -1164,16 +1204,16 @@
               const anim = !!(lastToggled && lastToggled.id === note.id && lastToggled.idx === idx && item.done);
               return `
                 <div class="flex items-center gap-2.5 group/item">
-                  <button class="chalk-check ${item.done ? 'is-done' : ''} ${anim ? 'animate' : ''}"
+                  <button style="width:${cb}px;height:${cb}px" class="chalk-check ${item.done ? 'is-done' : ''} ${anim ? 'animate' : ''}"
                           onclick="toggleChecklistItem('${note.id}', ${idx})" title="Marcar / desmarcar">
-                    <svg viewBox="0 0 30 30" width="30" height="30" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 30 30" width="100%" height="100%" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M5 6.5 L22.5 5.5 L23.5 23 L5.5 24 Z" stroke-width="2.4"/>
                       <path d="M4.5 5.5 L23 6.5 L22.5 24.5 L4 23 Z" stroke-width="1.2" opacity="0.5"/>
                       <path class="check-mark" d="M7 15 L13 22 L28 3" stroke-width="3"/>
                       <path class="check-mark2" d="M8 16 L13.5 22.5 L27 5" stroke-width="1.5"/>
                     </svg>
                   </button>
-                  <span class="flex-1 font-chalk text-2xl leading-snug"><span class="chalk-ink ${item.done ? 'chalk-strike' : ''} ${anim ? 'animate' : ''}">${escapeHtml(item.text)}</span></span>
+                  <span class="flex-1 font-chalk leading-snug" style="font-size:${ls}px"><span class="chalk-ink ${item.done ? 'chalk-strike' : ''} ${anim ? 'animate' : ''}">${escapeHtml(item.text)}</span></span>
                   <button onclick="removeChecklistItem('${note.id}', ${idx})" class="item-remove chalk-del opacity-0 group-hover/item:opacity-100 text-xs transition" title="Remover tarefa">
                     <i class="fa-solid fa-xmark"></i>
                   </button>
@@ -1187,8 +1227,8 @@
                    id="new_item_input_${note.id}"
                    onkeydown="if(event.key==='Enter') addChecklistItem('${note.id}')"
                    placeholder="+ Adicionar tarefa..."
-                   class="chalk-ink chalk-input chalk-add flex-1 bg-transparent border-0 px-1 py-0.5 font-chalk text-xl focus:outline-none"
-                   style="color:inherit">
+                   class="chalk-ink chalk-input chalk-add flex-1 bg-transparent border-0 px-1 py-0.5 font-chalk focus:outline-none"
+                   style="color:inherit; font-size:${Math.max(12, Math.round(ls * 0.85))}px">
             <button onclick="addChecklistItem('${note.id}')" class="chalk-ink font-chalk text-2xl px-2 hover:scale-110 transition" title="Adicionar tarefa">+</button>
           </div>
         </div>
@@ -1504,7 +1544,7 @@
       board.notes.forEach(note => {
         const wrapper = document.createElement('div');
         const colorObj = POSTIT_COLORS.find(c => c.id === note.color) || POSTIT_COLORS[0];
-        const isChalk = (note.type === 'checklist' || note.type === 'chalktext' || note.type === 'shape' || note.type === 'image');
+        const isChalk = (note.type === 'checklist' || note.type === 'chalktext' || note.type === 'shape' || note.type === 'image' || note.type === 'sticker');
         
         wrapper.id = note.id;
         wrapper.className = isChalk ? 'absolute group style-wrapper chalk-note' : 'absolute group style-wrapper';
@@ -1523,6 +1563,8 @@
           wrapper.innerHTML = buildChalkTextHtml(note);
         } else if (note.type === 'shape') {
           wrapper.innerHTML = buildShapeHtml(note);
+        } else if (note.type === 'sticker') {
+          wrapper.innerHTML = buildStickerHtml(note);
         } else if (note.type === 'image') {
           wrapper.innerHTML = buildImageHtml(note);
           if (note.y < 52) wrapper.classList.add('img-bar-in');
@@ -1584,7 +1626,8 @@
       });
 
       hydrateImages();
-      lastToggled = null;
+      layoutStage();
+      lastToggled = null; lastStickerId = null;
     }
 
     function onNoteTextInput(id, textarea) {
@@ -2446,7 +2489,7 @@
       if (!activeImgCorner) return;
       if (e.preventDefault && e.cancelable) e.preventDefault();
       const p = getClientXY(e);
-      const newW = Math.max(80, Math.min(activeImgCorner.startW + (p.x - activeImgCorner.startX), 1200));
+      const newW = Math.max(80, Math.min(activeImgCorner.startW + (p.x - activeImgCorner.startX) / boardScale, 1200));
       activeImgCorner.element.style.width = newW + 'px';
       const note = findNote(activeImgCorner.noteId);
       if (note) {
@@ -2491,6 +2534,178 @@
     try { if (localStorage.getItem(HEADER_KEY) === '1') document.body.classList.add('header-hidden'); } catch (e) {}
     updateBarH();
     setTimeout(updateBarH, 400);
+
+    /* ===== Palco da lousa no celular ===== */
+    let boardScale = 1;
+    let lastStickerId = null;
+
+    function layoutStage() {
+      const vp = byId('boardViewport'), sz = byId('boardSizer'), mn = byId('boardCanvas');
+      if (!vp || !sz || !mn) return;
+      if (!isMobileBar()) {
+        boardScale = 1;
+        vp.style.display = '';
+        sz.style.cssText = 'position:relative;width:100%;height:100%';
+        mn.style.position = 'relative'; mn.style.left = mn.style.top = '';
+        mn.style.width = '100%'; mn.style.height = '100%'; mn.style.transform = 'none';
+        return;
+      }
+      const vw = vp.clientWidth, vh = vp.clientHeight;
+      if (!vw || !vh) return;
+      let W = 1366, H = 700;
+      const b = appData.boards && appData.boards[appData.activeBoardIndex];
+      if (b && b.notes) b.notes.forEach(n => {
+        W = Math.max(W, (n.x || 0) + (n.width || 0) + 60);
+        H = Math.max(H, (n.y || 0) + (n.height ? n.height + 40 : 200));
+      });
+      boardScale = vw > vh ? Math.min(vw / W, vh / H) : vh / H;   // deitado: lousa inteira; em pé: altura cheia e arrasta de lado
+      vp.style.display = 'flex';
+      sz.style.cssText = `position:relative;flex-shrink:0;margin:auto;width:${W * boardScale}px;height:${H * boardScale}px`;
+      mn.style.position = 'absolute'; mn.style.left = '0'; mn.style.top = '0';
+      mn.style.width = W + 'px'; mn.style.height = H + 'px';
+      mn.style.transform = `scale(${boardScale})`;
+    }
+    new ResizeObserver(() => layoutStage()).observe(byId('boardViewport'));
+    window.addEventListener('resize', layoutStage);
+
+    function visibleCenter() {
+      const vp = byId('boardViewport'), mn = byId('boardCanvas');
+      if (!isMobileBar()) return { x: mn.offsetWidth / 2, y: 180 };
+      return { x: (vp.scrollLeft + vp.clientWidth / 2) / boardScale, y: (vp.scrollTop + vp.clientHeight / 2) / boardScale };
+    }
+
+    /* ===== Tarefas: tamanho do texto ===== */
+    function changeListSize(id, delta) {
+      const note = findNote(id);
+      if (!note) return;
+      note.listSize = Math.max(12, Math.min((note.listSize || 24) + delta, 40));
+      saveData();
+      renderNotes();
+    }
+
+    /* ===== Adesivos ===== */
+    const EMOJI_STICKERS = '⭐ 🌟 ✨ ❤️ 💛 💚 💙 💜 🔥 💯 ✅ ❌ ❗ ❓ 💡 📌 📎 ✏️ 📚 🎒 🎨 🏆 🎯 🚀 🌈 ☀️ 🌙 ⚡ 🌸 🌻 🍀 🐱 🐶 🦄 🐼 🍎 🍕 🎂 🎉 🎈 🎁 👍 👏 💪 🙂 😎 😍 🤔 😴 🥳 🔔 📅 ⏰ 🏠 ☕ 🎵 ⚽ 🧠 📝 🔒 ✈️ 🐞'.split(' ');
+
+    function renderStickerMenu() {
+      byId('stickerGrid').innerHTML = EMOJI_STICKERS.map(e =>
+        `<button class="stk-btn" onclick="createSticker({kind:'emoji', emoji:'${e}'})">${e}</button>`).join('');
+      const mine = (appData.stickers || []);
+      byId('myStickerGrid').innerHTML = mine.length ? mine.map(st =>
+        `<div class="stk-btn" style="cursor:pointer" onclick="createSticker({kind:'img', stickerId:'${st.id}'})">
+           <img data-img-id="${st.id}" ${imageURLs[st.id] ? `src="${imageURLs[st.id]}"` : ''} alt="">
+           <span class="stk-del" onclick="event.stopPropagation(); deleteMySticker('${st.id}')" title="Remover da minha coleção"><i class="fa-solid fa-xmark"></i></span>
+         </div>`).join('') : '<div class="col-span-5 text-xs text-amber-100/60 px-1">Nenhum ainda. Crie um a partir de qualquer foto.</div>';
+      hydrateImages();
+    }
+
+    function toggleStickerMenu(e) {
+      e.stopPropagation();
+      const menu = byId('stickerMenu');
+      if (!menu.classList.contains('hidden')) { menu.classList.add('hidden'); return; }
+      closeShapeMenu();
+      renderStickerMenu();
+      const r = e.currentTarget.getBoundingClientRect();
+      menu.classList.remove('hidden');
+      const mh = menu.offsetHeight || 300;
+      const below = r.bottom + 8 + mh < window.innerHeight - 8;
+      menu.style.top = `${below ? r.bottom + 8 : Math.max(8, r.top - mh - 8)}px`;
+      menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#stickerMenu')) byId('stickerMenu').classList.add('hidden');
+    });
+
+    function createSticker(def) {
+      const board = getActiveBoard();
+      const id = 'note_' + Date.now();
+      const c = visibleCenter();
+      const width = 110;
+      board.nextZIndex += 1;
+      lastStickerId = id;
+      selectedNoteId = id;
+      board.notes.push(Object.assign({
+        id, type: 'sticker', width,
+        rotation: Math.round(Math.random() * 24 - 12),
+        x: Math.max(10, c.x - width / 2 + (Math.random() * 60 - 30)),
+        y: Math.max(10, c.y - width / 2 + (Math.random() * 60 - 30)),
+        zIndex: board.nextZIndex
+      }, def));
+      saveData();
+      renderNotes();
+    }
+
+    function buildStickerHtml(note) {
+      const w = Math.round(note.width || 110);
+      const art = note.kind === 'img'
+        ? `<div class="sticker-img"><img data-img-id="${note.stickerId}" ${imageURLs[note.stickerId] ? `src="${imageURLs[note.stickerId]}"` : ''} draggable="false" alt=""></div>`
+        : `<div class="sticker-emoji" style="font-size:${Math.round(w * 0.74)}px">${escapeHtml(note.emoji || '')}</div>`;
+      return `
+        <div class="img-bar">
+          <button onclick="stepStickerSize('${note.id}', -1)" class="img-bar-btn" title="Diminuir"><i class="fa-solid fa-minus"></i></button>
+          <button onclick="stepStickerSize('${note.id}', 1)" class="img-bar-btn" title="Aumentar"><i class="fa-solid fa-plus"></i></button>
+          <button onclick="rotateSticker('${note.id}')" class="img-bar-btn" title="Girar"><i class="fa-solid fa-rotate-right"></i></button>
+          <button onclick="deleteNote('${note.id}')" class="img-bar-btn chalk-del" title="Remover adesivo"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="drag-handle sticker-art cursor-grab ${note.id === lastStickerId ? 'sticker-paste' : ''}" style="--r:${note.rotation || 0}deg">${art}</div>
+        ${resizeHandlesHtml()}`;
+    }
+
+    function syncStickerUI(el, note) {
+      const em = el.querySelector('.sticker-emoji');
+      if (em) em.style.fontSize = Math.round(note.width * 0.74) + 'px';
+    }
+    function stepStickerSize(id, dir) {
+      const note = findNote(id);
+      if (!note) return;
+      note.width = Math.max(40, Math.min(Math.round((note.width || 110) * (dir > 0 ? 1.2 : 1 / 1.2)), 500));
+      saveData(); renderNotes();
+    }
+    function rotateSticker(id) {
+      const note = findNote(id);
+      if (!note) return;
+      note.rotation = ((note.rotation || 0) + 15) % 360;
+      saveData(); renderNotes();
+    }
+
+    function deleteMySticker(id) {
+      appData.stickers = (appData.stickers || []).filter(st => st.id !== id);
+      saveData(); renderStickerMenu();
+    }
+
+    /* Imagem -> adesivo: recorte quadrado com cantos arredondados (PNG transparente) */
+    function onStickerFileChosen(e) {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!f || !currentUser) return;
+      const fail = () => showCustomDialog({ title: 'Adesivo', message: 'Não consegui criar o adesivo com essa imagem. Tente outra.' });
+      const rd = new FileReader();
+      rd.onerror = fail;
+      rd.onload = () => {
+        const im = new Image();
+        im.onerror = fail;
+        im.onload = async () => {
+          try {
+            const S = 240, c = document.createElement('canvas');
+            c.width = c.height = S;
+            const x = c.getContext('2d');
+            const m = Math.min(im.naturalWidth, im.naturalHeight);
+            x.beginPath();
+            if (x.roundRect) x.roundRect(0, 0, S, S, S * 0.22); else x.rect(0, 0, S, S);
+            x.clip();
+            x.drawImage(im, (im.naturalWidth - m) / 2, (im.naturalHeight - m) / 2, m, m, 0, 0, S, S);
+            const dataUrl = c.toDataURL('image/png');
+            const id = 'stk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+            await FB.saveImage(id, dataUrl);
+            imageURLs[id] = dataUrlToBlobUrl(dataUrl);
+            appData.stickers = (appData.stickers || []).concat([{ id }]);
+            saveData();
+            renderStickerMenu();
+          } catch (err) { console.error(err); fail(); }
+        };
+        im.src = rd.result;
+      };
+      rd.readAsDataURL(f);
+    }
 
     // Inicialização: a lousa só aparece depois do login (evento "fb-auth" vindo do firebase.js)
     setTimeout(() => {
