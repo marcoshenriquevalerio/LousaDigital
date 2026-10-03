@@ -407,6 +407,41 @@
     .stk-tab.star { color: #fcd34d; }
     .stk-mini { font-size: 15px; border-radius: 8px; }
     .stk-mini .stk-del { width: 14px; height: 14px; top: -3px; right: -3px; font-size: 8px; }
+
+    /* ===== Frase da lousa ===== */
+    #boardQuote { position: absolute; left: 0; top: 0; white-space: pre; text-align: center; line-height: 1.25; opacity: .4; pointer-events: none; visibility: hidden; max-width: 100%; }
+    #boardQuote.quote-edit { pointer-events: auto; opacity: 1; z-index: 1000000; cursor: move; touch-action: none; outline: 2px dashed rgba(251,191,36,.9); outline-offset: 8px; }
+    #boardQuote.quote-empty { opacity: .5; font-style: italic; }
+    .q-btn { min-width: 32px; height: 30px; padding: 0 8px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fde68a; font-weight: 700; font-size: 13px; transition: background .2s ease; }
+    .q-btn:hover { background: rgba(255,255,255,.24); }
+    .q-btn.active { background: rgba(251,191,36,.5); color: #fff; }
+
+    /* ===== Apagador de lousa ===== */
+    .eraser { position: absolute; z-index: 1000000; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; filter: drop-shadow(0 5px 5px rgba(0,0,0,.5)); }
+    .eraser.is-erasing { cursor: grabbing; filter: drop-shadow(0 12px 10px rgba(0,0,0,.55)); }
+    .eraser.er-place { outline: 2px dashed #fbbf24; outline-offset: 5px; border-radius: 8px; }
+    .eraser .er-wood { position: absolute; left: 0; right: 0; top: 0; height: 66%; border-radius: 14% 14% 5% 5% / 34% 34% 8% 8%;
+      background: linear-gradient(180deg, #dca86d 0%, #b97a3f 40%, #86501f 100%);
+      box-shadow: inset 0 2px 1px rgba(255,255,255,.5), inset 0 -3px 4px rgba(0,0,0,.4), inset 2px 0 2px rgba(255,255,255,.18), inset -2px 0 3px rgba(0,0,0,.28); }
+    .eraser .er-wood::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(94deg, rgba(70,35,10,.13) 0 1px, transparent 1px 7px); }
+    .eraser .er-wood::after { content: ''; position: absolute; left: 12%; right: 12%; top: 18%; height: 14%; border-radius: 999px; background: rgba(255,255,255,.22); filter: blur(1px); }
+    .eraser .er-felt { position: absolute; left: 3%; right: 3%; bottom: 0; height: 42%; border-radius: 3px 3px 10px 10px; background: linear-gradient(180deg, #51514e 0%, #2a2a29 100%); box-shadow: inset 0 2px 3px rgba(0,0,0,.55), 0 1px 0 rgba(0,0,0,.3); }
+    .eraser .er-dust { position: absolute; inset: 0; border-radius: inherit;
+      background: radial-gradient(circle at 16% 60%, rgba(255,255,255,.55) 0 7%, transparent 8%), radial-gradient(circle at 38% 78%, rgba(255,255,255,.42) 0 9%, transparent 10%), radial-gradient(circle at 62% 55%, rgba(255,255,255,.5) 0 6%, transparent 7%), radial-gradient(circle at 84% 72%, rgba(255,255,255,.38) 0 8%, transparent 9%), radial-gradient(circle at 50% 90%, rgba(255,255,255,.3) 0 12%, transparent 13%); }
+    .theme-marker .eraser .er-wood { background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 50%, #94a3b8 100%); }
+    .theme-marker .eraser .er-wood::before { background: none; }
+    .theme-marker .eraser .er-felt { background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%); }
+    .theme-marker .eraser .er-dust { opacity: .3; }
+
+    .chalk-puff { position: absolute; pointer-events: none; z-index: 999999; border-radius: 50%; filter: blur(1.5px);
+      background: radial-gradient(circle, rgba(255,255,255,.55) 0%, rgba(255,255,255,.22) 45%, rgba(255,255,255,0) 72%);
+      animation: chalkPuff .9s ease-out forwards; }
+    .theme-marker .chalk-puff { background: radial-gradient(circle, rgba(148,163,184,.5) 0%, rgba(148,163,184,.2) 45%, rgba(148,163,184,0) 72%); }
+    @keyframes chalkPuff {
+      0%   { opacity: 0; transform: translate(0,0) scale(.4); }
+      20%  { opacity: .85; }
+      100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -16px)) scale(1.9); }
+    }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -481,7 +516,7 @@
       <button onclick="openPlannerModal()" data-close class="tb mob-only bg-purple-100 text-purple-700 border border-purple-300" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label">Planner</span></button>
       <button onclick="toggleTheme()" id="themeBtn" data-close class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300" title="Alternar estilo"><i id="themeBtnIcon" class="fa-solid fa-pen-fancy text-stone-700"></i><span id="themeBtnLabel" class="tb-label">Modo Canetão</span></button>
       <button onclick="toggleFullscreen()" id="fullscreenBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Tela cheia"><i class="fa-solid fa-expand"></i><span class="tb-label">Tela cheia</span></button>
-      <button onclick="confirmClearBoard()" data-close class="tb bg-red-900/60 hover:bg-red-800 text-red-100 border border-red-700/50" title="Limpar esta lousa"><i class="fa-solid fa-broom"></i><span class="tb-label">Limpar</span></button>
+      <button onclick="toggleQuoteEdit()" id="quoteBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Configurar a frase da lousa"><i class="fa-solid fa-gear"></i><span class="tb-label">Frase</span></button>
       <button onclick="toggleHeader()" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ocultar barra"><i class="fa-solid fa-eye-slash"></i><span class="tb-label">Ocultar</span></button>
       <div id="userChip" class="hidden nav-pill">
         <span id="syncStatus" class="px-1 text-sm text-emerald-400" title="Salvo na nuvem"><i class="fa-solid fa-cloud"></i></span>
@@ -509,11 +544,8 @@
   <!-- MAIN: Área da Lousa Verde Escolar Vintage -->
   <div id="boardViewport" class="chalkboard-bg flex-1 min-h-0 w-full relative overflow-hidden"><div id="boardSizer" style="position:relative;width:100%;height:100%"><main id="boardCanvas" class="relative overflow-hidden" style="width:100%;height:100%;transform-origin:0 0">
     
-    <!-- Elementos Decorativos em Giz -->
-    <div class="absolute bottom-16 right-8 pointer-events-none opacity-20 font-chalk text-xl chalk-text select-none hidden lg:block text-right">
-      "Entrega teus caminhos ao senhor
-Confia nele e Ele tudo fará"
-    </div>
+    <!-- Frase decorativa (configurável: texto, linhas, posição) -->
+    <div id="boardQuote" class="font-chalk chalk-text select-none"></div>
 
     <!-- Mensagem de Tela Vazia -->
     <div id="emptyBoardMsg" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-40 text-center p-6">
@@ -524,6 +556,13 @@ Confia nele e Ele tudo fará"
 
     <!-- Container onde são renderizados os Post-its -->
     <div id="notesContainer" class="relative w-full h-full"></div>
+
+    <!-- Apagador de lousa (arraste para apagar; ao soltar volta ao lugar) -->
+    <div id="eraser" class="eraser" title="Apagador — arraste para apagar. Toque duas vezes para ajustar">
+      <div class="er-wood"></div>
+      <div class="er-felt"></div>
+      <div class="er-dust"></div>
+    </div>
 
   </main></div></div>
 
@@ -656,6 +695,38 @@ Confia nele e Ele tudo fará"
     </div>
     <button onclick="byId('stickerFileInput').click()" class="mt-2 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-wand-magic-sparkles"></i> Criar adesivo de uma imagem</button>
   </div>
+  <!-- Editor da frase -->
+  <div id="quoteEditor" class="hidden fixed wood-frame rounded-xl p-3 shadow-2xl" style="z-index:9990;left:50%;transform:translateX(-50%);width:min(390px,calc(100vw - 16px))">
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="text-[11px] font-semibold text-amber-200/90"><i class="fa-solid fa-gear mr-1"></i>Frase da lousa</span>
+      <span class="text-[10px] text-amber-100/60">arraste a frase para mover</span>
+    </div>
+    <textarea id="quoteInput" rows="3" oninput="onQuoteInput(this)" onkeydown="if(event.key==='Escape') finishQuoteEdit()" placeholder="Escreva a frase que quiser..." class="w-full bg-stone-900/80 border border-amber-900/60 rounded-lg px-2.5 py-1.5 text-sm text-stone-100 focus:outline-none focus:border-amber-400 resize-none" style="user-select:text;-webkit-user-select:text"></textarea>
+    <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+      <span class="text-[11px] text-amber-100/80 mr-0.5">Linhas</span>
+      <button class="q-btn" data-lines="1" onclick="setQuoteLines(1)">1</button>
+      <button class="q-btn" data-lines="2" onclick="setQuoteLines(2)">2</button>
+      <button class="q-btn" data-lines="3" onclick="setQuoteLines(3)">3</button>
+      <span class="w-1"></span>
+      <button class="q-btn" onclick="changeQuoteSize(-2)" title="Diminuir letra">A-</button>
+      <button class="q-btn" onclick="changeQuoteSize(2)" title="Aumentar letra">A+</button>
+      <span class="flex-1"></span>
+      <button onclick="finishQuoteEdit()" class="px-3 h-[30px] bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition"><i class="fa-solid fa-lock mr-1"></i>Concluir</button>
+    </div>
+  </div>
+
+  <!-- Ajustes do apagador -->
+  <div id="eraserPanel" class="hidden fixed wood-frame rounded-xl p-3 shadow-2xl" style="z-index:9990;width:250px;max-width:calc(100vw - 16px)">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-[11px] font-semibold text-amber-200/90">Apagador</span>
+      <button onclick="closeEraserPanel()" class="text-stone-300 hover:text-white w-6 h-6 rounded-full flex items-center justify-center bg-stone-700/50 hover:bg-stone-700 transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+    </div>
+    <label class="text-[11px] text-amber-100/80 flex items-center justify-between mb-1">Tamanho <span id="eraserSizeLbl"></span></label>
+    <input id="eraserSize" type="range" min="50" max="250" step="5" oninput="setEraserSize(this.value)" class="w-full" style="accent-color:#fbbf24">
+    <button id="eraserPlaceBtn" onclick="toggleEraserPlace()" class="mt-2.5 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-up-down-left-right"></i><span>Mudar posição de descanso</span></button>
+    <button onclick="resetEraser()" class="mt-1.5 w-full px-3 py-1.5 bg-stone-700/70 hover:bg-stone-600 text-stone-200 rounded-lg text-xs transition">Restaurar tamanho e posição</button>
+  </div>
+
   <input type="file" id="stickerFileInput" accept="image/*" class="hidden" onchange="onStickerFileChosen(event)">
 
   <!-- Seletor de arquivo (oculto) -->
@@ -1228,6 +1299,7 @@ Confia nele e Ele tudo fará"
         <div class="chalk-frame rounded-lg p-3" style="color:${getChalkHex(note)}">
           ${chalkBarHtml(note, `<button onclick="changeListSize('${note.id}', -2)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button><button onclick="changeListSize('${note.id}', 2)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>`)}
 
+          <div class="erase-layer" style="${maskCss(note)}">
           <input type="text"
                  value="${escapeHtml(note.title || '')}"
                  onchange="updateChecklistTitle('${note.id}', this.value)"
@@ -1236,7 +1308,7 @@ Confia nele e Ele tudo fará"
                  style="color:inherit; font-size:${Math.round(ls * 1.25)}px">
           <div class="chalk-line mb-2"></div>
 
-          <div class="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+          <div class="chalk-items space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
             ${items.map((item, idx) => {
               const anim = !!(lastToggled && lastToggled.id === note.id && lastToggled.idx === idx && item.done);
               return `
@@ -1271,6 +1343,7 @@ Confia nele e Ele tudo fará"
                    style="color:inherit; font-size:${Math.max(12, Math.round(ls * 0.85))}px">
             <button onclick="addChecklistItem('${note.id}')" class="chalk-ink font-chalk text-2xl px-2 hover:scale-110 transition" title="Adicionar tarefa">+</button>
           </div>
+          </div>
         </div>
         ${resizeHandlesHtml()}
       `;
@@ -1286,11 +1359,13 @@ Confia nele e Ele tudo fará"
       return `
         <div class="chalk-frame rounded-lg p-2" style="color:${getChalkHex(note)}">
           ${chalkBarHtml(note, extra)}
+          <div class="erase-layer" style="${maskCss(note)}">
           <textarea id="input_${note.id}"
                     oninput="onNoteTextInput('${note.id}', this)"
                     placeholder="Escreva em giz..."
                     class="chalk-ink chalk-input w-full bg-transparent border-none resize-none focus:outline-none font-chalk leading-snug overflow-hidden"
                     style="font-size:${fs}px; min-height:52px; color:inherit">${escapeHtml(note.content || '')}</textarea>
+          </div>
         </div>
         ${resizeHandlesHtml()}
       `;
@@ -1405,7 +1480,7 @@ Confia nele e Ele tudo fará"
       return `
         <div class="drag-handle chalk-frame cursor-grab active:cursor-grabbing w-full h-full relative rounded" style="color:${getChalkHex(note)}">
           <svg class="shape-svg block" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
-               style="overflow:visible; transform:rotate(${rot}deg); filter:drop-shadow(0 0 2px rgba(255,255,255,0.3));">
+               style="overflow:visible; transform:rotate(${rot}deg); filter:drop-shadow(0 0 2px rgba(255,255,255,0.3));${maskCss(note)}">
             ${shapeInnerHtml(note)}
           </svg>
         </div>
@@ -1669,6 +1744,9 @@ Confia nele e Ele tudo fará"
 
       hydrateImages();
       layoutStage();
+      renderQuote();
+      renderEraser();
+      preloadMasks();
       lastToggled = null; lastStickerId = null;
     }
 
@@ -2734,8 +2812,9 @@ Confia nele e Ele tudo fará"
       mn.style.width = W + 'px'; mn.style.height = H + 'px';
       mn.style.transform = `scale(${boardScale})`;
     }
-    new ResizeObserver(() => layoutStage()).observe(byId('boardViewport'));
-    window.addEventListener('resize', layoutStage);
+    function relayoutAll() { layoutStage(); if (typeof renderQuote === 'function') { renderQuote(); renderEraser(); } }
+    new ResizeObserver(() => relayoutAll()).observe(byId('boardViewport'));
+    window.addEventListener('resize', relayoutAll);
 
     function visibleCenter() {
       const vp = byId('boardViewport'), mn = byId('boardCanvas');
@@ -2927,6 +3006,493 @@ Confia nele e Ele tudo fará"
       };
       rd.readAsDataURL(f);
     }
+
+
+    /* =========================================================================
+       FRASE DA LOUSA (texto, linhas, tamanho e posição livres; trava ao concluir)
+       ========================================================================= */
+    const QUOTE_DEFAULT = { text: '"Passo a passo se vai longe..." ✎', xr: 0.97, yr: 0.84, size: 22 };
+    let quoteEditing = false;
+    let quoteDrag = null;
+    const clamp01 = (v) => Math.max(0, Math.min(1, isFinite(v) ? v : 0));
+
+    function getQuote() {
+      if (!appData.quote) appData.quote = Object.assign({}, QUOTE_DEFAULT);
+      return appData.quote;
+    }
+
+    function renderQuote() {
+      const el = byId('boardQuote'), mn = byId('boardCanvas');
+      if (!el || !mn) return;
+      const q = getQuote();
+      const has = !!(q.text && q.text.trim());
+      el.textContent = has ? q.text : (quoteEditing ? 'Sua frase aqui' : '');
+      el.style.fontSize = (q.size || 22) + 'px';
+      el.classList.toggle('quote-edit', quoteEditing);
+      el.classList.toggle('quote-empty', quoteEditing && !has);
+      el.style.visibility = (has || quoteEditing) ? 'visible' : 'hidden';
+      const W = mn.clientWidth, H = mn.clientHeight, w = el.offsetWidth, h = el.offsetHeight;
+      el.style.left = (Math.max(0, W - w) * clamp01(q.xr)) + 'px';
+      el.style.top = (Math.max(0, H - h) * clamp01(q.yr)) + 'px';
+    }
+
+    function updateLinesButtons() {
+      const q = getQuote();
+      const n = Math.min(3, (q.text || '').split('\n').filter(l => l.trim()).length);
+      document.querySelectorAll('#quoteEditor [data-lines]').forEach(b => b.classList.toggle('active', Number(b.dataset.lines) === n));
+    }
+
+    function placeQuoteEditor() {
+      const ed = byId('quoteEditor'), el = byId('boardQuote');
+      if (!ed || !el) return;
+      const r = el.getBoundingClientRect();
+      const lower = (r.top + r.height / 2) > window.innerHeight * 0.5;
+      const hdr = byId('topbar');
+      const topOff = (hdr && !document.body.classList.contains('header-hidden') && !isMobileBar()) ? hdr.offsetHeight + 8 : 8;
+      if (lower) { ed.style.top = topOff + 'px'; ed.style.bottom = 'auto'; }
+      else { ed.style.top = 'auto'; ed.style.bottom = 'calc(var(--bar-h, 0px) + 8px)'; }
+    }
+
+    function toggleQuoteEdit() { quoteEditing ? finishQuoteEdit() : startQuoteEdit(); }
+
+    function startQuoteEdit() {
+      quoteEditing = true;
+      const q = getQuote();
+      const ta = byId('quoteInput');
+      ta.value = q.text || '';
+      ta.rows = window.innerHeight < 500 ? 2 : 3;
+      byId('quoteEditor').classList.remove('hidden');
+      renderQuote();
+      updateLinesButtons();
+      placeQuoteEditor();
+      setTimeout(() => ta.focus(), 50);
+    }
+
+    function finishQuoteEdit() {
+      quoteEditing = false;
+      byId('quoteEditor').classList.add('hidden');
+      saveData();
+      renderQuote();
+    }
+
+    function onQuoteInput(ta) {
+      getQuote().text = ta.value;
+      saveData();
+      renderQuote();
+      updateLinesButtons();
+    }
+
+    function changeQuoteSize(d) {
+      const q = getQuote();
+      q.size = Math.max(12, Math.min((q.size || 22) + d, 56));
+      saveData(); renderQuote(); placeQuoteEditor();
+    }
+
+    /* Reparte o texto em 1, 2 ou 3 linhas equilibradas */
+    function setQuoteLines(n) {
+      const q = getQuote();
+      const words = (q.text || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+      if (!words.length) return;
+      n = Math.min(n, words.length);
+      const target = words.join(' ').length / n;
+      const lines = [];
+      let cur = '';
+      words.forEach((w, i) => {
+        const remaining = words.length - i;
+        const needAfter = n - lines.length - 1;
+        if (cur && lines.length < n - 1) {
+          const closerBefore = Math.abs(cur.length - target) <= Math.abs((cur + ' ' + w).length - target);
+          if (remaining <= needAfter || closerBefore) { lines.push(cur); cur = ''; }
+        }
+        cur = cur ? cur + ' ' + w : w;
+      });
+      if (cur) lines.push(cur);
+      q.text = lines.join('\n');
+      byId('quoteInput').value = q.text;
+      saveData(); renderQuote(); updateLinesButtons(); placeQuoteEditor();
+    }
+
+    (function initQuoteDrag() {
+      const el = byId('boardQuote');
+      el.addEventListener('pointerdown', (e) => {
+        if (!quoteEditing) return;
+        e.preventDefault(); e.stopPropagation();
+        const r = el.getBoundingClientRect();
+        quoteDrag = { ox: (e.clientX - r.left) / boardScale, oy: (e.clientY - r.top) / boardScale, pid: e.pointerId };
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!quoteDrag || e.pointerId !== quoteDrag.pid) return;
+        const mn = byId('boardCanvas'), cr = mn.getBoundingClientRect(), q = getQuote();
+        const W = mn.clientWidth, H = mn.clientHeight, w = el.offsetWidth, h = el.offsetHeight;
+        const x = Math.max(0, Math.min((e.clientX - cr.left) / boardScale - quoteDrag.ox, W - w));
+        const y = Math.max(0, Math.min((e.clientY - cr.top) / boardScale - quoteDrag.oy, H - h));
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        q.xr = (W - w) > 0 ? x / (W - w) : 0.5;
+        q.yr = (H - h) > 0 ? y / (H - h) : 0.5;
+      });
+      const end = (e) => {
+        if (!quoteDrag) return;
+        quoteDrag = null;
+        saveData(); placeQuoteEditor();
+      };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    })();
+
+    /* =========================================================================
+       APAGADOR DE LOUSA
+       ========================================================================= */
+    const ERASER_BASE_W = 96, ERASER_RATIO = 0.46, ERASER_MARGIN = 10;
+    const ERASABLE = ['checklist', 'chalktext', 'shape'];   // post-its, imagens e adesivos nunca são apagados
+    const maskStore = {};          // id da peça -> { canvas, ctx, w, h, src }
+    const maskDirty = {};          // peças com máscara a atualizar no próximo frame
+    let eraserDrag = null, eraserPlace = false, eraserLastTap = 0, puffAt = 0, maskRaf = 0;
+
+    function getEraserCfg() {
+      if (!appData.eraser) appData.eraser = { size: 1, hx: 1, hy: 1 };
+      return appData.eraser;
+    }
+    function eraserDims() {
+      const c = getEraserCfg();
+      let w = ERASER_BASE_W * (c.size || 1);
+      if (boardScale < 1) w = Math.max(w, 60 / boardScale);   // no celular nunca fica pequeno demais para pegar
+      return { w, h: w * ERASER_RATIO };
+    }
+    function eraserHomePos(w, h) {
+      const mn = byId('boardCanvas'), c = getEraserCfg();
+      const W = mn.clientWidth, H = mn.clientHeight, m = ERASER_MARGIN;
+      return { x: m + clamp01(c.hx) * Math.max(0, W - w - 2 * m), y: m + clamp01(c.hy) * Math.max(0, H - h - 2 * m) };
+    }
+    function renderEraser() {
+      const el = byId('eraser');
+      if (!el || eraserDrag) return;
+      const { w, h } = eraserDims();
+      const pos = eraserHomePos(w, h);
+      el.style.width = w + 'px'; el.style.height = h + 'px';
+      el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
+    }
+
+    /* ---------- máscara de apagado por peça ---------- */
+    function maskCss(note) {
+      if (!note || !note.erase) return '';
+      const u = `url('${note.erase}')`;
+      return `-webkit-mask-image:${u};mask-image:${u};-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;`;
+    }
+    function applyMask(target, url) {
+      const u = `url(${url})`;
+      target.style.webkitMaskImage = u; target.style.maskImage = u;
+      target.style.webkitMaskSize = '100% 100%'; target.style.maskSize = '100% 100%';
+      target.style.webkitMaskRepeat = 'no-repeat'; target.style.maskRepeat = 'no-repeat';
+    }
+    function eraseTargetOf(note, wrapper) {
+      return note.type === 'shape' ? wrapper.querySelector('.shape-svg') : wrapper.querySelector('.erase-layer');
+    }
+    function targetGeom(note, target) {
+      if (note.type === 'shape') return { x: note.x, y: note.y, w: Math.round(note.width || 160), h: Math.round(note.height || 80), rot: note.rotation || 0 };
+      return { x: note.x + target.offsetLeft, y: note.y + target.offsetTop, w: target.offsetWidth, h: target.offsetHeight, rot: 0 };
+    }
+    function ensureMask(note, w, h) {
+      const want = note.erase || '';
+      const m = maskStore[note.id];
+      if (m && m.src === want && m.w === w && m.h === h) return m;
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d');
+      x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
+      const nm = { canvas: c, ctx: x, w, h, src: want };
+      if (m && m.src === want) {
+        x.globalCompositeOperation = 'destination-in'; x.drawImage(m.canvas, 0, 0, w, h); x.globalCompositeOperation = 'source-over';
+      } else if (want) {
+        const im = new Image();
+        im.onload = () => { x.globalCompositeOperation = 'destination-in'; x.drawImage(im, 0, 0, w, h); x.globalCompositeOperation = 'source-over'; };
+        im.src = want;
+      }
+      maskStore[note.id] = nm;
+      return nm;
+    }
+    function preloadMasks() {
+      const board = getActiveBoard();
+      board.notes.forEach(n => {
+        if (!n.erase || ERASABLE.indexOf(n.type) < 0) return;
+        const wr = byId(n.id), t = wr && eraseTargetOf(n, wr);
+        if (!t) return;
+        const g = targetGeom(n, t);
+        if (g.w > 0 && g.h > 0) ensureMask(n, g.w, g.h);
+      });
+    }
+
+    /* ---------- apagar ---------- */
+    function eraseRect(R, touched) {
+      const board = getActiveBoard();
+      let hit = false;
+      board.notes.forEach(note => {
+        if (ERASABLE.indexOf(note.type) < 0) return;
+        const wr = byId(note.id); if (!wr) return;
+        const t = eraseTargetOf(note, wr); if (!t) return;
+        const g = targetGeom(note, t);
+        if (g.w < 1 || g.h < 1) return;
+        const cx = g.x + g.w / 2, cy = g.y + g.h / 2;
+        if (Math.hypot(R.x + R.w / 2 - cx, R.y + R.h / 2 - cy) > Math.hypot(g.w, g.h) / 2 + Math.hypot(R.w, R.h) / 2) return;
+        const a = -g.rot * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
+        const pts = [[R.x, R.y], [R.x + R.w, R.y], [R.x + R.w, R.y + R.h], [R.x, R.y + R.h]].map(([px, py]) => {
+          const dx = px - cx, dy = py - cy;
+          return [dx * cos - dy * sin + g.w / 2, dx * sin + dy * cos + g.h / 2];
+        });
+        const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+        if (Math.max(...xs) < 0 || Math.min(...xs) > g.w || Math.max(...ys) < 0 || Math.min(...ys) > g.h) return;
+        const m = ensureMask(note, g.w, g.h);
+        const x = m.ctx;
+        x.save();
+        x.globalCompositeOperation = 'destination-out';
+        x.shadowColor = '#000'; x.shadowBlur = 3;
+        x.fillStyle = '#000';
+        x.beginPath(); x.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < 4; i++) x.lineTo(pts[i][0], pts[i][1]); x.closePath(); x.fill();
+        x.restore();
+        maskDirty[note.id] = { target: t, m };
+        touched.add(note.id);
+        hit = true;
+      });
+      if (hit && !maskRaf) maskRaf = requestAnimationFrame(flushMasks);
+      return hit;
+    }
+    function flushMasks() {
+      maskRaf = 0;
+      Object.keys(maskDirty).forEach(id => {
+        const d = maskDirty[id]; delete maskDirty[id];
+        if (d.target && d.target.isConnected) applyMask(d.target, d.m.canvas.toDataURL('image/png'));
+      });
+    }
+    function eraserSweep(x0, y0, x1, y1, touched) {
+      const { w, h } = eraserDims(), inset = 3;
+      const step = Math.max(4, Math.min(w, h) / 3);
+      const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / step));
+      let any = false;
+      for (let i = 1; i <= n; i++) {
+        const t = i / n;
+        if (eraseRect({ x: x0 + (x1 - x0) * t + inset, y: y0 + (y1 - y0) * t + inset, w: w - 2 * inset, h: h - 2 * inset }, touched)) any = true;
+      }
+      return any;
+    }
+
+    /* ---------- fumaça de giz ---------- */
+    function spawnPuff(x, y) {
+      const mn = byId('boardCanvas');
+      if (mn.querySelectorAll('.chalk-puff').length > 34) return;
+      const p = document.createElement('div');
+      const s = 20 + Math.random() * 26;
+      p.className = 'chalk-puff';
+      p.style.cssText = `left:${x - s / 2}px;top:${y - s / 2}px;width:${s}px;height:${s}px;--dx:${(Math.random() * 34 - 17).toFixed(1)}px;--dy:${(-(8 + Math.random() * 24)).toFixed(1)}px`;
+      p.addEventListener('animationend', () => p.remove());
+      mn.appendChild(p);
+    }
+
+    /* ---------- o que ainda é visível? (para remover a peça só quando tudo foi apagado) ---------- */
+    function inkAlive(note, target, m) {
+      const w = m.w, h = m.h;
+      const ink = document.createElement('canvas'); ink.width = w; ink.height = h;
+      const x = ink.getContext('2d');
+      x.fillStyle = '#000';
+      const rect = (rx, ry, rw, rh) => x.fillRect(rx, ry, rw, rh);
+
+      if (note.type === 'shape') {
+        target.querySelectorAll('g[stroke-width="3.6"] > *').forEach(g => {
+          if (typeof g.getTotalLength !== 'function') return;
+          const L = g.getTotalLength();
+          for (let t = 0; t <= L; t += 3) {
+            const pt = g.getPointAtLength(t);
+            x.beginPath(); x.arc(pt.x, pt.y, 3.4, 0, 6.2832); x.fill();
+          }
+        });
+      } else {
+        const br = target.getBoundingClientRect();
+        const sc = target.offsetWidth ? (br.width / target.offsetWidth) : 1;
+        const rel = (r) => rect((r.left - br.left) / sc, (r.top - br.top) / sc, r.width / sc, r.height / sc);
+        if (note.type === 'checklist') {
+          const ti = target.querySelector('input[type=text]');
+          if (ti && ti.value.trim()) {
+            const cs = getComputedStyle(ti), c2 = document.createElement('canvas').getContext('2d');
+            c2.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+            const tw = c2.measureText(ti.value).width, r = ti.getBoundingClientRect();
+            rect((r.left - br.left) / sc + (parseFloat(cs.paddingLeft) || 0), (r.top - br.top) / sc + r.height / sc * 0.1, tw, r.height / sc * 0.8);
+          }
+          const ln = target.querySelector('.chalk-line'); if (ln) rel(ln.getBoundingClientRect());
+          target.querySelectorAll('.chalk-check').forEach(b => rel(b.getBoundingClientRect()));
+          target.querySelectorAll('.chalk-items .chalk-ink').forEach(sp => {
+            const rg = document.createRange(); rg.selectNodeContents(sp);
+            Array.from(rg.getClientRects()).forEach(r => { if (r.width > 1) rel(r); });
+          });
+        } else {
+          const ta = target.querySelector('textarea');
+          if (ta) {
+            const cs = getComputedStyle(ta), d = document.createElement('div');
+            d.style.cssText = `position:fixed;left:-99999px;top:0;visibility:hidden;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:border-box;padding:0;border:0;width:${ta.clientWidth}px;font-family:${cs.fontFamily};font-size:${cs.fontSize};font-weight:${cs.fontWeight};line-height:${cs.lineHeight};letter-spacing:${cs.letterSpacing}`;
+            d.textContent = ta.value;
+            document.body.appendChild(d);
+            const o = d.getBoundingClientRect(), rg = document.createRange();
+            rg.selectNodeContents(d);
+            Array.from(rg.getClientRects()).forEach(r => { if (r.width > 1) rect(r.left - o.left, r.top - o.top, r.width, r.height); });
+            d.remove();
+          }
+        }
+      }
+      const A = x.getImageData(0, 0, w, h).data, B = m.ctx.getImageData(0, 0, w, h).data;
+      const cell = 10, cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
+      const tot = new Uint16Array(cols * rows), alive = new Uint16Array(cols * rows);
+      for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+        const i = (yy * w + xx) * 4;
+        if (A[i + 3] > 40) {
+          const c = ((yy / cell) | 0) * cols + ((xx / cell) | 0);
+          tot[c]++;
+          if (B[i + 3] > 128) alive[c]++;
+        }
+      }
+      for (let c = 0; c < tot.length; c++) if (tot[c] > 0 && alive[c] >= 10 && alive[c] / tot[c] > 0.3) return true;
+      return false;
+    }
+
+    /* Ao soltar o apagador: guarda o que foi apagado e remove de vez as peças totalmente limpas */
+    function commitErase(touched) {
+      if (!touched.size) return;
+      flushMasks();
+      const board = getActiveBoard();
+      const cleared = [];
+      touched.forEach(id => {
+        const note = board.notes.find(n => n.id === id), m = maskStore[id], wr = byId(id);
+        if (!note || !m || !wr) return;
+        const t = eraseTargetOf(note, wr);
+        if (!t) return;
+        let alive = true;
+        try { alive = inkAlive(note, t, m); } catch (err) { console.warn('Checagem de apagado falhou', err); }
+        if (!alive) { cleared.push(id); return; }
+        const sc = document.createElement('canvas');
+        sc.width = Math.max(1, Math.round(m.w / 2)); sc.height = Math.max(1, Math.round(m.h / 2));
+        sc.getContext('2d').drawImage(m.canvas, 0, 0, sc.width, sc.height);
+        note.erase = sc.toDataURL('image/png');
+        m.src = note.erase;
+      });
+      if (cleared.length) {
+        board.notes = board.notes.filter(n => cleared.indexOf(n.id) < 0);
+        cleared.forEach(id => delete maskStore[id]);
+        saveData();
+        renderNotes();
+      } else {
+        saveData();
+      }
+    }
+
+    /* ---------- arrastar o apagador ---------- */
+    (function initEraser() {
+      const el = byId('eraser');
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const r = el.getBoundingClientRect();
+        eraserDrag = {
+          pid: e.pointerId, ox: (e.clientX - r.left) / boardScale, oy: (e.clientY - r.top) / boardScale,
+          sx: e.clientX, sy: e.clientY, px: parseFloat(el.style.left) || 0, py: parseFloat(el.style.top) || 0,
+          moved: false, touched: new Set()
+        };
+        el.style.transition = 'none';
+        el.classList.add('is-erasing');
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      el.addEventListener('pointermove', (e) => {
+        const d = eraserDrag;
+        if (!d || e.pointerId !== d.pid) return;
+        e.preventDefault();
+        if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 5) return;
+        d.moved = true;
+        const mn = byId('boardCanvas'), cr = mn.getBoundingClientRect(), { w, h } = eraserDims();
+        const x = Math.max(0, Math.min((e.clientX - cr.left) / boardScale - d.ox, mn.clientWidth - w));
+        const y = Math.max(0, Math.min((e.clientY - cr.top) / boardScale - d.oy, mn.clientHeight - h));
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        if (!eraserPlace) {
+          const hit = eraserSweep(d.px, d.py, x, y, d.touched);
+          const now = performance.now();
+          if (hit && now - puffAt > 45) {
+            puffAt = now;
+            const k = 1 + (Math.random() > 0.6 ? 1 : 0);
+            for (let i = 0; i < k; i++) spawnPuff(x + w * (0.15 + Math.random() * 0.7), y + h * (0.55 + Math.random() * 0.4));
+          }
+        }
+        d.px = x; d.py = y;
+      });
+      const end = (e) => {
+        const d = eraserDrag;
+        if (!d || (e && e.pointerId !== d.pid)) return;
+        eraserDrag = null;
+        el.classList.remove('is-erasing');
+        try { el.releasePointerCapture(d.pid); } catch (err) {}
+        const { w, h } = eraserDims();
+
+        if (d.moved && eraserPlace) {
+          /* novo ponto de descanso */
+          const mn = byId('boardCanvas'), c = getEraserCfg(), m = ERASER_MARGIN;
+          const fw = Math.max(1, mn.clientWidth - w - 2 * m), fh = Math.max(1, mn.clientHeight - h - 2 * m);
+          c.hx = clamp01((d.px - m) / fw); c.hy = clamp01((d.py - m) / fh);
+          saveData();
+          setEraserPlace(false);
+          renderEraser();
+          return;
+        }
+
+        /* volta sempre ao lugar de descanso */
+        const home = eraserHomePos(w, h);
+        el.style.transition = 'left .35s cubic-bezier(.2,.8,.3,1), top .35s cubic-bezier(.2,.8,.3,1)';
+        el.style.left = home.x + 'px'; el.style.top = home.y + 'px';
+        setTimeout(() => { if (!eraserDrag) el.style.transition = 'none'; }, 380);
+
+        if (d.moved) { commitErase(d.touched); return; }
+        /* toque duplo (funciona também no celular) abre os ajustes */
+        const now = Date.now();
+        if (now - eraserLastTap < 400) { eraserLastTap = 0; openEraserPanel(); }
+        else eraserLastTap = now;
+      };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    })();
+
+    /* ---------- ajustes do apagador ---------- */
+    function placeEraserPanel() {
+      const pn = byId('eraserPanel'), r = byId('eraser').getBoundingClientRect();
+      const pw = pn.offsetWidth || 250, ph = pn.offsetHeight || 170;
+      const left = Math.max(8, Math.min(r.right - pw, window.innerWidth - pw - 8));
+      let top = r.top - ph - 10;
+      if (top < 8) top = Math.min(r.bottom + 10, window.innerHeight - ph - 8);
+      pn.style.left = left + 'px'; pn.style.top = Math.max(8, top) + 'px';
+    }
+    function openEraserPanel() {
+      const pn = byId('eraserPanel'), c = getEraserCfg();
+      byId('eraserSize').value = Math.round((c.size || 1) * 100);
+      byId('eraserSizeLbl').textContent = Math.round((c.size || 1) * 100) + '%';
+      pn.classList.remove('hidden');
+      placeEraserPanel();
+    }
+    function closeEraserPanel() { byId('eraserPanel').classList.add('hidden'); setEraserPlace(false); }
+    function setEraserSize(v) {
+      const c = getEraserCfg();
+      c.size = Math.max(0.5, Math.min(Number(v) / 100, 2.5));
+      byId('eraserSizeLbl').textContent = Math.round(c.size * 100) + '%';
+      renderEraser(); saveData();
+    }
+    function setEraserPlace(on) {
+      eraserPlace = on;
+      byId('eraser').classList.toggle('er-place', on);
+      const b = byId('eraserPlaceBtn');
+      if (b) b.querySelector('span').textContent = on ? 'Arraste o apagador e solte no lugar novo' : 'Mudar posição de descanso';
+    }
+    function toggleEraserPlace() { setEraserPlace(!eraserPlace); }
+    function resetEraser() {
+      appData.eraser = { size: 1, hx: 1, hy: 1 };
+      saveData(); setEraserPlace(false); renderEraser();
+      byId('eraserSize').value = 100; byId('eraserSizeLbl').textContent = '100%';
+      placeEraserPanel();
+    }
+    document.addEventListener('pointerdown', (e) => {
+      const pn = byId('eraserPanel');
+      if (pn.classList.contains('hidden')) return;
+      if (e.target.closest('#eraserPanel') || e.target.closest('#eraser')) return;
+      closeEraserPanel();
+    }, true);
 
     // Inicialização: a lousa só aparece depois do login (evento "fb-auth" vindo do firebase.js)
     setTimeout(() => {
