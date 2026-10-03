@@ -442,6 +442,19 @@
       20%  { opacity: .85; }
       100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -16px)) scale(1.9); }
     }
+
+    /* ===== Restaurar o que o apagador apagou ===== */
+    .chalk-restore { color: #fcd34d; }
+    .chalk-restore:hover { color: #fde68a; }
+    .theme-marker .chalk-restore { color: #b45309; }
+    .theme-marker .chalk-restore:hover { color: #92400e; }
+    /* Peça totalmente apagada: só sobra este ícone no lugar dela */
+    .chalk-ghost { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 30;
+      width: 36px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.5); color: #fcd34d; border: 1.5px dashed rgba(252,211,77,.75);
+      cursor: pointer; font-size: 14px; transition: background .2s ease, transform .12s ease; }
+    .chalk-ghost:hover { background: rgba(0,0,0,.72); transform: translate(-50%, -50%) scale(1.1); }
+    .theme-marker .chalk-ghost { background: rgba(255,255,255,.92); color: #b45309; border-color: rgba(180,83,9,.7); box-shadow: 0 2px 8px rgba(15,23,42,.25); }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -723,6 +736,7 @@
     </div>
     <label class="text-[11px] text-amber-100/80 flex items-center justify-between mb-1">Tamanho <span id="eraserSizeLbl"></span></label>
     <input id="eraserSize" type="range" min="50" max="250" step="5" oninput="setEraserSize(this.value)" class="w-full" style="accent-color:#fbbf24">
+    <label class="mt-2.5 flex items-center justify-between text-[11px] text-amber-100/80 cursor-pointer"><span><i class="fa-solid fa-volume-high mr-1"></i>Som ao apagar</span><input id="eraserSound" type="checkbox" checked onchange="setEraserSound(this.checked)" style="accent-color:#fbbf24;width:16px;height:16px"></label>
     <button id="eraserPlaceBtn" onclick="toggleEraserPlace()" class="mt-2.5 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-up-down-left-right"></i><span>Mudar posição de descanso</span></button>
     <button onclick="resetEraser()" class="mt-1.5 w-full px-3 py-1.5 bg-stone-700/70 hover:bg-stone-600 text-stone-200 rounded-lg text-xs transition">Restaurar tamanho e posição</button>
   </div>
@@ -975,6 +989,20 @@
       };
     }
 
+    /* Camadas: peças normais < imagens < adesivos (sempre abaixo de menus/cards, que ficam fora da lousa) */
+    const Z_LAYER = { image: 3000, sticker: 6000 };
+    function noteZ(note) { return (Z_LAYER[note.type] || 0) + Math.min(Math.max(note.zIndex || 1, 1), 2900); }
+    function normalizeZ(board) {
+      if ((board.nextZIndex || 0) < 2800) return false;
+      const sorted = board.notes.slice().sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+      sorted.forEach((n, i) => { n.zIndex = i + 1; });
+      board.nextZIndex = sorted.length + 1;
+      return true;
+    }
+    function refreshAllZ(board) {
+      board.notes.forEach(n => { const w = document.getElementById(n.id); if (w) w.style.zIndex = noteZ(n); });
+    }
+
     function initDragAndDrop(element, noteId) {
       const handles = element.querySelectorAll('.drag-handle');
       if (!handles.length) return;
@@ -985,11 +1013,13 @@
         }
 
         const board = getActiveBoard();
+        const zReset = normalizeZ(board);
         board.nextZIndex += 1;
-        element.style.zIndex = board.nextZIndex;
 
         const note = board.notes.find(n => n.id === noteId);
         if (note) note.zIndex = board.nextZIndex;
+        if (zReset) refreshAllZ(board);
+        else element.style.zIndex = note ? noteZ(note) : board.nextZIndex;
 
         const rect = element.getBoundingClientRect();
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
@@ -1267,12 +1297,19 @@
       `;
     }
 
+    /* Botão "restaurar": só existe na barra de peças apagáveis e só aparece se o apagador já passou por ela */
+    function restoreBtnHtml(note) {
+      return `<button onclick="restoreErased('${note.id}')" class="chalk-restore chalk-btn text-[12px] px-1 rounded transition" title="Restaurar o que foi apagado" style="${note.erase ? '' : 'display:none'}"><i class="fa-solid fa-rotate-left"></i></button>`;
+    }
+
     function chalkBarHtml(note, extraHtml = '') {
+      const restore = (note.type === 'checklist' || note.type === 'chalktext') ? restoreBtnHtml(note) : '';
       return `
         <div class="drag-handle chalk-bar cursor-grab active:cursor-grabbing flex items-center justify-between gap-3 select-none">
           ${chalkColorDotsHtml(note)}
           <div class="flex items-center gap-2">
             ${extraHtml}
+            ${restore}
             <span class="text-xs opacity-60" title="Arraste para mover"><i class="fa-solid fa-grip-vertical"></i></span>
             <button onclick="deleteNote('${note.id}')" class="chalk-del text-xs p-0.5 transition" title="Excluir">
               <i class="fa-solid fa-xmark"></i>
@@ -1487,6 +1524,7 @@
 
         <div class="shape-controls shape-controls-bg absolute top-1 right-1 z-20 flex items-center gap-2 rounded-full px-2 py-1">
           ${chalkColorDotsHtml(note)}
+          ${restoreBtnHtml(note)}
           <button onclick="rotateShape('${note.id}')" class="chalk-rot transition" title="Girar 45°">
             <i class="fa-solid fa-rotate-right text-[11px]"></i>
           </button>
@@ -1646,6 +1684,7 @@
     /* ---------- RENDERIZAÇÃO ---------- */
     function renderNotes() {
       const board = getActiveBoard();
+      normalizeZ(board);
       const container = document.getElementById('notesContainer');
       const emptyMsg = document.getElementById('emptyBoardMsg');
       
@@ -1668,7 +1707,7 @@
         wrapper.style.left = `${note.x}px`;
         wrapper.style.top = `${note.y}px`;
         wrapper.style.width = `${note.width || 320}px`;
-        wrapper.style.zIndex = note.zIndex || 1;
+        wrapper.style.zIndex = noteZ(note);
         if (isChalk && note.id === selectedNoteId) wrapper.classList.add('is-selected');
         if (note.type === 'shape') {
           wrapper.style.height = `${note.height || 80}px`;
@@ -1738,6 +1777,7 @@
 
         initDragAndDrop(wrapper, note.id);
         initHorizontalResize(wrapper, note.id);
+        if (note.erase) syncRestoreUI(note, wrapper);
         if (note.type === 'shape') initCornerResize(wrapper, note.id);
         if (note.type === 'image') initImageCornerResize(wrapper, note.id);
       });
@@ -3350,12 +3390,53 @@
       return false;
     }
 
-    /* Ao soltar o apagador: guarda o que foi apagado e remove de vez as peças totalmente limpas */
+    /* Mostra/esconde o botão de restaurar na barra da peça (e o ícone fantasma, se ela foi toda apagada) */
+    function syncRestoreUI(note, wr) {
+      if (!note || !wr) return;
+      wr.querySelectorAll('.chalk-restore').forEach(b => { b.style.display = note.erase ? '' : 'none'; });
+      let g = wr.querySelector('.chalk-ghost');
+      if (note.erase && note.erasedAll) {
+        if (!g) {
+          g = document.createElement('button');
+          g.type = 'button';
+          g.className = 'chalk-ghost';
+          g.title = 'Restaurar o que foi apagado';
+          g.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
+          g.addEventListener('click', (ev) => { ev.stopPropagation(); restoreErased(note.id); });
+          wr.appendChild(g);
+        }
+      } else if (g) {
+        g.remove();
+      }
+    }
+
+    function clearMask(target) {
+      target.style.webkitMaskImage = ''; target.style.maskImage = '';
+      target.style.webkitMaskSize = ''; target.style.maskSize = '';
+      target.style.webkitMaskRepeat = ''; target.style.maskRepeat = '';
+    }
+
+    /* Botão "restaurar": devolve tudo o que o apagador tirou daquela peça */
+    function restoreErased(id) {
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === id);
+      if (!note) return;
+      delete note.erase; delete note.erasedAll;
+      delete maskStore[id]; delete maskDirty[id];
+      const wr = byId(id);
+      if (wr) {
+        const t = eraseTargetOf(note, wr);
+        if (t) clearMask(t);
+        syncRestoreUI(note, wr);
+      }
+      saveData();
+    }
+
+    /* Ao soltar o apagador: guarda o que foi apagado. Peças totalmente limpas ficam (invisíveis) para poderem ser restauradas */
     function commitErase(touched) {
       if (!touched.size) return;
       flushMasks();
       const board = getActiveBoard();
-      const cleared = [];
       touched.forEach(id => {
         const note = board.notes.find(n => n.id === id), m = maskStore[id], wr = byId(id);
         if (!note || !m || !wr) return;
@@ -3363,22 +3444,105 @@
         if (!t) return;
         let alive = true;
         try { alive = inkAlive(note, t, m); } catch (err) { console.warn('Checagem de apagado falhou', err); }
-        if (!alive) { cleared.push(id); return; }
         const sc = document.createElement('canvas');
         sc.width = Math.max(1, Math.round(m.w / 2)); sc.height = Math.max(1, Math.round(m.h / 2));
         sc.getContext('2d').drawImage(m.canvas, 0, 0, sc.width, sc.height);
         note.erase = sc.toDataURL('image/png');
         m.src = note.erase;
+        if (alive) delete note.erasedAll; else note.erasedAll = true;
+        syncRestoreUI(note, wr);
       });
-      if (cleared.length) {
-        board.notes = board.notes.filter(n => cleared.indexOf(n.id) < 0);
-        cleared.forEach(id => delete maskStore[id]);
-        saveData();
-        renderNotes();
-      } else {
-        saveData();
-      }
+      saveData();
     }
+
+    /* ---------- som do apagador (sintetizado com Web Audio: sem arquivos externos) ----------
+       O volume e o "brilho" seguem a velocidade do arraste: reto = som contínuo,
+       inverter a direção = pausa curtinha, parou = silêncio. Passar sobre giz deixa o som mais áspero. */
+    const eraserSnd = (() => {
+      let ctx = null, g = null, raf = 0, active = false;
+      let speed = 0, lastX = 0, lastY = 0, lastT = 0, lastMoveT = 0, dirX = 0, dirY = 0, pauseUntil = 0, hitT = -1e9;
+
+      function enabled() { return getEraserCfg().sound !== false; }
+
+      function build() {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return false;
+        ctx = new AC();
+        const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < len; i++) {            // ruído "rosado" (mais natural que ruído branco)
+          const w = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+          b3 = 0.8665 * b3 + w * 0.3104856;  b4 = 0.55 * b4 + w * 0.5329522;    b5 = -0.7616 * b5 - w * 0.016898;
+          d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+        }
+        const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+        const band = (f, q) => { const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; const gn = ctx.createGain(); gn.gain.value = 0; src.connect(bp); bp.connect(gn); return { bp, gn }; };
+        const felt = band(900, 0.8);      // fricção do feltro na lousa
+        const grit = band(3200, 0.9);     // grãozinho do giz
+        const am = ctx.createGain(); am.gain.value = 0.78;           // vibração "stick-slip" do esfregar
+        const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 18;
+        const depth = ctx.createGain(); depth.gain.value = 0.22;
+        osc.connect(depth); depth.connect(am.gain);
+        const out = ctx.createGain(); out.gain.value = 0.6;
+        felt.gn.connect(am); grit.gn.connect(am); am.connect(out); out.connect(ctx.destination);
+        src.start(); osc.start();
+        g = { felt, grit, osc };
+        return true;
+      }
+
+      function tick() {
+        if (!active) return;
+        const now = performance.now(), t = ctx.currentTime;
+        let target = speed;
+        if (now - lastMoveT > 70) target = 0;     // parou de mexer: silêncio
+        if (now < pauseUntil) target = 0;         // virou a direção: pausa rápida
+        const level = Math.pow(Math.min(target / 1.6, 1), 0.65);
+        const hb = Math.max(0, 1 - (now - hitT) / 220);   // está passando por giz?
+        g.felt.gn.gain.setTargetAtTime(level * 0.22, t, 0.025);
+        g.grit.gn.gain.setTargetAtTime(level * (0.08 + 0.4 * hb), t, 0.02);
+        g.felt.bp.frequency.setTargetAtTime(600 + level * 900, t, 0.05);
+        g.grit.bp.frequency.setTargetAtTime(2200 + level * 2200 + hb * 600, t, 0.05);
+        g.osc.frequency.setTargetAtTime(9 + level * 34, t, 0.05);
+        raf = requestAnimationFrame(tick);
+      }
+
+      return {
+        start(x, y) {
+          if (!enabled()) return;
+          if (!ctx && !build()) return;
+          if (ctx.state === 'suspended') ctx.resume();
+          active = true; speed = 0; dirX = dirY = 0; pauseUntil = 0;
+          lastX = x; lastY = y; lastT = lastMoveT = performance.now();
+          cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+        },
+        move(x, y, hit) {
+          if (!active || !enabled()) return;
+          const now = performance.now(), dx = x - lastX, dy = y - lastY, dist = Math.hypot(dx, dy);
+          if (dist < 0.5) return;
+          const ux = dx / dist, uy = dy / dist;
+          if (dist >= 2 && (dirX || dirY) && (ux * dirX + uy * dirY) < 0) {   // inversão de direção
+            pauseUntil = now + 55 + Math.random() * 35;
+            speed *= 0.25;
+            dirX = ux; dirY = uy;
+          } else {
+            const nx = dirX * 0.6 + ux * 0.4, ny = dirY * 0.6 + uy * 0.4, nl = Math.hypot(nx, ny) || 1;
+            dirX = nx / nl; dirY = ny / nl;
+          }
+          speed = speed * 0.55 + (dist / Math.max(now - lastT, 6)) * 0.45;
+          lastX = x; lastY = y; lastT = lastMoveT = now;
+          if (hit) hitT = now;
+        },
+        stop() {
+          if (!active) return;
+          active = false; cancelAnimationFrame(raf);
+          const t = ctx.currentTime;
+          g.felt.gn.gain.setTargetAtTime(0, t, 0.03);
+          g.grit.gn.gain.setTargetAtTime(0, t, 0.03);
+          setTimeout(() => { if (!active && ctx && ctx.state === 'running') ctx.suspend(); }, 500);
+        }
+      };
+    })();
 
     /* ---------- arrastar o apagador ---------- */
     (function initEraser() {
@@ -3393,6 +3557,7 @@
         };
         el.style.transition = 'none';
         el.classList.add('is-erasing');
+        if (!eraserPlace) eraserSnd.start(e.clientX, e.clientY);
         try { el.setPointerCapture(e.pointerId); } catch (err) {}
       });
       el.addEventListener('pointermove', (e) => {
@@ -3407,6 +3572,7 @@
         el.style.left = x + 'px'; el.style.top = y + 'px';
         if (!eraserPlace) {
           const hit = eraserSweep(d.px, d.py, x, y, d.touched);
+          eraserSnd.move(e.clientX, e.clientY, hit);
           const now = performance.now();
           if (hit && now - puffAt > 45) {
             puffAt = now;
@@ -3420,6 +3586,7 @@
         const d = eraserDrag;
         if (!d || (e && e.pointerId !== d.pid)) return;
         eraserDrag = null;
+        eraserSnd.stop();
         el.classList.remove('is-erasing');
         try { el.releasePointerCapture(d.pid); } catch (err) {}
         const { w, h } = eraserDims();
@@ -3464,6 +3631,7 @@
       const pn = byId('eraserPanel'), c = getEraserCfg();
       byId('eraserSize').value = Math.round((c.size || 1) * 100);
       byId('eraserSizeLbl').textContent = Math.round((c.size || 1) * 100) + '%';
+      byId('eraserSound').checked = c.sound !== false;
       pn.classList.remove('hidden');
       placeEraserPanel();
     }
@@ -3473,6 +3641,11 @@
       c.size = Math.max(0.5, Math.min(Number(v) / 100, 2.5));
       byId('eraserSizeLbl').textContent = Math.round(c.size * 100) + '%';
       renderEraser(); saveData();
+    }
+    function setEraserSound(on) {
+      getEraserCfg().sound = !!on;
+      if (!on) eraserSnd.stop();
+      saveData();
     }
     function setEraserPlace(on) {
       eraserPlace = on;
@@ -3485,6 +3658,7 @@
       appData.eraser = { size: 1, hx: 1, hy: 1 };
       saveData(); setEraserPlace(false); renderEraser();
       byId('eraserSize').value = 100; byId('eraserSizeLbl').textContent = '100%';
+      byId('eraserSound').checked = true;
       placeEraserPanel();
     }
     document.addEventListener('pointerdown', (e) => {
