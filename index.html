@@ -448,13 +448,6 @@
     .chalk-restore:hover { color: #fde68a; }
     .theme-marker .chalk-restore { color: #b45309; }
     .theme-marker .chalk-restore:hover { color: #92400e; }
-    /* Peça totalmente apagada: só sobra este ícone no lugar dela */
-    .chalk-ghost { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 30;
-      width: 36px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,.5); color: #fcd34d; border: 1.5px dashed rgba(252,211,77,.75);
-      cursor: pointer; font-size: 14px; transition: background .2s ease, transform .12s ease; }
-    .chalk-ghost:hover { background: rgba(0,0,0,.72); transform: translate(-50%, -50%) scale(1.1); }
-    .theme-marker .chalk-ghost { background: rgba(255,255,255,.92); color: #b45309; border-color: rgba(180,83,9,.7); box-shadow: 0 2px 8px rgba(15,23,42,.25); }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -3390,24 +3383,10 @@
       return false;
     }
 
-    /* Mostra/esconde o botão de restaurar na barra da peça (e o ícone fantasma, se ela foi toda apagada) */
+    /* Mostra o botão de restaurar na barra só enquanto a peça estiver apagada em parte */
     function syncRestoreUI(note, wr) {
       if (!note || !wr) return;
       wr.querySelectorAll('.chalk-restore').forEach(b => { b.style.display = note.erase ? '' : 'none'; });
-      let g = wr.querySelector('.chalk-ghost');
-      if (note.erase && note.erasedAll) {
-        if (!g) {
-          g = document.createElement('button');
-          g.type = 'button';
-          g.className = 'chalk-ghost';
-          g.title = 'Restaurar o que foi apagado';
-          g.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
-          g.addEventListener('click', (ev) => { ev.stopPropagation(); restoreErased(note.id); });
-          wr.appendChild(g);
-        }
-      } else if (g) {
-        g.remove();
-      }
     }
 
     function clearMask(target) {
@@ -3421,7 +3400,7 @@
       const board = getActiveBoard();
       const note = board.notes.find(n => n.id === id);
       if (!note) return;
-      delete note.erase; delete note.erasedAll;
+      delete note.erase;
       delete maskStore[id]; delete maskDirty[id];
       const wr = byId(id);
       if (wr) {
@@ -3432,11 +3411,12 @@
       saveData();
     }
 
-    /* Ao soltar o apagador: guarda o que foi apagado. Peças totalmente limpas ficam (invisíveis) para poderem ser restauradas */
+    /* Ao soltar o apagador: guarda o que foi apagado e remove de vez as peças totalmente limpas (apagado é apagado) */
     function commitErase(touched) {
       if (!touched.size) return;
       flushMasks();
       const board = getActiveBoard();
+      const cleared = [];
       touched.forEach(id => {
         const note = board.notes.find(n => n.id === id), m = maskStore[id], wr = byId(id);
         if (!note || !m || !wr) return;
@@ -3444,15 +3424,22 @@
         if (!t) return;
         let alive = true;
         try { alive = inkAlive(note, t, m); } catch (err) { console.warn('Checagem de apagado falhou', err); }
+        if (!alive) { cleared.push(id); return; }
         const sc = document.createElement('canvas');
         sc.width = Math.max(1, Math.round(m.w / 2)); sc.height = Math.max(1, Math.round(m.h / 2));
         sc.getContext('2d').drawImage(m.canvas, 0, 0, sc.width, sc.height);
         note.erase = sc.toDataURL('image/png');
         m.src = note.erase;
-        if (alive) delete note.erasedAll; else note.erasedAll = true;
         syncRestoreUI(note, wr);
       });
-      saveData();
+      if (cleared.length) {
+        board.notes = board.notes.filter(n => cleared.indexOf(n.id) < 0);
+        cleared.forEach(id => { delete maskStore[id]; delete maskDirty[id]; });
+        saveData();
+        renderNotes();
+      } else {
+        saveData();
+      }
     }
 
     /* ---------- som do apagador (sintetizado com Web Audio: sem arquivos externos) ----------
