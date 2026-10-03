@@ -374,6 +374,10 @@
     .sticker-img { width: 100%; height: 100%; border-radius: 22%; overflow: hidden; position: relative; }
     .sticker-img img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
     .sticker-img::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 68%, rgba(0,0,0,.16) 100%); }
+    /* PNG: figura inteira, contorno de adesivo segue a silhueta, sem brilho quadrado */
+    .sticker-img.sticker-png { border-radius: 0; overflow: visible; }
+    .sticker-img.sticker-png img { object-fit: contain; }
+    .sticker-img.sticker-png::after { display: none; }
     .sticker-paste { animation: stickerPaste .65s cubic-bezier(.2,.8,.3,1) both; }
     @keyframes stickerPaste {
       0%   { transform: rotate(calc(var(--r, 0deg) - 10deg)) scale(1.55) translateY(-22px); opacity: .25; }
@@ -3247,7 +3251,7 @@
         byId('stickerTitle').textContent = `Meus adesivos (${mine.length})`;
         grid.style.gridTemplateColumns = 'repeat(8, minmax(0, 1fr))';
         grid.innerHTML = mine.length ? mine.map(st =>
-          `<div class="stk-btn stk-mini" style="cursor:pointer" onclick="createSticker({kind:'img', stickerId:'${st.id}'})">
+          `<div class="stk-btn stk-mini" style="cursor:pointer" onclick="createSticker({kind:'img', stickerId:'${st.id}', png:${!!st.png}})">
              <img data-img-id="${st.id}" ${imageURLs[st.id] ? `src="${imageURLs[st.id]}"` : ''} alt="">
              <span class="stk-del" onclick="event.stopPropagation(); deleteMySticker('${st.id}')" title="Excluir este adesivo"><i class="fa-solid fa-xmark"></i></span>
            </div>`).join('')
@@ -3323,7 +3327,7 @@
     function buildStickerHtml(note) {
       const w = Math.round(note.width || 110);
       const art = note.kind === 'img'
-        ? `<div class="sticker-img"><img data-img-id="${note.stickerId}" ${imageURLs[note.stickerId] ? `src="${imageURLs[note.stickerId]}"` : ''} draggable="false" alt=""></div>`
+        ? `<div class="sticker-img${note.png ? ' sticker-png' : ''}"><img data-img-id="${note.stickerId}" ${imageURLs[note.stickerId] ? `src="${imageURLs[note.stickerId]}"` : ''} draggable="false" alt=""></div>`
         : `<div class="sticker-emoji" style="font-size:${Math.round(w * 0.74)}px">${escapeHtml(note.emoji || '')}</div>`;
       return `
         <div class="img-bar">
@@ -3374,16 +3378,36 @@
             const S = 240, c = document.createElement('canvas');
             c.width = c.height = S;
             const x = c.getContext('2d');
-            const m = Math.min(im.naturalWidth, im.naturalHeight);
-            x.beginPath();
-            if (x.roundRect) x.roundRect(0, 0, S, S, S * 0.22); else x.rect(0, 0, S, S);
-            x.clip();
-            x.drawImage(im, (im.naturalWidth - m) / 2, (im.naturalHeight - m) / 2, m, m, 0, 0, S, S);
+            const isPng = f.type === 'image/png';
+            if (isPng) {
+              /* PNG: sem recorte. Tira só a margem transparente e encaixa a figura inteira */
+              const q = Math.min(1, 1024 / Math.max(im.naturalWidth, im.naturalHeight));
+              const tw = Math.max(1, Math.round(im.naturalWidth * q)), th = Math.max(1, Math.round(im.naturalHeight * q));
+              const t = document.createElement('canvas');
+              t.width = tw; t.height = th;
+              const tx = t.getContext('2d', { willReadFrequently: true });
+              tx.drawImage(im, 0, 0, tw, th);
+              const d = tx.getImageData(0, 0, tw, th).data;
+              let x0 = tw, y0 = th, x1 = -1, y1 = -1;
+              for (let yy = 0; yy < th; yy++) for (let xx = 0; xx < tw; xx++) {
+                if (d[(yy * tw + xx) * 4 + 3] > 8) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; }
+              }
+              if (x1 < 0) { x0 = 0; y0 = 0; x1 = tw - 1; y1 = th - 1; }
+              const bw = x1 - x0 + 1, bh = y1 - y0 + 1, pad = 8;
+              const k = Math.min((S - pad * 2) / bw, (S - pad * 2) / bh);
+              x.drawImage(t, x0, y0, bw, bh, (S - bw * k) / 2, (S - bh * k) / 2, bw * k, bh * k);
+            } else {
+              const m = Math.min(im.naturalWidth, im.naturalHeight);
+              x.beginPath();
+              if (x.roundRect) x.roundRect(0, 0, S, S, S * 0.22); else x.rect(0, 0, S, S);
+              x.clip();
+              x.drawImage(im, (im.naturalWidth - m) / 2, (im.naturalHeight - m) / 2, m, m, 0, 0, S, S);
+            }
             const dataUrl = c.toDataURL('image/png');
             const id = 'stk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
             await FB.saveImage(id, dataUrl);
             imageURLs[id] = dataUrlToBlobUrl(dataUrl);
-            appData.stickers = (appData.stickers || []).concat([{ id }]);
+            appData.stickers = (appData.stickers || []).concat([isPng ? { id, png: true } : { id }]);
             saveData();
             stickerTab = 'mine';
             renderStickerMenu();
