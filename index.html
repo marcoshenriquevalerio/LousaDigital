@@ -385,6 +385,28 @@
     .stk-btn:hover { background: rgba(255,255,255,.25); transform: scale(1.1); }
     .stk-btn img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
     .stk-del { position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%; background: #b91c1c; color: #fff; font-size: 9px; display: flex; align-items: center; justify-content: center; }
+
+    /* ===== Camadas: menus e janelas sempre na frente de tudo da lousa ===== */
+    #boardViewport { isolation: isolate; }
+    #shapeMenu, #stickerMenu { z-index: 9990 !important; }
+    #calendarModal, #plannerModal, #imageModal { z-index: 9995 !important; }
+    #customDialogModal { z-index: 9999 !important; }
+
+    /* Barras de controle não ficam cortadas quando a peça encosta nas bordas */
+    .img-bar-in .chalk-bar { top: auto; bottom: -30px; }
+    .bar-edge-l .img-bar { left: 0; transform: none; }
+    .bar-edge-r .img-bar { left: auto; right: 0; transform: none; }
+    .chalk-note.is-selected .item-remove { opacity: .85; }
+    .chalk-note.is-selected .item-remove:hover { opacity: 1; }
+    .edit-input { width: 100%; background: transparent; border: 0; border-bottom: 2px dashed currentColor; outline: none; font: inherit; color: inherit; padding: 0 2px; }
+
+    /* Painel de adesivos */
+    .stk-tab { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; font-size: 17px; line-height: 1; transition: background .2s ease, transform .12s ease; }
+    .stk-tab:hover { background: rgba(255,255,255,.2); }
+    .stk-tab.active { background: rgba(251,191,36,.35); box-shadow: inset 0 0 0 1.5px rgba(251,191,36,.9); }
+    .stk-tab.star { color: #fcd34d; }
+    .stk-mini { font-size: 15px; border-radius: 8px; }
+    .stk-mini .stk-del { width: 14px; height: 14px; top: -3px; right: -3px; font-size: 8px; }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -485,7 +507,7 @@
   </div>
 
   <!-- MAIN: Área da Lousa Verde Escolar Vintage -->
-  <div id="boardViewport" class="chalkboard-bg flex-1 min-h-0 w-full relative overflow-hidden"><div id="boardSizer" style="position:relative;width:100%;height:100%"><main id="boardCanvas" class="relative overflow-hidden p-4 sm:p-8" style="width:100%;height:100%;transform-origin:0 0">
+  <div id="boardViewport" class="chalkboard-bg flex-1 min-h-0 w-full relative overflow-hidden"><div id="boardSizer" style="position:relative;width:100%;height:100%"><main id="boardCanvas" class="relative overflow-hidden" style="width:100%;height:100%;transform-origin:0 0">
     
     <!-- Elementos Decorativos em Giz -->
     <div class="absolute bottom-16 right-8 pointer-events-none opacity-20 font-chalk text-xl chalk-text select-none hidden lg:block text-right">
@@ -623,11 +645,14 @@
     </div>
   </div>
 
-  <div id="stickerMenu" class="hidden fixed z-50 wood-frame rounded-xl p-2.5 shadow-2xl" style="width:310px;max-width:calc(100vw - 16px);top:70px;left:8px">
-    <div class="text-[11px] font-semibold text-amber-200/80 px-1 pb-1">Adesivos</div>
-    <div id="stickerGrid" class="grid grid-cols-7 gap-1 overflow-y-auto" style="max-height:34vh"></div>
-    <div class="text-[11px] font-semibold text-amber-200/80 px-1 pt-2 pb-1">Meus adesivos</div>
-    <div id="myStickerGrid" class="grid grid-cols-5 gap-1.5"></div>
+  <div id="stickerMenu" class="hidden fixed z-50 wood-frame rounded-xl p-2.5 shadow-2xl" style="width:330px;max-width:calc(100vw - 16px);top:70px;left:8px">
+    <div id="stickerTabs" class="flex gap-1 overflow-x-auto pb-1.5"></div>
+    <div id="stickerTitle" class="text-[11px] font-semibold text-amber-200/80 px-1 pb-1"></div>
+    <div id="stickerGrid" class="grid gap-1 overflow-y-auto pr-0.5" style="height:216px;align-content:start"></div>
+    <div id="stickerFreeRow" class="flex gap-1.5 mt-2">
+      <input id="stickerFreeInput" type="text" placeholder="Digite ou cole qualquer emoji" onkeydown="if(event.key==='Enter') createFreeEmoji()" class="flex-1 min-w-0 bg-stone-900/80 border border-amber-900/60 rounded-lg px-2.5 py-1.5 text-sm text-stone-100 focus:outline-none focus:border-amber-400">
+      <button onclick="createFreeEmoji()" class="px-3 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition" title="Criar adesivo"><i class="fa-solid fa-plus"></i></button>
+    </div>
     <button onclick="byId('stickerFileInput').click()" class="mt-2 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-wand-magic-sparkles"></i> Criar adesivo de uma imagem</button>
   </div>
   <input type="file" id="stickerFileInput" accept="image/*" class="hidden" onchange="onStickerFileChosen(event)">
@@ -919,6 +944,16 @@
       });
     }
 
+    /* Ajusta as barras de controle quando a peça está perto de uma borda */
+    function updateEdgeClasses(el) {
+      const mn = document.getElementById('boardCanvas');
+      if (!el || !mn) return;
+      const x = parseFloat(el.style.left) || 0, y = parseFloat(el.style.top) || 0;
+      el.classList.toggle('img-bar-in', y < 52);
+      el.classList.toggle('bar-edge-l', x < 70);
+      el.classList.toggle('bar-edge-r', x + el.offsetWidth > mn.offsetWidth - 70);
+    }
+
     function onPointerMove(e) {
       if (!activeDrag) return;
       if (e.preventDefault && e.cancelable) e.preventDefault();
@@ -932,8 +967,9 @@
       let x = (clientX - boardRect.left) / boardScale - activeDrag.offsetX;
       let y = (clientY - boardRect.top) / boardScale - activeDrag.offsetY;
 
-      x = Math.max(10, Math.min(x, boardRect.width / boardScale - activeDrag.element.offsetWidth - 10));
-      y = Math.max(10, Math.min(y, boardRect.height / boardScale - activeDrag.element.offsetHeight - 10));
+      /* Posição livre: pode encostar em qualquer borda, sem folga */
+      x = Math.max(0, Math.min(x, boardRect.width / boardScale - activeDrag.element.offsetWidth));
+      y = Math.max(0, Math.min(y, boardRect.height / boardScale - activeDrag.element.offsetHeight));
 
       activeDrag.element.style.left = `${x}px`;
       activeDrag.element.style.top = `${y}px`;
@@ -949,7 +985,7 @@
     function onPointerUp() {
       if (!activeDrag) return;
       activeDrag.element.classList.remove('is-dragging');
-      activeDrag.element.classList.toggle('img-bar-in', parseFloat(activeDrag.element.style.top) < 52);
+      updateEdgeClasses(activeDrag.element);
       activeDrag = null;
 
       document.removeEventListener('pointermove', onPointerMove);
@@ -1213,7 +1249,10 @@
                       <path class="check-mark2" d="M8 16 L13.5 22.5 L27 5" stroke-width="1.5"/>
                     </svg>
                   </button>
-                  <span class="flex-1 font-chalk leading-snug" style="font-size:${ls}px"><span class="chalk-ink ${item.done ? 'chalk-strike' : ''} ${anim ? 'animate' : ''}">${escapeHtml(item.text)}</span></span>
+                  <span data-item-idx="${idx}" ondblclick="editChecklistItem('${note.id}', ${idx})" class="flex-1 font-chalk leading-snug" style="font-size:${ls}px"><span class="chalk-ink ${item.done ? 'chalk-strike' : ''} ${anim ? 'animate' : ''}">${escapeHtml(item.text)}</span></span>
+                  <button onclick="editChecklistItem('${note.id}', ${idx})" class="item-remove chalk-rot opacity-0 group-hover/item:opacity-100 text-xs transition" title="Editar tarefa">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
                   <button onclick="removeChecklistItem('${note.id}', ${idx})" class="item-remove chalk-del opacity-0 group-hover/item:opacity-100 text-xs transition" title="Remover tarefa">
                     <i class="fa-solid fa-xmark"></i>
                   </button>
@@ -1567,7 +1606,6 @@
           wrapper.innerHTML = buildStickerHtml(note);
         } else if (note.type === 'image') {
           wrapper.innerHTML = buildImageHtml(note);
-          if (note.y < 52) wrapper.classList.add('img-bar-in');
         } else {
           wrapper.innerHTML = `
           <!-- FITA ADESIVA FIXA NO TOPO -->
@@ -1613,6 +1651,7 @@
         }
 
         container.appendChild(wrapper);
+        updateEdgeClasses(wrapper);
 
         if (note.type === 'text' || note.type === 'chalktext' || note.type === 'image') {
           const ta = wrapper.querySelector('textarea');
@@ -1698,6 +1737,42 @@
         saveData();
         renderNotes();
       }
+    }
+
+    /* Edição no lugar: troca o texto por um campo, Enter/clicar fora salva, Esc cancela */
+    function inlineEdit(target, current, onCommit, onCancel, fontSize) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = current;
+      input.className = 'edit-input';
+      if (fontSize) input.style.fontSize = fontSize;
+      target.replaceChildren(input);
+      input.focus();
+      input.select();
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        const v = input.value.trim();
+        if (ok && v && v !== current) onCommit(v); else onCancel();
+      };
+      input.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+      });
+      input.addEventListener('blur', () => finish(true));
+    }
+
+    function editChecklistItem(id, idx) {
+      const note = findNote(id);
+      const wrap = document.getElementById(id);
+      const target = wrap && wrap.querySelector(`[data-item-idx="${idx}"]`);
+      if (!note || !note.items || !note.items[idx] || !target) return;
+      inlineEdit(target, note.items[idx].text,
+        (v) => { note.items[idx].text = v; saveData(); renderNotes(); },
+        () => renderNotes(),
+        target.style.fontSize);
     }
 
     function removeChecklistItem(id, itemIndex) {
@@ -1817,8 +1892,11 @@
         const itemEl = document.createElement('div');
         itemEl.className = 'flex items-center justify-between bg-stone-900 p-2 rounded border border-stone-700/60 group';
         itemEl.innerHTML = `
-          <span class="text-xs text-stone-200 font-chalk text-base leading-snug flex-1 pr-2">${escapeHtml(evtText)}</span>
-          <button onclick="removeCalendarEvent('${selectedCalDateStr}', ${idx})" class="text-stone-500 hover:text-red-400 p-0.5 transition">
+          <span data-evt-idx="${idx}" ondblclick="editCalendarEvent('${selectedCalDateStr}', ${idx})" class="text-xs text-stone-200 font-chalk text-base leading-snug flex-1 pr-2">${escapeHtml(evtText)}</span>
+          <button onclick="editCalendarEvent('${selectedCalDateStr}', ${idx})" class="text-stone-500 hover:text-amber-300 p-0.5 mr-1 transition" title="Editar">
+            <i class="fa-solid fa-pen text-xs"></i>
+          </button>
+          <button onclick="removeCalendarEvent('${selectedCalDateStr}', ${idx})" class="text-stone-500 hover:text-red-400 p-0.5 transition" title="Excluir">
             <i class="fa-solid fa-trash-can text-xs"></i>
           </button>
         `;
@@ -1841,6 +1919,16 @@
 
       saveData();
       renderCalendar();
+    }
+
+    function editCalendarEvent(dateStr, idx) {
+      const board = getActiveBoard();
+      const list = board.calendarEvents && board.calendarEvents[dateStr];
+      const target = document.querySelector(`#dayEventsList [data-evt-idx="${idx}"]`);
+      if (!list || list[idx] === undefined || !target) return;
+      inlineEdit(target, list[idx],
+        (v) => { list[idx] = v; saveData(); renderCalendar(); },
+        () => renderSelectedDayEvents());
     }
 
     function removeCalendarEvent(dateStr, index) {
@@ -1901,8 +1989,11 @@
               <div class="text-center py-6 text-stone-600 font-chalk text-xs">Sem notas</div>
             ` : events.map((evt, idx) => `
               <div class="bg-stone-900/90 p-1.5 rounded border border-stone-700/80 font-chalk text-sm leading-snug flex items-start justify-between gap-1 group">
-                <span class="text-stone-200 break-words flex-1">• ${escapeHtml(evt)}</span>
-                <button onclick="removePlannerItem('${dateStr}', ${idx})" class="opacity-0 group-hover:opacity-100 text-stone-500 hover:text-red-400 transition text-xs p-0.5">
+                <span data-plan-idx="${idx}" ondblclick="editPlannerItem('${dateStr}', ${idx})" class="text-stone-200 break-words flex-1">• ${escapeHtml(evt)}</span>
+                <button onclick="editPlannerItem('${dateStr}', ${idx})" class="opacity-50 group-hover:opacity-100 text-stone-500 hover:text-amber-300 transition text-xs p-0.5" title="Editar">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button onclick="removePlannerItem('${dateStr}', ${idx})" class="opacity-50 group-hover:opacity-100 text-stone-500 hover:text-red-400 transition text-xs p-0.5" title="Excluir">
                   <i class="fa-solid fa-xmark"></i>
                 </button>
               </div>
@@ -1933,6 +2024,19 @@
       board.calendarEvents[dateStr].push(input.value.trim());
       saveData();
       renderPlanner();
+    }
+
+    function editPlannerItem(dateStr, idx) {
+      const board = getActiveBoard();
+      const list = board.calendarEvents && board.calendarEvents[dateStr];
+      const target = document.querySelector(`#plannerDaysGrid [data-plan-idx="${idx}"]`);
+      /* o mesmo índice existe em cada coluna: pega a coluna do dia certo */
+      const col = document.getElementById(`planner_input_${dateStr}`);
+      const scoped = col && col.closest('div.flex-col') ? col.closest('div.flex-col').querySelector(`[data-plan-idx="${idx}"]`) : target;
+      if (!list || list[idx] === undefined || !scoped) return;
+      inlineEdit(scoped, list[idx],
+        (v) => { list[idx] = v; saveData(); renderPlanner(); if (!document.getElementById('calendarModal').classList.contains('hidden')) renderCalendar(); },
+        () => renderPlanner());
     }
 
     function removePlannerItem(dateStr, index) {
@@ -2584,18 +2688,67 @@
     }
 
     /* ===== Adesivos ===== */
-    const EMOJI_STICKERS = '⭐ 🌟 ✨ ❤️ 💛 💚 💙 💜 🔥 💯 ✅ ❌ ❗ ❓ 💡 📌 📎 ✏️ 📚 🎒 🎨 🏆 🎯 🚀 🌈 ☀️ 🌙 ⚡ 🌸 🌻 🍀 🐱 🐶 🦄 🐼 🍎 🍕 🎂 🎉 🎈 🎁 👍 👏 💪 🙂 😎 😍 🤔 😴 🥳 🔔 📅 ⏰ 🏠 ☕ 🎵 ⚽ 🧠 📝 🔒 ✈️ 🐞'.split(' ');
+    const STICKER_CATS = [
+      { id: 'faces', icon: '😀', label: 'Carinhas', items: '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 😚 😙 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🤫 🤔 🤐 🤨 😐 😑 😶 😏 😒 🙄 😬 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 🤯 🤠 🥳 😎 🤓 🧐 😕 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊' },
+      { id: 'hands', icon: '👍', label: 'Gestos e pessoas', items: '👋 🤚 🖐️ ✋ 🖖 👌 🤌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦵 🦶 👂 👃 🧠 👀 👁️ 👅 👄 👶 🧒 👦 👧 🧑 👨 👩 🧓 👴 👵 👮 🕵️ 💂 👷 🤴 👸 👳 🧕 🤵 👰 🤰 👼 🎅 🤶 🦸 🦹 🧙 🧚 🧛 🧜 🧝 🧞 🧟 💆 💇 🚶 🏃 💃 🕺 👯 🧖 👪 👣' },
+      { id: 'symbols', icon: '❤️', label: 'Corações e símbolos', items: '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 ✅ ❌ ❗ ❓ ❕ ❔ ‼️ ⁉️ 💯 🔥 ✨ ⭐ 🌟 💫 💥 💢 💦 💨 💬 💭 💤 🔔 🔕 📢 📣 ✔️ ✖️ ➕ ➖ ➗ ➰ ➿ ⚠️ 🚫 ⛔ 📛 🔞 ♻️ 🔰 ⭕ ✳️ ❇️ 🆗 🆒 🆕 🆓 🆙 🔝 🔜 🔛 🔚 🔙 💲 🆘 ▶️ ⏸️ ⏩ ⏪ 🔀 🔁 🔂 ➡️ ⬅️ ⬆️ ⬇️ ↗️ ↘️ ↙️ ↖️ ↕️ ↔️ 🔄 🔴 🟠 🟡 🟢 🔵 🟣 ⚫ ⚪ 🟤 🟥 🟧 🟨 🟩 🟦 🟪 🟫 ⬛ ⬜ 🔶 🔷 🔸 🔹 🔺 🔻 🏁 🚩 🎌 🏴 🏳️' },
+      { id: 'animals', icon: '🐱', label: 'Animais', items: '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🐤 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🐝 🐛 🦋 🐌 🐞 🐜 🕷️ 🦂 🐢 🐍 🦎 🐙 🦑 🦐 🦀 🐡 🐠 🐟 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦍 🐘 🦛 🦏 🐪 🐫 🦒 🦘 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🐐 🦌 🐕 🐩 🐈 🐓 🦃 🦚 🦜 🦢 🕊️ 🐇 🦝 🦨 🦔 🦦 🦥 🐁 🐀 🐿️ 🐾 🐉 🦖 🦕' },
+      { id: 'nature', icon: '🌸', label: 'Natureza e clima', items: '🌸 💮 🏵️ 🌹 🥀 🌺 🌻 🌼 🌷 🌱 🌲 🌳 🌴 🌵 🌾 🌿 ☘️ 🍀 🍁 🍂 🍃 🍄 🌰 🐚 🌍 🌎 🌏 🌙 🌚 🌛 🌜 🌝 🌞 ☀️ ⛅ ☁️ 🌤️ ⛈️ 🌧️ ❄️ ☃️ ⛄ 🌈 ⚡ 💧 🌊 ☔ 🌋 ⛰️ 🏔️ 🗻 🏕️ 🏖️ 🏝️ 🏜️' },
+      { id: 'food', icon: '🍕', label: 'Comidas e bebidas', items: '🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶️ 🌽 🥕 🧄 🧅 🥔 🍠 🥐 🥯 🍞 🥖 🥨 🧀 🥚 🍳 🥞 🧇 🥓 🥩 🍗 🍖 🌭 🍔 🍟 🍕 🥪 🌮 🌯 🥗 🍝 🍜 🍲 🍛 🍣 🍱 🥟 🍤 🍙 🍚 🍘 🍥 🥠 🍢 🍡 🍧 🍨 🍦 🥧 🧁 🍰 🎂 🍮 🍭 🍬 🍫 🍿 🍩 🍪 🥜 🍯 🥛 🍼 ☕ 🍵 🧃 🥤 🍶 🍺 🍻 🥂 🍷 🥃 🍸 🍹 🍾 🧊 🥄 🍴 🍽️' },
+      { id: 'fun', icon: '⚽', label: 'Esportes e diversão', items: '⚽ 🏀 🏈 ⚾ 🥎 🎾 🏐 🏉 🎱 🏓 🏸 🥅 🏒 🏑 🏏 ⛳ 🏹 🎣 🥊 🥋 🛹 ⛸️ 🎿 ⛷️ 🏂 🏋️ 🤸 🤺 🏇 🧘 🏄 🏊 🚴 🏆 🥇 🥈 🥉 🏅 🎖️ 🎗️ 🎫 🎟️ 🎪 🎭 🎨 🎬 🎤 🎧 🎼 🎹 🥁 🎷 🎺 🎸 🪕 🎻 🎲 🎯 🎳 🎮 🎰 🧩 🎁 🎈 🎀 🎊 🎉 🎎 🏮' },
+      { id: 'objects', icon: '💡', label: 'Objetos e escola', items: '⌚ 📱 💻 ⌨️ 🖥️ 🖨️ 🖱️ 💾 💿 📷 📸 📹 🎥 📞 ☎️ 📺 📻 🎙️ ⏰ ⏱️ ⏲️ 🕰️ 💡 🔦 🕯️ 🧯 💸 💵 💴 💶 💷 💰 💳 💎 ⚖️ 🔧 🔨 ⚒️ 🛠️ ⛏️ 🔩 ⚙️ 🧲 🛡️ 🔮 📿 ⚗️ 🔭 🔬 💊 💉 🩺 🧬 🌡️ 🧹 🧺 🧼 🧽 🔑 🗝️ 🚪 🛋️ 🛏️ 🧸 🖼️ 🛍️ ✉️ 📧 📨 📦 📫 📝 📁 📂 📅 📆 📇 📈 📉 📊 📋 📌 📍 📎 🖇️ 📏 📐 ✂️ 🗃️ 🗄️ 🗑️ 🔒 🔓 🔏 🔐 📚 📖 📗 📘 📙 📕 🔖 🏷️ ✏️ ✒️ 🖋️ 🖊️ 🖌️ 🖍️ 🎒 🎓 🧮 🔔' },
+      { id: 'travel', icon: '✈️', label: 'Viagem e lugares', items: '🚗 🚕 🚙 🚌 🚎 🏎️ 🚓 🚑 🚒 🚐 🚚 🚛 🚜 🛴 🚲 🛵 🏍️ 🚨 🚔 🚍 🚘 🚖 🚡 🚠 🚟 🚃 🚋 🚞 🚝 🚄 🚅 🚈 🚂 🚆 🚇 🚊 🚉 ✈️ 🛫 🛬 🚀 🛸 🚁 🛶 ⛵ 🚤 🛳️ ⛴️ 🚢 ⚓ ⛽ 🚧 🚦 🚥 🗺️ 🗿 🗽 🗼 🏰 🏯 🏟️ 🎡 🎢 🎠 ⛲ ⛱️ ⛺ 🏠 🏡 🏢 🏣 🏤 🏥 🏦 🏨 🏩 🏪 🏫 🏬 🏭 ⛪ 🕌 🛕 🕍' }
+    ];
+    let stickerTab = 'faces';
+
+    function setStickerTab(id) { stickerTab = id; renderStickerMenu(); }
 
     function renderStickerMenu() {
-      byId('stickerGrid').innerHTML = EMOJI_STICKERS.map(e =>
-        `<button class="stk-btn" onclick="createSticker({kind:'emoji', emoji:'${e}'})">${e}</button>`).join('');
       const mine = (appData.stickers || []);
-      byId('myStickerGrid').innerHTML = mine.length ? mine.map(st =>
-        `<div class="stk-btn" style="cursor:pointer" onclick="createSticker({kind:'img', stickerId:'${st.id}'})">
-           <img data-img-id="${st.id}" ${imageURLs[st.id] ? `src="${imageURLs[st.id]}"` : ''} alt="">
-           <span class="stk-del" onclick="event.stopPropagation(); deleteMySticker('${st.id}')" title="Remover da minha coleção"><i class="fa-solid fa-xmark"></i></span>
-         </div>`).join('') : '<div class="col-span-5 text-xs text-amber-100/60 px-1">Nenhum ainda. Crie um a partir de qualquer foto.</div>';
+      const isMine = stickerTab === 'mine';
+
+      byId('stickerTabs').innerHTML =
+        `<button class="stk-tab star ${isMine ? 'active' : ''}" onclick="setStickerTab('mine')" title="Meus adesivos"><i class="fa-solid fa-star"></i></button>` +
+        STICKER_CATS.map(c => `<button class="stk-tab ${stickerTab === c.id ? 'active' : ''}" onclick="setStickerTab('${c.id}')" title="${c.label}">${c.icon}</button>`).join('');
+
+      const grid = byId('stickerGrid');
+      if (isMine) {
+        byId('stickerTitle').textContent = `Meus adesivos (${mine.length})`;
+        grid.style.gridTemplateColumns = 'repeat(8, minmax(0, 1fr))';
+        grid.innerHTML = mine.length ? mine.map(st =>
+          `<div class="stk-btn stk-mini" style="cursor:pointer" onclick="createSticker({kind:'img', stickerId:'${st.id}'})">
+             <img data-img-id="${st.id}" ${imageURLs[st.id] ? `src="${imageURLs[st.id]}"` : ''} alt="">
+             <span class="stk-del" onclick="event.stopPropagation(); deleteMySticker('${st.id}')" title="Excluir este adesivo"><i class="fa-solid fa-xmark"></i></span>
+           </div>`).join('')
+          : '<div class="text-xs text-amber-100/60 px-1" style="grid-column:1/-1">Nenhum ainda. Use o botão abaixo para criar um a partir de qualquer foto.</div>';
+      } else {
+        const cat = STICKER_CATS.find(c => c.id === stickerTab) || STICKER_CATS[0];
+        byId('stickerTitle').textContent = cat.label;
+        grid.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
+        grid.innerHTML = cat.items.split(' ').map(e =>
+          `<button class="stk-btn" onclick="createSticker({kind:'emoji', emoji:'${e}'})">${e}</button>`).join('');
+      }
+      grid.scrollTop = 0;
+      byId('stickerFreeRow').style.display = isMine ? 'none' : 'flex';
       hydrateImages();
+    }
+
+    /* Qualquer emoji: digite ou cole e vira adesivo */
+    function createFreeEmoji() {
+      const input = byId('stickerFreeInput');
+      const v = (input.value || '').trim();
+      if (!v) return;
+      const first = (window.Intl && Intl.Segmenter)
+        ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(v)][0].segment
+        : Array.from(v)[0];
+      if (!/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(first)) {
+        input.value = '';
+        input.placeholder = 'Isso não parece um emoji — tente outro';
+        return;
+      }
+      input.value = '';
+      input.placeholder = 'Digite ou cole qualquer emoji';
+      createSticker({ kind: 'emoji', emoji: first });
     }
 
     function toggleStickerMenu(e) {
@@ -2606,13 +2759,15 @@
       renderStickerMenu();
       const r = e.currentTarget.getBoundingClientRect();
       menu.classList.remove('hidden');
-      const mh = menu.offsetHeight || 300;
+      const mh = menu.offsetHeight || 380;
       const below = r.bottom + 8 + mh < window.innerHeight - 8;
       menu.style.top = `${below ? r.bottom + 8 : Math.max(8, r.top - mh - 8)}px`;
       menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
     }
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('#stickerMenu')) byId('stickerMenu').classList.add('hidden');
+      const menu = byId('stickerMenu');
+      /* composedPath inclui elementos que o painel já recriou (troca de aba / excluir) */
+      if (!e.composedPath().includes(menu)) menu.classList.add('hidden');
     });
 
     function createSticker(def) {
@@ -2626,8 +2781,8 @@
       board.notes.push(Object.assign({
         id, type: 'sticker', width,
         rotation: Math.round(Math.random() * 24 - 12),
-        x: Math.max(10, c.x - width / 2 + (Math.random() * 60 - 30)),
-        y: Math.max(10, c.y - width / 2 + (Math.random() * 60 - 30)),
+        x: Math.max(0, c.x - width / 2 + (Math.random() * 60 - 30)),
+        y: Math.max(0, c.y - width / 2 + (Math.random() * 60 - 30)),
         zIndex: board.nextZIndex
       }, def));
       saveData();
@@ -2699,6 +2854,7 @@
             imageURLs[id] = dataUrlToBlobUrl(dataUrl);
             appData.stickers = (appData.stickers || []).concat([{ id }]);
             saveData();
+            stickerTab = 'mine';
             renderStickerMenu();
           } catch (err) { console.error(err); fail(); }
         };
