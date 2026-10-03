@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Quadro Verde Escolar Vintage - Lousa Interativa</title>
   
   <!-- Tailwind CSS CDN -->
@@ -320,6 +320,44 @@
     .theme-marker .img-bar { background: rgba(255,255,255,0.96); color: #0f172a; box-shadow: 0 2px 10px rgba(15,23,42,0.25); }
     .theme-marker .img-bar-btn:hover { background: rgba(0,0,0,0.08); }
     .theme-marker .img-range { accent-color: #1d4ed8; }
+    /* ===== BARRA DE FERRAMENTAS COMPACTA (desktop: topo / celular: inferior) ===== */
+    :root { --bar-h: 0px; }
+    #topbar { flex-wrap: wrap; row-gap: 4px; }
+    .tb-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .tb-spacer { flex: 1; }
+    .tb { width: 36px; height: 36px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.35); transition: transform .12s ease, background .2s ease; }
+    .tb:hover { transform: translateY(-1px); }
+    .tb:active { transform: scale(.92); }
+    .tb-label { display: none; }
+    .mob-only, #moreBtn { display: none !important; }
+    .brand-text { display: none; flex-direction: column; }
+    @media (min-width: 1280px) { .brand-text { display: flex; } }
+    #topbar .nav-pill { padding: 3px 6px; gap: 4px; border-radius: 999px; }
+    #topbar .nav-btn { width: 28px; height: 28px; border-radius: 50%; }
+    #topbar .nav-name { font-size: 14px; line-height: 1; }
+    #showHeaderBtn { display: none; position: fixed; top: 8px; right: 8px; z-index: 44; background: rgba(20,12,5,.72); color: #fde68a; border: 1px solid rgba(251,191,36,.4); backdrop-filter: blur(4px); }
+    body.header-hidden #showHeaderBtn { display: inline-flex; }
+    body.header-hidden #topbar { display: none; }
+    .theme-marker #showHeaderBtn { background: rgba(255,255,255,.92); color: #0f172a; border-color: #94a3b8; }
+    .theme-marker #moreGroup { background: rgba(255,255,255,.98); border-color: #94a3b8; }
+
+    @media (max-width: 899px) {
+      body { padding-bottom: var(--bar-h); }
+      #topbar { position: fixed; left: 0; right: 0; bottom: 0; top: auto; flex-wrap: nowrap; padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px)); border-radius: 20px 20px 0 0; border-bottom-width: 0; }
+      #topbar .brand, .tb-spacer, .desk-only { display: none !important; }
+      #toolGroup { width: 100%; flex-wrap: nowrap; justify-content: space-between; gap: 4px; }
+      .tb { width: 40px; height: 40px; font-size: 16px; }
+      #moreBtn { display: inline-flex !important; }
+      #moreGroup { display: none; position: fixed; left: 10px; right: 10px; bottom: calc(var(--bar-h) + 8px); z-index: 46; max-width: 420px; margin: 0 auto; padding: 12px; border-radius: 18px; grid-template-columns: repeat(4, 1fr); gap: 8px; background: rgba(28,16,7,.97); border: 1px solid rgba(251,191,36,.25); box-shadow: 0 12px 32px rgba(0,0,0,.55); }
+      #moreGroup.open { display: grid; }
+      #moreGroup .tb { display: flex; width: auto; height: auto; min-height: 58px; border-radius: 14px; flex-direction: column; gap: 5px; padding: 8px 2px; font-size: 18px; }
+      #moreGroup .mob-only.tb { display: flex !important; }
+      #moreGroup .tb-label { display: block; font-size: 10.5px; font-weight: 600; line-height: 1.1; text-align: center; }
+      #moreGroup .nav-pill, #moreGroup #userChip { grid-column: 1 / -1; justify-content: center; }
+      #moreGroup .nav-btn { width: 38px; height: 38px; }
+      #userName { display: inline !important; }
+      #showHeaderBtn { top: auto; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+    }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -356,114 +394,55 @@
     </defs>
   </svg>
 
-  <!-- TOPO: Barra de Ferramentas e Botões Principais -->
-  <header class="wood-frame shrink-0 sticky top-0 z-40 px-3 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xl">
-    
-    <!-- Lado Esquerdo: Identificador da Lousa -->
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full bg-emerald-950/90 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-inner">
-        <i class="fa-solid fa-chalkboard text-xl"></i>
-      </div>
-      
-      <div class="flex flex-col">
-        <h1 id="headerBoardTitle" class="font-chalk text-2xl font-bold text-amber-200 tracking-wide">Lousa 1</h1>
-        <span id="headerSubtitle" class="text-[11px] text-amber-300/70 -mt-1 font-medium">Quadro Verde Vintage</span>
+  <!-- TOPO / BARRA DE FERRAMENTAS -->
+  <header id="topbar" class="wood-frame shrink-0 sticky top-0 z-40 px-3 py-1.5 flex items-center gap-2 shadow-2xl">
+    <div class="brand flex items-center gap-2 min-w-0 shrink-0">
+      <div class="w-9 h-9 rounded-full bg-emerald-950/90 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-inner shrink-0"><i class="fa-solid fa-chalkboard text-base"></i></div>
+      <div class="brand-text leading-tight min-w-0">
+        <h1 id="headerBoardTitle" class="font-chalk text-lg font-bold text-amber-200 tracking-wide truncate max-w-[140px]">Lousa 1</h1>
+        <span id="headerSubtitle" class="hidden">Quadro Verde Vintage</span>
       </div>
     </div>
 
-    <!-- Lado Direito: Ferramentas / Criar Notas / Modais / Fullscreen -->
-    <div class="flex flex-wrap items-center gap-2">
-      <button onclick="createNewNote('text')" class="bg-amber-100 hover:bg-amber-200 text-amber-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-amber-300">
-        <i class="fa-solid fa-sticky-note text-amber-700"></i>
-        <span>+ Post-it</span>
-      </button>
+    <div id="toolGroup" class="tb-group">
+      <button onclick="createNewNote('text')" class="tb bg-amber-100 hover:bg-amber-200 text-amber-700 border border-amber-300 " title="Post-it"><i class="fa-solid fa-note-sticky"></i><span class="tb-label"></span></button>
+      <button onclick="createNewNote('checklist')" class="tb bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border border-emerald-300 " title="Lista de tarefas"><i class="fa-solid fa-list-check"></i><span class="tb-label"></span></button>
+      <button onclick="createNewNote('chalktext')" class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300 " title="Texto livre (giz / canetão)"><i class="fa-solid fa-pen-nib"></i><span class="tb-label"></span></button>
+      <button onclick="pickImage()" class="tb bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-300 " title="Adicionar imagem"><i class="fa-solid fa-image"></i><span class="tb-label"></span></button>
+      <button onclick="toggleShapeMenu(event)" class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300 " title="Setas e formas"><i class="fa-solid fa-shapes"></i><span class="tb-label"></span></button>
+      <button onclick="openCalendarModal()" class="tb bg-sky-100 hover:bg-sky-200 text-sky-700 border border-sky-300 " title="Calendário"><i class="fa-solid fa-calendar-days"></i><span class="tb-label"></span></button>
+      <button onclick="openPlannerModal()" class="tb bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300 desk-only" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label"></span></button>
+      <button id="moreBtn" onclick="toggleMore(event)" class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Mais opções"><i class="fa-solid fa-ellipsis"></i></button>
+    </div>
 
-      <button onclick="createNewNote('checklist')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-emerald-300">
-        <i class="fa-solid fa-list-check text-emerald-700"></i>
-        <span>+ Tarefas</span>
-      </button>
+    <div class="tb-spacer"></div>
 
-      <!-- NOVO: Texto livre em giz -->
-      <button onclick="createNewNote('chalktext')" class="bg-stone-100 hover:bg-white text-stone-900 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-stone-300">
-        <i class="fa-solid fa-pen text-stone-700"></i>
-        <span>+ Texto Giz</span>
-      </button>
-
-      <!-- Imagem (galeria / câmera) -->
-      <button onclick="pickImage()" class="bg-rose-100 hover:bg-rose-200 text-rose-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-rose-300">
-        <i class="fa-solid fa-image text-rose-700"></i>
-        <span>+ Imagem</span>
-      </button>
-
-      <!-- NOVO: Menu de setas e formas geométricas -->
-      <div class="relative">
-        <button onclick="toggleShapeMenu(event)" class="bg-stone-100 hover:bg-white text-stone-900 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-stone-300">
-          <i class="fa-solid fa-shapes text-stone-700"></i>
-          <span>Formas</span>
-          <i class="fa-solid fa-caret-down text-[10px] text-stone-600"></i>
-        </button>
-      </div>
-
-      <button onclick="openCalendarModal()" class="bg-sky-100 hover:bg-sky-200 text-sky-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-sky-300">
-        <i class="fa-solid fa-calendar-days text-sky-700"></i>
-        <span>Calendário</span>
-      </button>
-
-      <button onclick="openPlannerModal()" class="bg-purple-100 hover:bg-purple-200 text-purple-950 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-purple-300">
-        <i class="fa-solid fa-calendar-week text-purple-700"></i>
-        <span>Planner 7 Dias</span>
-      </button>
-
-      <div class="h-6 w-px bg-amber-900/50 mx-0.5 hidden md:block"></div>
-
-      <!-- Navegador de lousas (no cabeçalho) -->
+    <div id="moreGroup" class="tb-group">
       <div class="nav-pill">
-        <button id="btnPrevBoard" onclick="navigateBoard(-1)" class="nav-btn" title="Lousa Anterior">
-          <i class="fa-solid fa-chevron-left text-xs"></i>
-        </button>
-        <div class="flex flex-col items-center px-1 min-w-[72px]">
-          <span id="widgetBoardName" class="nav-name font-chalk text-base font-bold whitespace-nowrap leading-tight">Lousa 1</span>
+        <button id="btnPrevBoard" onclick="navigateBoard(-1)" class="nav-btn" title="Lousa anterior"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+        <div class="flex flex-col items-center px-1 min-w-[64px]">
+          <span id="widgetBoardName" class="nav-name font-chalk font-bold whitespace-nowrap">Lousa 1</span>
           <span id="widgetBoardCount" class="nav-count text-[10px] font-semibold leading-none">1 de 1</span>
         </div>
-        <button id="btnNextBoard" onclick="navigateBoard(1)" class="nav-btn" title="Próxima Lousa">
-          <i class="fa-solid fa-chevron-right text-xs"></i>
-        </button>
-        <button onclick="createNewBoard()" class="nav-btn nav-add" title="Criar Nova Lousa Limpa">
-          <i class="fa-solid fa-plus text-xs"></i>
-        </button>
-        <button id="btnDeleteBoard" onclick="confirmDeleteCurrentBoard()" class="nav-btn nav-del" title="Excluir Esta Lousa">
-          <i class="fa-solid fa-trash-can text-xs"></i>
-        </button>
+        <button id="btnNextBoard" onclick="navigateBoard(1)" class="nav-btn" title="Próxima lousa"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+        <button onclick="createNewBoard()" class="nav-btn nav-add" title="Nova lousa"><i class="fa-solid fa-plus text-xs"></i></button>
+        <button id="btnDeleteBoard" onclick="confirmDeleteCurrentBoard()" class="nav-btn nav-del" title="Excluir esta lousa"><i class="fa-solid fa-trash-can text-xs"></i></button>
       </div>
-
-      <!-- Alternar estilo: Giz <-> Canetão -->
-      <button onclick="toggleTheme()" id="themeBtn" class="bg-stone-100 hover:bg-white text-stone-900 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95 border border-stone-300" title="Alternar estilo da lousa">
-        <i id="themeBtnIcon" class="fa-solid fa-pen-fancy text-stone-700"></i>
-        <span id="themeBtnLabel">Modo Canetão</span>
-      </button>
-
-      <!-- Botão de Alternar Tela Cheia (Fullscreen API) -->
-      <button onclick="toggleFullscreen()" id="fullscreenBtn" class="bg-stone-800 hover:bg-stone-700 text-amber-200 px-3 py-1.5 rounded-lg text-xs sm:text-sm transition border border-stone-600 flex items-center gap-1.5" title="Expandir / Reduzir Tela Cheia">
-        <i class="fa-solid fa-expand"></i>
-        <span class="hidden lg:inline">Expandir</span>
-      </button>
-
-      <!-- Botão Limpar Lousa Atual -->
-      <button onclick="confirmClearBoard()" class="bg-red-900/60 hover:bg-red-800 text-red-100 p-2 rounded-lg text-xs sm:text-sm flex items-center justify-center transition border border-red-700/50" title="Limpar Lousa Atual">
-        <i class="fa-solid fa-broom"></i>
-      </button>
-
-      <!-- Usuário logado, status de sincronização e sair -->
+      <button onclick="openPlannerModal()" data-close class="tb mob-only bg-purple-100 text-purple-700 border border-purple-300" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label">Planner</span></button>
+      <button onclick="toggleTheme()" id="themeBtn" data-close class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300" title="Alternar estilo"><i id="themeBtnIcon" class="fa-solid fa-pen-fancy text-stone-700"></i><span id="themeBtnLabel" class="tb-label">Modo Canetão</span></button>
+      <button onclick="toggleFullscreen()" id="fullscreenBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Tela cheia"><i class="fa-solid fa-expand"></i><span class="tb-label">Tela cheia</span></button>
+      <button onclick="confirmClearBoard()" data-close class="tb bg-red-900/60 hover:bg-red-800 text-red-100 border border-red-700/50" title="Limpar esta lousa"><i class="fa-solid fa-broom"></i><span class="tb-label">Limpar</span></button>
+      <button onclick="toggleHeader()" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ocultar barra"><i class="fa-solid fa-eye-slash"></i><span class="tb-label">Ocultar</span></button>
       <div id="userChip" class="hidden nav-pill">
         <span id="syncStatus" class="px-1 text-sm text-emerald-400" title="Salvo na nuvem"><i class="fa-solid fa-cloud"></i></span>
-        <img id="userPhoto" class="w-8 h-8 rounded-full border border-amber-400/40 hidden" alt="" referrerpolicy="no-referrer">
-        <span id="userName" class="nav-name text-xs font-semibold max-w-[140px] truncate hidden xl:inline"></span>
-        <button onclick="doLogout()" class="nav-btn nav-del" title="Sair da conta">
-          <i class="fa-solid fa-right-from-bracket text-xs"></i>
-        </button>
+        <img id="userPhoto" class="w-7 h-7 rounded-full border border-amber-400/40 hidden" alt="" referrerpolicy="no-referrer">
+        <span id="userName" class="nav-name text-xs font-semibold max-w-[140px] truncate hidden"></span>
+        <button onclick="doLogout()" class="nav-btn nav-del" title="Sair da conta"><i class="fa-solid fa-right-from-bracket text-xs"></i></button>
       </div>
     </div>
   </header>
+
+  <button id="showHeaderBtn" onclick="toggleHeader()" class="tb" title="Mostrar barra"><i class="fa-solid fa-bars"></i></button>
 
   <!-- NOVO: Painel flutuante de formas (posicionado via JS) -->
   <div id="shapeMenu" class="hidden fixed z-50 wood-frame rounded-xl p-2 grid grid-cols-4 gap-1.5 shadow-2xl" style="width:232px; top:70px; left:8px;">
@@ -489,7 +468,7 @@
     <div id="emptyBoardMsg" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-40 text-center p-6">
       <i class="fa-solid fa-hand-pointer text-5xl chalk-text mb-3 animate-bounce"></i>
       <h2 class="font-chalk text-3xl chalk-text mb-1">Esta Lousa está vazia!</h2>
-      <p class="text-sm text-emerald-100 max-w-sm">Adicione novos Post-its ou crie/navegue por outras telas usando o controle no canto inferior direito.</p>
+      <p class="text-sm text-emerald-100 max-w-sm">Use a barra de ferramentas para adicionar post-its, tarefas, textos e imagens.</p>
     </div>
 
     <!-- Container onde são renderizados os Post-its -->
@@ -1438,9 +1417,11 @@
         return;
       }
       const r = e.currentTarget.getBoundingClientRect();
-      menu.style.top = `${r.bottom + 8}px`;
-      menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 240))}px`;
       menu.classList.remove('hidden');
+      const mh = menu.offsetHeight || 110;
+      const below = r.bottom + 8 + mh < window.innerHeight - 8;
+      menu.style.top = `${below ? r.bottom + 8 : Math.max(8, r.top - mh - 8)}px`;
+      menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 240))}px`;
     }
 
     function closeShapeMenu() {
@@ -1494,6 +1475,8 @@
       if (lbl) lbl.innerText = marker ? 'Modo Giz' : 'Modo Canetão';
       const ico = document.getElementById('themeBtnIcon');
       if (ico) ico.className = marker ? 'fa-solid fa-chalkboard text-stone-700' : 'fa-solid fa-pen-fancy text-stone-700';
+      const tbtn = document.getElementById('themeBtn');
+      if (tbtn) tbtn.title = marker ? 'Modo Giz (lousa verde)' : 'Modo Canetão (quadro branco)';
     }
 
     function toggleTheme() {
@@ -1691,12 +1674,12 @@
       const btn = document.getElementById('fullscreenBtn');
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().then(() => {
-          if (btn) btn.innerHTML = '<i class="fa-solid fa-compress"></i><span class="hidden lg:inline">Reduzir</span>';
+          if (btn) btn.innerHTML = '<i class="fa-solid fa-compress"></i><span class="tb-label">Tela cheia</span>';
         }).catch(err => console.log(err));
       } else {
         if (document.exitFullscreen) {
           document.exitFullscreen().then(() => {
-            if (btn) btn.innerHTML = '<i class="fa-solid fa-expand"></i><span class="hidden lg:inline">Expandir</span>';
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-expand"></i><span class="tb-label">Tela cheia</span>';
           });
         }
       }
@@ -2481,6 +2464,33 @@
       document.removeEventListener('touchend', onImgCornerUp);
       saveData();
     }
+
+    /* ===== Barra de ferramentas: ocultar/mostrar e menu "mais" (celular) ===== */
+    const HEADER_KEY = 'lousa_header_hidden';
+    const isMobileBar = () => window.matchMedia('(max-width: 899px)').matches;
+
+    function updateBarH() {
+      const bar = document.getElementById('topbar');
+      const hidden = document.body.classList.contains('header-hidden');
+      document.documentElement.style.setProperty('--bar-h', (isMobileBar() && !hidden && bar) ? bar.offsetHeight + 'px' : '0px');
+    }
+    function closeMore() { byId('moreGroup').classList.remove('open'); }
+    function toggleMore(e) { if (e) e.stopPropagation(); byId('moreGroup').classList.toggle('open'); }
+    function toggleHeader() {
+      const hidden = document.body.classList.toggle('header-hidden');
+      closeMore();
+      try { localStorage.setItem(HEADER_KEY, hidden ? '1' : '0'); } catch (e) {}
+      updateBarH();
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#moreGroup [data-close]')) { closeMore(); return; }
+      if (!e.target.closest('#moreGroup') && !e.target.closest('#moreBtn')) closeMore();
+    });
+    window.addEventListener('resize', updateBarH);
+    window.addEventListener('orientationchange', () => setTimeout(updateBarH, 150));
+    try { if (localStorage.getItem(HEADER_KEY) === '1') document.body.classList.add('header-hidden'); } catch (e) {}
+    updateBarH();
+    setTimeout(updateBarH, 400);
 
     // Inicialização: a lousa só aparece depois do login (evento "fb-auth" vindo do firebase.js)
     setTimeout(() => {
