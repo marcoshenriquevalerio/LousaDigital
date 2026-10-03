@@ -1540,6 +1540,8 @@
     }
 
     document.addEventListener('pointerdown', (e) => {
+      /* Marcar/desmarcar tarefa só dá o check: não muda a seleção da lista */
+      if (e.target.closest && e.target.closest('.chalk-check')) return;
       const n = e.target.closest && e.target.closest('.chalk-note');
       setSelectedNote(n ? n.id : null);
     }, true);
@@ -2624,6 +2626,7 @@
     function closeMore() { byId('moreGroup').classList.remove('open'); }
     function toggleMore(e) { if (e) e.stopPropagation(); byId('moreGroup').classList.toggle('open'); }
     function toggleHeader() {
+      autoHid = false;   /* o usuário assumiu o controle da barra */
       const hidden = document.body.classList.toggle('header-hidden');
       closeMore();
       try { localStorage.setItem(HEADER_KEY, hidden ? '1' : '0'); } catch (e) {}
@@ -2635,9 +2638,70 @@
     });
     window.addEventListener('resize', updateBarH);
     window.addEventListener('orientationchange', () => setTimeout(updateBarH, 150));
+
+    /* ===== Celular deitado: esconde a barra e entra em tela cheia sozinho ===== */
+    let autoHid = false;        // a barra foi escondida automaticamente (não grava na memória do usuário)
+    let autoFullscreen = false; // a tela cheia foi iniciada por nós
+    let fsArmed = false;
+
+    const isPhoneLandscape = () =>
+      window.matchMedia('(pointer: coarse)').matches &&
+      window.matchMedia('(orientation: landscape)').matches &&
+      window.innerHeight <= 520;
+
+    function setFsIcon(on) {
+      const btn = byId('fullscreenBtn');
+      if (btn) btn.innerHTML = `<i class="fa-solid fa-${on ? 'compress' : 'expand'}"></i><span class="tb-label">Tela cheia</span>`;
+    }
+
+    /* Navegadores só liberam tela cheia após um toque. Se a tentativa direta falhar,
+       o primeiro toque na lousa depois de deitar o celular conclui a expansão. */
+    function armFullscreenOnTouch() {
+      if (fsArmed) return;
+      fsArmed = true;
+      const go = () => {
+        document.removeEventListener('pointerup', go, true);
+        fsArmed = false;
+        if (isPhoneLandscape() && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().then(() => { autoFullscreen = true; }).catch(() => {});
+        }
+      };
+      document.addEventListener('pointerup', go, true);
+    }
+
+    function applyOrientation() {
+      if (isPhoneLandscape()) {
+        if (!document.body.classList.contains('header-hidden')) {
+          document.body.classList.add('header-hidden');
+          autoHid = true;
+        }
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen()
+            .then(() => { autoFullscreen = true; })
+            .catch(() => armFullscreenOnTouch());
+        }
+      } else {
+        if (autoHid) { document.body.classList.remove('header-hidden'); autoHid = false; }
+        if (autoFullscreen && document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+        autoFullscreen = false;
+      }
+      closeMore();
+      updateBarH();
+    }
+    window.addEventListener('orientationchange', () => setTimeout(applyOrientation, 200));
+    if (window.screen && screen.orientation && screen.orientation.addEventListener) {
+      screen.orientation.addEventListener('change', () => setTimeout(applyOrientation, 200));
+    }
+    document.addEventListener('fullscreenchange', () => {
+      setFsIcon(!!document.fullscreenElement);
+      if (!document.fullscreenElement) autoFullscreen = false;
+    });
     try { if (localStorage.getItem(HEADER_KEY) === '1') document.body.classList.add('header-hidden'); } catch (e) {}
     updateBarH();
     setTimeout(updateBarH, 400);
+    setTimeout(() => { if (isPhoneLandscape()) applyOrientation(); }, 600);
 
     /* ===== Palco da lousa no celular ===== */
     let boardScale = 1;
