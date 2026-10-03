@@ -448,6 +448,18 @@
     .chalk-restore:hover { color: #fde68a; }
     .theme-marker .chalk-restore { color: #b45309; }
     .theme-marker .chalk-restore:hover { color: #92400e; }
+    /* ===== Menu de formas e alças da seta flexível ===== */
+    .shape-ico { width: 100%; height: 100%; padding: 6px 5px; display: block; }
+    .shape-ico * { vector-effect: non-scaling-stroke; }
+    .bend-layer { position: absolute; inset: 0; pointer-events: none; transform-origin: 50% 50%; z-index: 15; }
+    .chalk-note:not(.is-selected):not(.is-dragging) .bend-layer { display: none; }
+    .bend-pt, .bend-mid { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; touch-action: none; }
+    .bend-pt { width: 28px; height: 28px; cursor: move; }
+    .bend-pt::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #fbbf24; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.55); box-sizing: border-box; }
+    .bend-mid { width: 24px; height: 24px; cursor: copy; }
+    .bend-mid::after { content: '+'; position: absolute; inset: 6px; border-radius: 50%; background: rgba(255,255,255,.78); color: #422006; font: 700 11px/12px Inter, sans-serif; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
+    .bend-mid:hover::after { background: #fff; }
+    .bend-pt.is-active::after { background: #f97316; }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -522,7 +534,7 @@
       <button onclick="openPlannerModal()" data-close class="tb mob-only bg-purple-100 text-purple-700 border border-purple-300" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label">Planner</span></button>
       <button onclick="toggleTheme()" id="themeBtn" data-close class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300" title="Alternar estilo"><i id="themeBtnIcon" class="fa-solid fa-pen-fancy text-stone-700"></i><span id="themeBtnLabel" class="tb-label">Modo Canetão</span></button>
       <button onclick="toggleFullscreen()" id="fullscreenBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Tela cheia"><i class="fa-solid fa-expand"></i><span class="tb-label">Tela cheia</span></button>
-      <button onclick="toggleQuoteEdit()" id="quoteBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Configurar a frase da lousa"><i class="fa-solid fa-gear"></i><span class="tb-label">Frase</span></button>
+      <button onclick="toggleQuoteEdit()" id="quoteBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ajustes: frase e apagador"><i class="fa-solid fa-gear"></i><span class="tb-label">Ajustes</span></button>
       <button onclick="toggleHeader()" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ocultar barra"><i class="fa-solid fa-eye-slash"></i><span class="tb-label">Ocultar</span></button>
       <div id="userChip" class="hidden nav-pill">
         <span id="syncStatus" class="px-1 text-sm text-emerald-400" title="Salvo na nuvem"><i class="fa-solid fa-cloud"></i></span>
@@ -536,16 +548,7 @@
   <button id="showHeaderBtn" onclick="toggleHeader()" class="tb" title="Mostrar barra"><i class="fa-solid fa-bars"></i></button>
 
   <!-- NOVO: Painel flutuante de formas (posicionado via JS) -->
-  <div id="shapeMenu" class="hidden fixed z-50 wood-frame rounded-xl p-2 grid grid-cols-4 gap-1.5 shadow-2xl" style="width:232px; top:70px; left:8px;">
-    <button onclick="createNewShape('arrow')"    title="Seta"          class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">→</button>
-    <button onclick="createNewShape('curve')"    title="Seta curva"    class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">↷</button>
-    <button onclick="createNewShape('line')"     title="Linha"         class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">―</button>
-    <button onclick="createNewShape('rect')"     title="Retângulo"     class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">▭</button>
-    <button onclick="createNewShape('circle')"   title="Círculo"       class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">◯</button>
-    <button onclick="createNewShape('triangle')" title="Triângulo"     class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">△</button>
-    <button onclick="createNewShape('diamond')"  title="Losango"       class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">◇</button>
-    <button onclick="createNewShape('star')"     title="Estrela"       class="h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 text-2xl leading-none transition active:scale-95">☆</button>
-  </div>
+  <div id="shapeMenu" class="hidden fixed z-50 wood-frame rounded-xl p-2 grid grid-cols-5 gap-1.5 shadow-2xl" style="width:min(290px, calc(100vw - 16px)); max-height:calc(100vh - 90px); overflow-y:auto; top:70px; left:8px;"></div>
 
   <!-- MAIN: Área da Lousa Verde Escolar Vintage -->
   <div id="boardViewport" class="chalkboard-bg flex-1 min-h-0 w-full relative overflow-hidden"><div id="boardSizer" style="position:relative;width:100%;height:100%"><main id="boardCanvas" class="relative overflow-hidden" style="width:100%;height:100%;transform-origin:0 0">
@@ -699,39 +702,42 @@
       <input id="stickerFreeInput" type="text" placeholder="Digite ou cole qualquer emoji" onkeydown="if(event.key==='Enter') createFreeEmoji()" class="flex-1 min-w-0 bg-stone-900/80 border border-amber-900/60 rounded-lg px-2.5 py-1.5 text-sm text-stone-100 focus:outline-none focus:border-amber-400">
       <button onclick="createFreeEmoji()" class="px-3 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition" title="Criar adesivo"><i class="fa-solid fa-plus"></i></button>
     </div>
-    <button onclick="byId('stickerFileInput').click()" class="mt-2 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-wand-magic-sparkles"></i> Criar adesivo de uma imagem</button>
+    <button onclick="pickFile('stickerFileInput')" class="mt-2 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-wand-magic-sparkles"></i> Criar adesivo de uma imagem</button>
   </div>
-  <!-- Editor da frase -->
+  <!-- Ajustes (engrenagem): aba Frase + aba Apagador -->
   <div id="quoteEditor" class="hidden fixed wood-frame rounded-xl p-3 shadow-2xl" style="z-index:9990;left:50%;transform:translateX(-50%);width:min(390px,calc(100vw - 16px))">
-    <div class="flex items-center justify-between mb-1.5">
-      <span class="text-[11px] font-semibold text-amber-200/90"><i class="fa-solid fa-gear mr-1"></i>Frase da lousa</span>
-      <span class="text-[10px] text-amber-100/60">arraste a frase para mover</span>
+    <div class="flex items-center justify-between mb-2 gap-2">
+      <div class="flex items-center gap-1.5">
+        <button class="q-btn px-3" data-qtab="frase" onclick="setSettingsTab('frase')"><i class="fa-solid fa-quote-left mr-1"></i>Frase</button>
+        <button class="q-btn px-3" data-qtab="apagador" onclick="setSettingsTab('apagador')"><i class="fa-solid fa-eraser mr-1"></i>Apagador</button>
+      </div>
+      <span id="qeHint" class="text-[10px] text-amber-100/60 text-right">arraste a frase para mover</span>
     </div>
-    <textarea id="quoteInput" rows="3" oninput="onQuoteInput(this)" onkeydown="if(event.key==='Escape') finishQuoteEdit()" placeholder="Escreva a frase que quiser..." class="w-full bg-stone-900/80 border border-amber-900/60 rounded-lg px-2.5 py-1.5 text-sm text-stone-100 focus:outline-none focus:border-amber-400 resize-none" style="user-select:text;-webkit-user-select:text"></textarea>
-    <div class="flex items-center gap-1.5 mt-2 flex-wrap">
-      <span class="text-[11px] text-amber-100/80 mr-0.5">Linhas</span>
-      <button class="q-btn" data-lines="1" onclick="setQuoteLines(1)">1</button>
-      <button class="q-btn" data-lines="2" onclick="setQuoteLines(2)">2</button>
-      <button class="q-btn" data-lines="3" onclick="setQuoteLines(3)">3</button>
-      <span class="w-1"></span>
-      <button class="q-btn" onclick="changeQuoteSize(-2)" title="Diminuir letra">A-</button>
-      <button class="q-btn" onclick="changeQuoteSize(2)" title="Aumentar letra">A+</button>
-      <span class="flex-1"></span>
+
+    <div id="qeFrase">
+      <textarea id="quoteInput" rows="3" oninput="onQuoteInput(this)" onkeydown="if(event.key==='Escape') finishQuoteEdit()" placeholder="Escreva a frase que quiser..." class="w-full bg-stone-900/80 border border-amber-900/60 rounded-lg px-2.5 py-1.5 text-sm text-stone-100 focus:outline-none focus:border-amber-400 resize-none" style="user-select:text;-webkit-user-select:text"></textarea>
+      <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+        <span class="text-[11px] text-amber-100/80 mr-0.5">Linhas</span>
+        <button class="q-btn" data-lines="1" onclick="setQuoteLines(1)">1</button>
+        <button class="q-btn" data-lines="2" onclick="setQuoteLines(2)">2</button>
+        <button class="q-btn" data-lines="3" onclick="setQuoteLines(3)">3</button>
+        <span class="w-1"></span>
+        <button class="q-btn" onclick="changeQuoteSize(-2)" title="Diminuir letra">A-</button>
+        <button class="q-btn" onclick="changeQuoteSize(2)" title="Aumentar letra">A+</button>
+      </div>
+    </div>
+
+    <div id="qeApagador" class="hidden">
+      <label class="text-[11px] text-amber-100/80 flex items-center justify-between mb-1">Tamanho <span id="eraserSizeLbl"></span></label>
+      <input id="eraserSize" type="range" min="50" max="250" step="5" oninput="setEraserSize(this.value)" class="w-full" style="accent-color:#fbbf24">
+      <label class="mt-2.5 flex items-center justify-between text-[11px] text-amber-100/80 cursor-pointer"><span><i class="fa-solid fa-volume-high mr-1"></i>Som ao apagar</span><input id="eraserSound" type="checkbox" checked onchange="setEraserSound(this.checked)" style="accent-color:#fbbf24;width:16px;height:16px"></label>
+      <button id="eraserPlaceBtn" onclick="toggleEraserPlace()" class="mt-2.5 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-up-down-left-right"></i><span>Mudar posição de descanso</span></button>
+      <button onclick="resetEraser()" class="mt-1.5 w-full px-3 py-1.5 bg-stone-700/70 hover:bg-stone-600 text-stone-200 rounded-lg text-xs transition">Restaurar tamanho e posição</button>
+    </div>
+
+    <div class="flex justify-end mt-2">
       <button onclick="finishQuoteEdit()" class="px-3 h-[30px] bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition"><i class="fa-solid fa-lock mr-1"></i>Concluir</button>
     </div>
-  </div>
-
-  <!-- Ajustes do apagador -->
-  <div id="eraserPanel" class="hidden fixed wood-frame rounded-xl p-3 shadow-2xl" style="z-index:9990;width:250px;max-width:calc(100vw - 16px)">
-    <div class="flex items-center justify-between mb-2">
-      <span class="text-[11px] font-semibold text-amber-200/90">Apagador</span>
-      <button onclick="closeEraserPanel()" class="text-stone-300 hover:text-white w-6 h-6 rounded-full flex items-center justify-center bg-stone-700/50 hover:bg-stone-700 transition"><i class="fa-solid fa-xmark text-xs"></i></button>
-    </div>
-    <label class="text-[11px] text-amber-100/80 flex items-center justify-between mb-1">Tamanho <span id="eraserSizeLbl"></span></label>
-    <input id="eraserSize" type="range" min="50" max="250" step="5" oninput="setEraserSize(this.value)" class="w-full" style="accent-color:#fbbf24">
-    <label class="mt-2.5 flex items-center justify-between text-[11px] text-amber-100/80 cursor-pointer"><span><i class="fa-solid fa-volume-high mr-1"></i>Som ao apagar</span><input id="eraserSound" type="checkbox" checked onchange="setEraserSound(this.checked)" style="accent-color:#fbbf24;width:16px;height:16px"></label>
-    <button id="eraserPlaceBtn" onclick="toggleEraserPlace()" class="mt-2.5 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-up-down-left-right"></i><span>Mudar posição de descanso</span></button>
-    <button onclick="resetEraser()" class="mt-1.5 w-full px-3 py-1.5 bg-stone-700/70 hover:bg-stone-600 text-stone-200 rounded-lg text-xs transition">Restaurar tamanho e posição</button>
   </div>
 
   <input type="file" id="stickerFileInput" accept="image/*" class="hidden" onchange="onStickerFileChosen(event)">
@@ -1404,14 +1410,59 @@
     /* ---------- SETAS E FORMAS GEOMÉTRICAS EM GIZ ---------- */
     const SHAPE_DEFAULTS = {
       arrow:    { w: 180, h: 60 },
+      arrow2:   { w: 180, h: 60 },
       curve:    { w: 180, h: 110 },
+      elbow:    { w: 180, h: 100 },
+      corner:   { w: 130, h: 110 },
+      uturn:    { w: 120, h: 120 },
+      bend:     { w: 220, h: 140 },
       line:     { w: 180, h: 40 },
+      wave:     { w: 200, h: 50 },
+      brace:    { w: 70,  h: 150 },
       rect:     { w: 180, h: 110 },
+      roundrect:{ w: 180, h: 110 },
       circle:   { w: 140, h: 120 },
       triangle: { w: 150, h: 130 },
       diamond:  { w: 150, h: 130 },
-      star:     { w: 140, h: 135 }
+      star:     { w: 140, h: 135 },
+      pentagon: { w: 140, h: 135 },
+      hexagon:  { w: 150, h: 130 },
+      heart:    { w: 140, h: 125 },
+      cross:    { w: 110, h: 110 },
+      check:    { w: 110, h: 110 },
+      bubble:   { w: 180, h: 130 },
+      cloud:    { w: 190, h: 120 },
+      parallelogram: { w: 180, h: 100 }
     };
+
+    /* Itens do menu (ordem de exibição) */
+    const SHAPE_MENU = [
+      { k: 'arrow',    t: 'Seta' },
+      { k: 'arrow2',   t: 'Seta dupla' },
+      { k: 'curve',    t: 'Seta curva' },
+      { k: 'elbow',    t: 'Seta em degrau' },
+      { k: 'corner',   t: 'Seta em L' },
+      { k: 'uturn',    t: 'Seta em retorno (U)' },
+      { k: 'bend',     t: 'Seta flexível: dobre do jeito que quiser', head: 'end' },
+      { k: 'bend',     t: 'Linha flexível: dobre do jeito que quiser', head: 'none' },
+      { k: 'line',     t: 'Linha' },
+      { k: 'wave',     t: 'Linha ondulada' },
+      { k: 'brace',    t: 'Chave' },
+      { k: 'rect',     t: 'Retângulo' },
+      { k: 'roundrect',t: 'Retângulo arredondado' },
+      { k: 'circle',   t: 'Círculo' },
+      { k: 'triangle', t: 'Triângulo' },
+      { k: 'diamond',  t: 'Losango' },
+      { k: 'parallelogram', t: 'Paralelogramo' },
+      { k: 'pentagon', t: 'Pentágono' },
+      { k: 'hexagon',  t: 'Hexágono' },
+      { k: 'star',     t: 'Estrela' },
+      { k: 'heart',    t: 'Coração' },
+      { k: 'cloud',    t: 'Nuvem' },
+      { k: 'bubble',   t: 'Balão de fala' },
+      { k: 'check',    t: 'Certo (✓)' },
+      { k: 'cross',    t: 'Errado (✗)' }
+    ];
 
     function arrowHeadPath(x, y, ang, size) {
       const a1 = ang + Math.PI * 0.82;
@@ -1423,13 +1474,41 @@
       return `M${x1} ${y1} L${x.toFixed(1)} ${y.toFixed(1)} L${x2} ${y2}`;
     }
 
-    function shapeInnerHtml(note) {
-      const w = Math.round(note.width || 160);
-      const h = Math.round(note.height || 80);
+    /* Redimensiona um caminho desenhado numa grade bw x bh para a caixa w x h (pares "x,y" absolutos) */
+    function scalePath(d, w, h, bw, bh, pad) {
+      const sx = Math.max(1, w - 2 * pad) / bw, sy = Math.max(1, h - 2 * pad) / bh;
+      return d.replace(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g, (m, x, y) => `${(pad + x * sx).toFixed(1)},${(pad + y * sy).toFixed(1)}`);
+    }
+
+    /* ----- seta/linha flexível: curva suave (Catmull-Rom) passando por todos os pontos ----- */
+    const BEND_DEFAULT_PTS = [{ x: 0.05, y: 0.78 }, { x: 0.36, y: 0.22 }, { x: 0.64, y: 0.78 }, { x: 0.95, y: 0.22 }];
+    function bendPts(note) {
+      return (note.pts && note.pts.length >= 2) ? note.pts : BEND_DEFAULT_PTS;
+    }
+    function bendSegs(pts, w, h) {
+      const P = pts.map(q => [q.x * w, q.y * h]), n = P.length, segs = [];
+      for (let i = 0; i < n - 1; i++) {
+        const p0 = P[Math.max(i - 1, 0)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(i + 2, n - 1)];
+        segs.push([p1, [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6], p2]);
+      }
+      return segs;
+    }
+    function bezAt(sg, t) {
+      const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+      return [a * sg[0][0] + b * sg[1][0] + c * sg[2][0] + d * sg[3][0], a * sg[0][1] + b * sg[1][1] + c * sg[2][1] + d * sg[3][1]];
+    }
+    /* meio de cada trecho da curva (onde fica a bolinha "+" para criar um novo ponto) */
+    function bendMids(pts, w, h) {
+      return bendSegs(pts, w, h).map(sg => { const m = bezAt(sg, 0.5); return { x: m[0] / w, y: m[1] / h }; });
+    }
+
+    /* Traços de uma forma, dentro de uma caixa w x h */
+    function shapeMarkup(kind, w, h, note) {
       const p = 8;
       let d = '';
+      const head = (x, y, ang, sz) => `<path d="${arrowHeadPath(x, y, ang, sz)}"/>`;
 
-      switch (note.shape) {
+      switch (kind) {
         case 'line': {
           d = `<path d="M${p} ${h / 2} L${w - p} ${h / 2}"/>`;
           break;
@@ -1437,7 +1516,13 @@
         case 'arrow': {
           const y = h / 2;
           const s = Math.max(8, Math.min(22, h / 2 - 4, w / 3));
-          d = `<path d="M${p} ${y} L${w - p} ${y}"/><path d="${arrowHeadPath(w - p, y, 0, s)}"/>`;
+          d = `<path d="M${p} ${y} L${w - p} ${y}"/>${head(w - p, y, 0, s)}`;
+          break;
+        }
+        case 'arrow2': {
+          const y = h / 2;
+          const s = Math.max(8, Math.min(22, h / 2 - 4, w / 4));
+          d = `<path d="M${p} ${y} L${w - p} ${y}"/>${head(w - p, y, 0, s)}${head(p, y, Math.PI, s)}`;
           break;
         }
         case 'curve': {
@@ -1447,11 +1532,64 @@
           const ex = w - p - 6, ey = h * 0.5;
           const ang = Math.atan2(ey - c2y, ex - c2x);
           const s = Math.max(8, Math.min(20, w / 4, h / 3));
-          d = `<path d="M${sx} ${sy} C${c1x.toFixed(1)} ${c1y} ${c2x.toFixed(1)} ${c2y} ${ex} ${ey.toFixed(1)}"/><path d="${arrowHeadPath(ex, ey, ang, s)}"/>`;
+          d = `<path d="M${sx} ${sy} C${c1x.toFixed(1)} ${c1y} ${c2x.toFixed(1)} ${c2y} ${ex} ${ey.toFixed(1)}"/>${head(ex, ey, ang, s)}`;
+          break;
+        }
+        case 'elbow': {
+          const s = Math.max(8, Math.min(20, h / 3, w / 5));
+          d = `<path d="M${p} ${h - p} L${w / 2} ${h - p} L${w / 2} ${p} L${w - p} ${p}"/>${head(w - p, p, 0, s)}`;
+          break;
+        }
+        case 'corner': {
+          const s = Math.max(8, Math.min(20, h / 3, w / 4));
+          d = `<path d="M${p} ${p} L${p} ${h - p} L${w - p} ${h - p}"/>${head(w - p, h - p, 0, s)}`;
+          break;
+        }
+        case 'uturn': {
+          const rx = Math.max(4, (w - 2 * p) / 2), ry = Math.max(4, Math.min(rx, h / 2 - p));
+          const s = Math.max(8, Math.min(20, w / 4, h / 4));
+          d = `<path d="M${p} ${h - p} L${p} ${p + ry} A${rx} ${ry} 0 0 1 ${w - p} ${p + ry} L${w - p} ${h - p}"/>${head(w - p, h - p, Math.PI / 2, s)}`;
+          break;
+        }
+        case 'bend': {
+          const pts = bendPts(note || {}), hd = (note && note.head) || 'end';
+          const segs = bendSegs(pts, w, h);
+          let pd = `M${segs[0][0][0].toFixed(1)} ${segs[0][0][1].toFixed(1)}`;
+          segs.forEach(sg => { pd += ` C${sg[1][0].toFixed(1)} ${sg[1][1].toFixed(1)} ${sg[2][0].toFixed(1)} ${sg[2][1].toFixed(1)} ${sg[3][0].toFixed(1)} ${sg[3][1].toFixed(1)}`; });
+          const s = Math.max(10, Math.min(22, Math.min(w, h) * 0.16 + 6));
+          d = `<path d="${pd}"/>`;
+          if (hd === 'end' || hd === 'both') {
+            const L = segs[segs.length - 1], e = L[3], b = bezAt(L, 0.82);
+            d += head(e[0], e[1], Math.atan2(e[1] - b[1], e[0] - b[0]), s);
+          }
+          if (hd === 'both') {
+            const F = segs[0], e = F[0], b = bezAt(F, 0.18);
+            d += head(e[0], e[1], Math.atan2(e[1] - b[1], e[0] - b[0]), s);
+          }
+          break;
+        }
+        case 'wave': {
+          const n = Math.max(2, Math.round((w - 2 * p) / 42)), seg = (w - 2 * p) / n, amp = Math.max(3, Math.min(h / 2 - 4, 14));
+          let pd = `M${p} ${h / 2}`;
+          for (let i = 0; i < n; i++) {
+            const x0 = p + i * seg, sg = i % 2 === 0 ? -1 : 1;
+            pd += ` Q${(x0 + seg / 2).toFixed(1)} ${(h / 2 + sg * amp * 2).toFixed(1)} ${(x0 + seg).toFixed(1)} ${h / 2}`;
+          }
+          d = `<path d="${pd}"/>`;
+          break;
+        }
+        case 'brace': {
+          const m = w / 2, q = Math.max(4, Math.min(18, (h / 2 - p) / 2));
+          d = `<path d="M${w - p} ${p} Q${m} ${p} ${m} ${p + q} L${m} ${h / 2 - q} Q${m} ${h / 2} ${p} ${h / 2} Q${m} ${h / 2} ${m} ${h / 2 + q} L${m} ${h - p - q} Q${m} ${h - p} ${w - p} ${h - p}"/>`;
           break;
         }
         case 'rect': {
           d = `<rect x="${p}" y="${p}" width="${Math.max(1, w - 2 * p)}" height="${Math.max(1, h - 2 * p)}" rx="4"/>`;
+          break;
+        }
+        case 'roundrect': {
+          const r = Math.max(4, Math.min(26, (w - 2 * p) / 2, (h - 2 * p) / 2));
+          d = `<rect x="${p}" y="${p}" width="${Math.max(1, w - 2 * p)}" height="${Math.max(1, h - 2 * p)}" rx="${r}"/>`;
           break;
         }
         case 'circle': {
@@ -1466,6 +1604,11 @@
           d = `<path d="M${w / 2} ${p} L${w - p} ${h / 2} L${w / 2} ${h - p} L${p} ${h / 2} Z"/>`;
           break;
         }
+        case 'parallelogram': {
+          const k = Math.min(w * 0.22, 40);
+          d = `<path d="M${p + k} ${p} L${w - p} ${p} L${w - p - k} ${h - p} L${p} ${h - p} Z"/>`;
+          break;
+        }
         case 'star': {
           const cx = w / 2, cy = h / 2 + 2;
           const rx = Math.max(1, w / 2 - p), ry = Math.max(1, h / 2 - p);
@@ -1478,18 +1621,68 @@
           d = `<polygon points="${pts.join(' ')}"/>`;
           break;
         }
+        case 'pentagon':
+        case 'hexagon': {
+          const sides = kind === 'pentagon' ? 5 : 6, cx = w / 2, cy = h / 2 + (kind === 'pentagon' ? 3 : 0);
+          const rx = Math.max(1, w / 2 - p), ry = Math.max(1, h / 2 - p), pts = [];
+          for (let i = 0; i < sides; i++) {
+            const a = (kind === 'pentagon' ? -Math.PI / 2 : 0) + i * 2 * Math.PI / sides;
+            pts.push(`${(cx + Math.cos(a) * rx).toFixed(1)},${(cy + Math.sin(a) * ry).toFixed(1)}`);
+          }
+          d = `<polygon points="${pts.join(' ')}"/>`;
+          break;
+        }
+        case 'heart': {
+          d = `<path d="${scalePath('M50,88 C8,58 2,30 22,14 C36,3 50,13 50,28 C50,13 64,3 78,14 C98,30 92,58 50,88 Z', w, h, 100, 90, p)}"/>`;
+          break;
+        }
+        case 'cloud': {
+          d = `<path d="${scalePath('M25,54 C6,54 4,32 22,30 C20,12 42,5 50,18 C58,3 84,10 80,28 C98,28 99,54 78,54 Z', w, h, 100, 60, p)}"/>`;
+          break;
+        }
+        case 'bubble': {
+          d = `<path d="${scalePath('M15,4 L85,4 Q96,4 96,15 L96,50 Q96,61 85,61 L48,61 L24,80 L28,61 L15,61 Q4,61 4,50 L4,15 Q4,4 15,4 Z', w, h, 100, 84, p)}"/>`;
+          break;
+        }
+        case 'check': {
+          d = `<path d="${scalePath('M8,56 L36,86 L92,14', w, h, 100, 100, p)}"/>`;
+          break;
+        }
+        case 'cross': {
+          d = `<path d="${scalePath('M10,10 L90,90', w, h, 100, 100, p)}"/><path d="${scalePath('M90,10 L10,90', w, h, 100, 100, p)}"/>`;
+          break;
+        }
         default:
           d = '';
       }
+      return d;
+    }
+
+    function shapeInnerHtml(note) {
+      const w = Math.round(note.width || 160);
+      const h = Math.round(note.height || 80);
+      const d = shapeMarkup(note.shape, w, h, note);
+      const dash = note.dash ? ' stroke-dasharray="11 9"' : '';
 
       /* Traço principal + traço fantasma levemente deslocado (efeito de giz passado duas vezes) */
       return `
         <g filter="url(#chalkShape)">
           <rect width="${w}" height="${h}" fill="none" stroke="none"/>
-          <g fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">${d}</g>
-          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" transform="translate(1.4 -1.1)">${d}</g>
+          <g fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"${dash}>${d}</g>
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" transform="translate(1.4 -1.1)"${dash}>${d}</g>
         </g>
       `;
+    }
+
+    /* Menu de formas: ícones desenhados com as próprias formas */
+    function buildShapeMenu() {
+      const menu = document.getElementById('shapeMenu');
+      if (!menu) return;
+      menu.innerHTML = SHAPE_MENU.map((it, i) => {
+        const def = SHAPE_DEFAULTS[it.k], n = { shape: it.k, head: it.head, pts: BEND_DEFAULT_PTS };
+        return `<button onclick="createNewShape('${it.k}', ${it.head ? `'${it.head}'` : 'null'})" title="${it.t}" class="shape-ico-btn h-11 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/40 text-amber-100 transition active:scale-95">` +
+          `<svg class="shape-ico" viewBox="0 0 ${def.w} ${def.h}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${shapeMarkup(it.k, def.w, def.h, n)}</svg></button>`;
+      }).join('');
     }
 
     function updateShapeSvg(element, note) {
@@ -1501,6 +1694,13 @@
       svg.setAttribute('height', h);
       svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
       svg.innerHTML = shapeInnerHtml(note);
+      if (note.shape === 'bend') {
+        const layer = element.querySelector('.bend-layer');
+        if (layer && !layer.querySelector('.bend-pt.is-active')) {
+          const mids = bendMids(bendPts(note), w, h);
+          layer.querySelectorAll('.bend-mid').forEach((el, i) => { if (mids[i]) { el.style.left = (mids[i].x * 100).toFixed(2) + '%'; el.style.top = (mids[i].y * 100).toFixed(2) + '%'; } });
+        }
+      }
     }
 
     function buildShapeHtml(note) {
@@ -1514,10 +1714,15 @@
             ${shapeInnerHtml(note)}
           </svg>
         </div>
+        ${note.shape === 'bend' ? `<div class="bend-layer" style="transform:rotate(${rot}deg)">${bendHandlesHtml(note)}</div>` : ''}
 
         <div class="shape-controls shape-controls-bg absolute top-1 right-1 z-20 flex items-center gap-2 rounded-full px-2 py-1">
           ${chalkColorDotsHtml(note)}
           ${restoreBtnHtml(note)}
+          ${note.shape === 'bend' ? `<button onclick="cycleBendHead('${note.id}')" class="chalk-rot transition" title="Pontas: ${note.head === 'both' ? 'nas duas pontas' : note.head === 'none' ? 'sem ponta' : 'só no fim'} (clique para mudar)"><i class="fa-solid ${note.head === 'both' ? 'fa-left-right' : note.head === 'none' ? 'fa-minus' : 'fa-arrow-right-long'} text-[11px]"></i></button>` : ''}
+          <button onclick="toggleShapeDash('${note.id}')" class="chalk-rot transition ${note.dash ? 'text-amber-300' : ''}" title="${note.dash ? 'Traço contínuo' : 'Traço tracejado'}">
+            <i class="fa-solid fa-ellipsis text-[11px]"></i>
+          </button>
           <button onclick="rotateShape('${note.id}')" class="chalk-rot transition" title="Girar 45°">
             <i class="fa-solid fa-rotate-right text-[11px]"></i>
           </button>
@@ -1533,7 +1738,7 @@
       `;
     }
 
-    function createNewShape(kind) {
+    function createNewShape(kind, head) {
       closeShapeMenu();
       const board = getActiveBoard();
       const id = 'note_' + Date.now();
@@ -1551,6 +1756,7 @@
         id,
         type: 'shape',
         shape: kind,
+        ...(kind === 'bend' ? { head: head || 'end', pts: BEND_DEFAULT_PTS.map(q => ({ x: q.x, y: q.y })) } : {}),
         chalk: 'white',
         x: posX,
         y: posY,
@@ -1562,6 +1768,120 @@
 
       saveData();
       renderNotes();
+    }
+
+    function toggleShapeDash(id) {
+      const note = findNote(id);
+      if (!note) return;
+      note.dash = !note.dash;
+      saveData();
+      renderNotes();
+    }
+
+    function cycleBendHead(id) {
+      const note = findNote(id);
+      if (!note) return;
+      const order = ['end', 'both', 'none'];
+      note.head = order[(order.indexOf(note.head || 'end') + 1) % order.length];
+      saveData();
+      renderNotes();
+    }
+
+    /* ---------- alças da seta/linha flexível ----------
+       Arraste uma bolinha amarela para dobrar. Toque no "+" do meio de um trecho para criar um novo ponto.
+       Toque duplo numa bolinha para remover o ponto (mínimo de 2). */
+    const BEND_MAX_PTS = 14;
+    function bendHandlesHtml(note) {
+      const w = Math.round(note.width || 220), h = Math.round(note.height || 140), pts = bendPts(note);
+      const mids = bendMids(pts, w, h);
+      return mids.map((m, i) => `<div class="bend-mid" data-i="${i}" title="Toque para criar um ponto" style="left:${(m.x * 100).toFixed(2)}%;top:${(m.y * 100).toFixed(2)}%"></div>`).join('') +
+             pts.map((q, i) => `<div class="bend-pt" data-i="${i}" title="Arraste para dobrar · toque duplo remove" style="left:${(q.x * 100).toFixed(2)}%;top:${(q.y * 100).toFixed(2)}%"></div>`).join('');
+    }
+
+    function bendLocal(wrapper, note, cx, cy) {
+      const r = wrapper.getBoundingClientRect(), w = note.width || 220, h = note.height || 140;
+      const x = (cx - r.left) / boardScale - w / 2, y = (cy - r.top) / boardScale - h / 2;
+      const a = -(note.rotation || 0) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+      return { x: Math.max(0, Math.min((x * c - y * sn + w / 2) / w, 1)), y: Math.max(0, Math.min((x * sn + y * c + h / 2) / h, 1)) };
+    }
+
+    function refreshBend(wrapper, note, rebuild) {
+      const layer = wrapper.querySelector('.bend-layer');
+      updateShapeSvg(wrapper, note);
+      if (!layer) return;
+      if (rebuild) { layer.innerHTML = bendHandlesHtml(note); return; }
+      const pts = bendPts(note), mids = bendMids(pts, Math.round(note.width || 220), Math.round(note.height || 140));
+      layer.querySelectorAll('.bend-pt').forEach((el, i) => { if (pts[i]) { el.style.left = (pts[i].x * 100).toFixed(2) + '%'; el.style.top = (pts[i].y * 100).toFixed(2) + '%'; } });
+      layer.querySelectorAll('.bend-mid').forEach((el, i) => { if (mids[i]) { el.style.left = (mids[i].x * 100).toFixed(2) + '%'; el.style.top = (mids[i].y * 100).toFixed(2) + '%'; } });
+    }
+
+    let bendTap = { id: '', i: -1, t: 0 };
+    function initBendHandles(wrapper, noteId) {
+      const layer = wrapper.querySelector('.bend-layer');
+      if (!layer) return;
+
+      const startDrag = (idx, e) => {
+        const note = findNote(noteId);
+        if (!note) return;
+        let moved = false;
+        const sx = e.clientX, sy = e.clientY, pid = e.pointerId;
+        const el = layer.querySelector(`.bend-pt[data-i="${idx}"]`);
+        if (el) el.classList.add('is-active');
+        const onMove = (ev) => {
+          if (ev.pointerId !== pid) return;
+          ev.preventDefault();
+          if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 3) return;
+          moved = true;
+          const n = findNote(noteId); if (!n) return;
+          n.pts = bendPts(n).map(q => ({ x: q.x, y: q.y }));
+          n.pts[idx] = bendLocal(wrapper, n, ev.clientX, ev.clientY);
+          refreshBend(wrapper, n, false);
+        };
+        const onUp = (ev) => {
+          if (ev.pointerId !== pid) return;
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          document.removeEventListener('pointercancel', onUp);
+          if (el) el.classList.remove('is-active');
+          const n = findNote(noteId); if (!n) return;
+          const now = Date.now();
+          if (!moved) {
+            /* toque duplo no mesmo ponto = remover */
+            if (bendTap.id === noteId && bendTap.i === idx && now - bendTap.t < 380 && bendPts(n).length > 2) {
+              n.pts = bendPts(n).map(q => ({ x: q.x, y: q.y }));
+              n.pts.splice(idx, 1);
+              bendTap = { id: '', i: -1, t: 0 };
+              refreshBend(wrapper, n, true);
+              saveData();
+              return;
+            }
+            bendTap = { id: noteId, i: idx, t: now };
+          } else {
+            bendTap = { id: '', i: -1, t: 0 };
+            saveData();
+          }
+        };
+        document.addEventListener('pointermove', onMove, { passive: false });
+        document.addEventListener('pointerup', onUp);
+        document.addEventListener('pointercancel', onUp);
+      };
+
+      layer.addEventListener('pointerdown', (e) => {
+        const pt = e.target.closest('.bend-pt'), md = e.target.closest('.bend-mid');
+        if (!pt && !md) return;
+        e.preventDefault(); e.stopPropagation();
+        const note = findNote(noteId);
+        if (!note) return;
+        if (pt) { startDrag(Number(pt.dataset.i), e); return; }
+        const pts = bendPts(note);
+        if (pts.length >= BEND_MAX_PTS) return;
+        const i = Number(md.dataset.i);
+        const m = bendMids(pts, Math.round(note.width || 220), Math.round(note.height || 140))[i];
+        note.pts = pts.map(q => ({ x: q.x, y: q.y }));
+        note.pts.splice(i + 1, 0, { x: m.x, y: m.y });
+        refreshBend(wrapper, note, true);
+        startDrag(i + 1, e);
+      });
     }
 
     function rotateShape(id) {
@@ -1595,6 +1915,7 @@
     }
 
     /* Menu flutuante de formas */
+    buildShapeMenu();
     function toggleShapeMenu(e) {
       e.stopPropagation();
       const menu = document.getElementById('shapeMenu');
@@ -1772,6 +2093,7 @@
         initHorizontalResize(wrapper, note.id);
         if (note.erase) syncRestoreUI(note, wrapper);
         if (note.type === 'shape') initCornerResize(wrapper, note.id);
+        if (note.type === 'shape' && note.shape === 'bend') initBendHandles(wrapper, note.id);
         if (note.type === 'image') initImageCornerResize(wrapper, note.id);
       });
 
@@ -2479,8 +2801,40 @@
       });
     }
 
+    /* O navegador (principalmente no celular) pode sair da tela cheia ao abrir a galeria/arquivos.
+       Lembramos que estava em tela cheia e voltamos assim que o seletor fecha. */
+    let fsWanted = false, fsRetryArmed = false;
+    function pickFile(inputId) {
+      fsWanted = !!document.fullscreenElement;
+      byId(inputId).click();
+    }
+    function armFsRetry() {
+      if (fsRetryArmed) return;
+      fsRetryArmed = true;
+      const go = () => {
+        document.removeEventListener('pointerup', go, true);
+        fsRetryArmed = false;
+        if (!fsWanted) return;
+        fsWanted = false;
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+      };
+      document.addEventListener('pointerup', go, true);
+    }
+    function restoreFullscreen() {
+      if (!fsWanted) return;
+      if (document.fullscreenElement || !document.documentElement.requestFullscreen) { fsWanted = false; return; }
+      document.documentElement.requestFullscreen().then(() => { fsWanted = false; }).catch(() => armFsRetry());
+    }
+    ['imageFileInput', 'stickerFileInput'].forEach(id => {
+      const el = byId(id);
+      if (!el) return;
+      el.addEventListener('change', restoreFullscreen);
+      el.addEventListener('cancel', restoreFullscreen);
+    });
+    window.addEventListener('focus', () => { if (fsWanted && !document.fullscreenElement) setTimeout(restoreFullscreen, 150); });
+
     function pickImage() {
-      byId('imageFileInput').click();
+      pickFile('imageFileInput');
     }
 
     async function onImageFileChosen(e) {
@@ -3076,7 +3430,7 @@
     }
 
     function placeQuoteEditor() {
-      const ed = byId('quoteEditor'), el = byId('boardQuote');
+      const ed = byId('quoteEditor'), el = (settingsTab === 'apagador' ? byId('eraser') : byId('boardQuote'));
       if (!ed || !el) return;
       const r = el.getBoundingClientRect();
       const lower = (r.top + r.height / 2) > window.innerHeight * 0.5;
@@ -3086,23 +3440,45 @@
       else { ed.style.top = 'auto'; ed.style.bottom = 'calc(var(--bar-h, 0px) + 8px)'; }
     }
 
-    function toggleQuoteEdit() { quoteEditing ? finishQuoteEdit() : startQuoteEdit(); }
+    let settingsTab = 'frase';
+    const settingsOpen = () => !byId('quoteEditor').classList.contains('hidden');
 
-    function startQuoteEdit() {
-      quoteEditing = true;
-      const q = getQuote();
-      const ta = byId('quoteInput');
-      ta.value = q.text || '';
-      ta.rows = window.innerHeight < 500 ? 2 : 3;
+    function toggleQuoteEdit() { settingsOpen() ? finishQuoteEdit() : startQuoteEdit('frase'); }
+
+    /* Abre o painel de ajustes (engrenagem) já na aba pedida: 'frase' ou 'apagador' */
+    function startQuoteEdit(tab) {
       byId('quoteEditor').classList.remove('hidden');
+      setSettingsTab(tab || 'frase');
+    }
+
+    function setSettingsTab(tab) {
+      settingsTab = tab === 'apagador' ? 'apagador' : 'frase';
+      const isF = settingsTab === 'frase';
+      quoteEditing = isF;                       // a frase só fica movível na aba Frase
+      if (!isF) setEraserPlace(false);
+      byId('qeFrase').classList.toggle('hidden', !isF);
+      byId('qeApagador').classList.toggle('hidden', isF);
+      byId('qeHint').classList.toggle('hidden', !isF);
+      document.querySelectorAll('#quoteEditor [data-qtab]').forEach(b => b.classList.toggle('active', b.dataset.qtab === settingsTab));
+      if (isF) {
+        const ta = byId('quoteInput');
+        ta.value = getQuote().text || '';
+        ta.rows = window.innerHeight < 500 ? 2 : 3;
+        updateLinesButtons();
+        setTimeout(() => ta.focus(), 50);
+      } else {
+        const c = getEraserCfg();
+        byId('eraserSize').value = Math.round((c.size || 1) * 100);
+        byId('eraserSizeLbl').textContent = Math.round((c.size || 1) * 100) + '%';
+        byId('eraserSound').checked = c.sound !== false;
+      }
       renderQuote();
-      updateLinesButtons();
       placeQuoteEditor();
-      setTimeout(() => ta.focus(), 50);
     }
 
     function finishQuoteEdit() {
       quoteEditing = false;
+      setEraserPlace(false);
       byId('quoteEditor').classList.add('hidden');
       saveData();
       renderQuote();
@@ -3606,23 +3982,9 @@
     })();
 
     /* ---------- ajustes do apagador ---------- */
-    function placeEraserPanel() {
-      const pn = byId('eraserPanel'), r = byId('eraser').getBoundingClientRect();
-      const pw = pn.offsetWidth || 250, ph = pn.offsetHeight || 170;
-      const left = Math.max(8, Math.min(r.right - pw, window.innerWidth - pw - 8));
-      let top = r.top - ph - 10;
-      if (top < 8) top = Math.min(r.bottom + 10, window.innerHeight - ph - 8);
-      pn.style.left = left + 'px'; pn.style.top = Math.max(8, top) + 'px';
-    }
-    function openEraserPanel() {
-      const pn = byId('eraserPanel'), c = getEraserCfg();
-      byId('eraserSize').value = Math.round((c.size || 1) * 100);
-      byId('eraserSizeLbl').textContent = Math.round((c.size || 1) * 100) + '%';
-      byId('eraserSound').checked = c.sound !== false;
-      pn.classList.remove('hidden');
-      placeEraserPanel();
-    }
-    function closeEraserPanel() { byId('eraserPanel').classList.add('hidden'); setEraserPlace(false); }
+    /* Toque duplo no apagador abre o mesmo painel da engrenagem, já na aba Apagador */
+    function openEraserPanel() { startQuoteEdit('apagador'); }
+    function closeEraserPanel() { finishQuoteEdit(); }
     function setEraserSize(v) {
       const c = getEraserCfg();
       c.size = Math.max(0.5, Math.min(Number(v) / 100, 2.5));
@@ -3646,15 +4008,8 @@
       saveData(); setEraserPlace(false); renderEraser();
       byId('eraserSize').value = 100; byId('eraserSizeLbl').textContent = '100%';
       byId('eraserSound').checked = true;
-      placeEraserPanel();
+      placeQuoteEditor();
     }
-    document.addEventListener('pointerdown', (e) => {
-      const pn = byId('eraserPanel');
-      if (pn.classList.contains('hidden')) return;
-      if (e.target.closest('#eraserPanel') || e.target.closest('#eraser')) return;
-      closeEraserPanel();
-    }, true);
-
     // Inicialização: a lousa só aparece depois do login (evento "fb-auth" vindo do firebase.js)
     setTimeout(() => {
       if (!window.FB) {
