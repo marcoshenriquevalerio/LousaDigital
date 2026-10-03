@@ -891,8 +891,11 @@
           <input id="finTableName" type="text" maxlength="60" placeholder="Ex.: Contas da casa" onkeydown="if(event.key==='Enter') confirmFinTable()" class="fin-modal-in">
         </div>
         <div>
-          <div class="fin-lbl">Rodapé (totais)</div>
-          <button id="finTableFootBtn" class="fsb" onclick="finTableToggleFoot()"></button>
+          <div class="fin-lbl">Exibição</div>
+          <div class="flex flex-wrap gap-1.5">
+            <button id="finTableTitleBtn" class="fsb" onclick="finTableToggleTitle()"></button>
+            <button id="finTableFootBtn" class="fsb" onclick="finTableToggleFoot()"></button>
+          </div>
         </div>
         <div>
           <div class="fin-lbl">Categorias de destino</div>
@@ -927,6 +930,7 @@
               <button class="fsb" data-fin-type data-v="bar" onclick="finDraftSet('type','bar')"><i class="fa-solid fa-chart-column mr-1"></i>Barras</button>
               <button class="fsb" data-fin-type data-v="line" onclick="finDraftSet('type','line')"><i class="fa-solid fa-chart-line mr-1"></i>Linhas</button>
               <button class="fsb" data-fin-type data-v="pie" onclick="finDraftSet('type','pie')"><i class="fa-solid fa-chart-pie mr-1"></i>Pizza</button>
+              <button class="fsb" data-fin-type data-v="donut" onclick="finDraftSet('type','donut')"><i class="fa-regular fa-circle-dot mr-1"></i>Rosca</button>
             </div>
           </div>
           <div>
@@ -965,6 +969,7 @@
               <button class="fsb" data-fin-show data-v="x" onclick="finDraftShow('x')">Eixo X</button>
               <button class="fsb" data-fin-show data-v="y" onclick="finDraftShow('y')">Eixo Y</button>
               <button class="fsb" data-fin-show data-v="legend" onclick="finDraftShow('legend')">Séries (cores)</button>
+              <button class="fsb" data-fin-show data-v="title" onclick="finDraftShow('title')">Título</button>
             </div>
           </div>
         </div>
@@ -4501,6 +4506,7 @@
     }
 
     function finTitleInput(note, def) {
+      if (note.noTitle) return '';
       const fs = note.fs || 18;
       return `<input type="text" data-ink value="${escapeHtml(note.title == null ? def : note.title)}" onchange="finSetTitle('${note.id}', this.value)"
         placeholder="Título..." class="chalk-ink chalk-input w-full bg-transparent border-0 font-chalk font-bold focus:outline-none pb-1" style="color:inherit;font-size:${Math.round(fs * 1.35)}px">
@@ -4610,9 +4616,8 @@
       }
       if (note.type === 'finchart') {
         extra.push(`<button onclick="openFinChartModal('${note.id}')" class="chalk-btn text-[12px] px-1 rounded transition" title="Configurar gráfico"><i class="fa-solid fa-sliders"></i></button>`);
-      } else {
-        extra.push(`<button onclick="finChangeSize('${note.id}', -2)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button><button onclick="finChangeSize('${note.id}', 2)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>`);
       }
+      extra.push(`<button onclick="finChangeSize('${note.id}', -2)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button><button onclick="finChangeSize('${note.id}', 2)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>`);
       if (note.type === 'fintable') extra.push(`<button onclick="openFinTableModal('${note.id}')" class="chalk-btn text-[12px] px-1 rounded transition" title="Configurar tabela (nome, rodapé, categorias)"><i class="fa-solid fa-sliders"></i></button>`);
       const inner = note.type === 'fintable' ? finTableInner(note) : note.type === 'fincards' ? finCardsInner(note) : finChartInner(note);
       return `
@@ -4829,7 +4834,8 @@
       const n = editId ? findNote(editId) : null, count = finNotes('fintable').length;
       finTableDraft = {
         editId: n ? n.id : null,
-        hideFoot: n ? !!n.hideFoot : false
+        hideFoot: n ? !!n.hideFoot : false,
+        hideTitle: n ? !!n.noTitle : false
       };
       byId('finTableName').value = n ? (n.title == null ? '💰 Controle financeiro' : n.title) : (count ? 'Tabela ' + (count + 1) : 'Controle financeiro');
       byId('finTableModalTitle').innerText = n ? 'Configurar tabela' : 'Nova tabela';
@@ -4845,7 +4851,12 @@
       const b = byId('finTableFootBtn');
       b.classList.toggle('on', finTableDraft.hideFoot);
       b.innerHTML = finTableDraft.hideFoot ? '<i class="fa-solid fa-eye-slash mr-1"></i>Rodapé oculto' : '<i class="fa-solid fa-eye mr-1"></i>Rodapé visível';
+      const t = byId('finTableTitleBtn');
+      t.classList.toggle('on', finTableDraft.hideTitle);
+      t.innerHTML = finTableDraft.hideTitle ? '<i class="fa-solid fa-eye-slash mr-1"></i>Título oculto' : '<i class="fa-solid fa-eye mr-1"></i>Título visível';
+      byId('finTableName').style.opacity = finTableDraft.hideTitle ? .45 : 1;
     }
+    function finTableToggleTitle() { if (!finTableDraft) return; finTableDraft.hideTitle = !finTableDraft.hideTitle; finSyncTableModal(); }
     function finTableToggleFoot() { if (!finTableDraft) return; finTableDraft.hideFoot = !finTableDraft.hideFoot; finSyncTableModal(); }
     function closeFinTableModal() { const m = byId('finTableModal'); if (m) m.classList.add('hidden'); finTableDraft = null; }
     function confirmFinTable() {
@@ -4855,13 +4866,13 @@
       const name = byId('finTableName').value.trim();
       if (d.editId) {
         const n = findNote(d.editId);
-        if (n) { n.title = name || 'Tabela'; n.hideFoot = d.hideFoot; finDropMask(n); saveData(); finRenderPiece(n); }
+        if (n) { n.title = name || 'Tabela'; n.hideFoot = d.hideFoot; n.noTitle = d.hideTitle; finDropMask(n); saveData(); finRenderPiece(n); }
       } else {
         const fin = finData();
         if (!fin.rows.length) {
           fin.rows.push({ id: 'r' + Date.now().toString(36), seq: ++fin.seq, date: finToday(), cat: 'out', dest: '', value: null, done: false });
         }
-        finCreatePiece('fintable', { title: name || ('Tabela ' + (finNotes('fintable').length + 1)), hideFoot: d.hideFoot });
+        finCreatePiece('fintable', { title: name || ('Tabela ' + (finNotes('fintable').length + 1)), hideFoot: d.hideFoot, noTitle: d.hideTitle });
         finUpdateDatalist();
       }
       closeFinTableModal();
@@ -4992,15 +5003,17 @@
       return { lo, hi: hi === lo ? lo + step : hi, ticks };
     }
     function finTrunc(s, n) { s = String(s); return s.length > n ? s.slice(0, Math.max(1, n - 1)) + '…' : s; }
+    let finFS = 1;   // escala das letras do gráfico (vem do A-/A+ da peça)
     function finSvgText(x, y, txt, o) {
       o = o || {};
-      return `<text data-ink x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${o.fill || 'currentColor'}" font-size="${o.size || 13}" text-anchor="${o.anchor || 'start'}"${o.opacity ? ` opacity="${o.opacity}"` : ''}${o.rotate ? ` transform="rotate(${o.rotate} ${x.toFixed(1)} ${y.toFixed(1)})"` : ''}>${escapeHtml(String(txt))}</text>`;
+      return `<text data-ink x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${o.fill || 'currentColor'}" font-size="${((o.size || 13) * finFS).toFixed(1)}" text-anchor="${o.anchor || 'start'}"${o.opacity ? ` opacity="${o.opacity}"` : ''}${o.rotate ? ` transform="rotate(${o.rotate} ${x.toFixed(1)} ${y.toFixed(1)})"` : ''}>${escapeHtml(String(txt))}</text>`;
     }
 
     /* caixa de referência invisível: o filtro de giz usa a caixa do desenho, e linhas retas (altura zero) sumiriam */
     function finBox(W, H) { return `<rect x="-12" y="-12" width="${W + 24}" height="${H + 24}" fill="none" stroke="none"/>`; }
 
     function finChartSvg(cfg, W, H) {
+      finFS = Math.max(0.6, Math.min(2, cfg.fontScale || 1));
       W = Math.max(120, Math.round(W)); H = Math.max(90, Math.round(H));
       const open = `<svg class="fin-svg font-chalk" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible">`;
       const metrics = (cfg.metrics || []).filter(k => FIN_METRICS[k]);
@@ -5010,17 +5023,17 @@
         return open + finSvgText(W / 2, H / 2 - 4, 'Sem dados ainda', { anchor: 'middle', size: 20, opacity: .75 }) +
           finSvgText(W / 2, H / 2 + 20, 'preencha a tabela e marque os lançamentos ✓', { anchor: 'middle', size: 14, opacity: .6 }) + '</svg>';
       }
-      const type = cfg.type === 'line' || cfg.type === 'pie' ? cfg.type : 'bar';
+      const type = cfg.type === 'line' || cfg.type === 'pie' || cfg.type === 'donut' ? cfg.type : 'bar';
       let svg = open, legendH = 0;
 
       /* legenda */
-      const legendItems = (type === 'pie' || cfg.hideLegend) ? [] : metrics.map(k => ({ k, label: FIN_METRICS[k].label }));
+      const legendItems = (type === 'pie' || type === 'donut' || cfg.hideLegend) ? [] : metrics.map(k => ({ k, label: FIN_METRICS[k].label }));
       let legendSvg = '';
       if (legendItems.length > 1) {
         let lx = 6, ly = 10; const rowsL = [];
         legendItems.forEach(it => {
-          const wI = 30 + it.label.length * 7.4;
-          if (lx + wI > W - 6 && lx > 6) { lx = 6; ly += 20; }
+          const wI = 30 + it.label.length * 7.4 * finFS;
+          if (lx + wI > W - 6 && lx > 6) { lx = 6; ly += 20 * finFS; }
           const c = finHex(FIN_METRICS[it.k].color), dash = FIN_METRICS[it.k].dash;
           legendSvg += `<g data-ink><rect x="${lx}" y="${ly - 9}" width="14" height="11" rx="2" fill="${c}" fill-opacity="${dash ? .12 : .35}" stroke="${c}" stroke-width="1.8"${dash ? ' stroke-dasharray="3 2"' : ''}/>` +
             finSvgText(lx + 20, ly + 1, it.label, { size: 14 }) + '</g>';
@@ -5029,45 +5042,64 @@
         legendH = ly + 8;
       }
 
-      if (type === 'pie') {
-        const k = metrics[0], meta = FIN_METRICS[k];
-        let items = groups.map(g => ({ label: g.label, v: Math.abs(g[k]) / 100 })).filter(i => i.v > 0).sort((a, b) => b.v - a.v);
-        if (items.length > 8) { const rest = items.slice(7).reduce((s, i) => s + i.v, 0); items = items.slice(0, 7).concat([{ label: 'Outros', v: rest }]); }
+      if (type === 'pie' || type === 'donut') {
+        /* pizza (disco cheio) e rosca (anel): cada fatia é um grupo; com vários valores marcados, uma fatia por grupo × valor */
+        const multi = metrics.length > 1, isDonut = type === 'donut';
+        let items = [];
+        groups.forEach(g => metrics.forEach(k => {
+          const v = Math.abs(g[k]) / 100;
+          if (v > 0) items.push({ label: multi ? g.label + ' · ' + FIN_METRICS[k].label : g.label, v });
+        }));
+        items.sort((a, b) => b.v - a.v);
+        if (items.length > 8) { const rest = items.slice(7).reduce((s, i) => s + i.v, 0); items = items.slice(0, 7).concat([{ label: 'Demais', v: rest }]); }
         const sum = items.reduce((s, i) => s + i.v, 0);
         const lw = cfg.hideLegend ? 0 : Math.min(230, Math.max(110, W * 0.42));
         const R = Math.max(30, Math.min(H / 2 - 12, (W - lw) / 2 - 8));
         const cx = (W - lw) / 2 + 2, cy = H / 2;
         const ids = ['green', 'pink', 'blue', 'yellow', 'white'];
         const rr = R * 0.74, sw = R * 0.48;
-        let ang = -Math.PI / 2, arcs = '', leg = '';
+        let ang = -Math.PI / 2, arcs = '', leg = '', pieLabels = '';
         const pt = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
         items.forEach((it, i) => {
           const c = finHex(ids[i % 5]), op = i < 5 ? 0.85 : 0.5, frac = it.v / sum, a2 = ang + frac * Math.PI * 2;
           const gap = items.length > 1 ? Math.min(0.03, frac * 0.3) : 0;
-          if (frac > 0.9995) arcs += `<circle data-ink cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}"/>`;
-          else {
-            const p1 = pt(ang + gap, rr), p2 = pt(a2 - gap, rr), large = (a2 - ang - 2 * gap) > Math.PI ? 1 : 0;
-            arcs += `<path data-ink d="M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A ${rr} ${rr} 0 ${large} 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}"/>`;
+          if (isDonut) {
+            if (frac > 0.9995) arcs += `<circle data-ink cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}"/>`;
+            else {
+              const p1 = pt(ang + gap, rr), p2 = pt(a2 - gap, rr), large = (a2 - ang - 2 * gap) > Math.PI ? 1 : 0;
+              arcs += `<path data-ink d="M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A ${rr} ${rr} 0 ${large} 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}"/>`;
+            }
+          } else {
+            const PR = R * 0.97;
+            if (frac > 0.9995) arcs += `<circle data-ink cx="${cx}" cy="${cy}" r="${PR}" fill="${c}" fill-opacity="${op * 0.4}" stroke="${c}" stroke-width="2.4"/>`;
+            else {
+              const p1 = pt(ang + gap / 2, PR), p2 = pt(a2 - gap / 2, PR), large = (a2 - ang - gap) > Math.PI ? 1 : 0;
+              arcs += `<path data-ink d="M ${cx.toFixed(1)} ${cy.toFixed(1)} L ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A ${PR} ${PR} 0 ${large} 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} Z" fill="${c}" fill-opacity="${op * 0.4}" stroke="${c}" stroke-width="2.4" stroke-linejoin="round"/>`;
+            }
+            if (frac >= 0.06 && PR > 40) {
+              const mid = (ang + a2) / 2, tp = pt(mid, PR * 0.62);
+              pieLabels += finSvgText(tp[0], tp[1] + 4, Math.round(frac * 100) + '%', { anchor: 'middle', size: 13 });
+            }
           }
           ang = a2;
-          const ly = cy - (items.length * 24) / 2 + i * 24 + 12, lx = W - lw + 4;
+          const rowH = 24 * Math.max(1, finFS), ly = cy - (items.length * rowH) / 2 + i * rowH + 12, lx = W - lw + 4;
           leg += `<g data-ink><rect x="${lx}" y="${ly - 10}" width="13" height="13" rx="2" fill="${c}" fill-opacity="${op}"/>` +
-            finSvgText(lx + 19, ly + 1, finTrunc(it.label, Math.max(5, Math.floor((lw - 78) / 7.2))), { size: 14 }) +
+            finSvgText(lx + 19, ly + 1, finTrunc(it.label, Math.max(5, Math.floor((lw - 78 * finFS) / (7.2 * finFS)))), { size: 14 }) +
             finSvgText(W - 2, ly + 1, Math.round(frac * 100) + '%', { size: 14, anchor: 'end' }) + '</g>';
         });
-        svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${arcs}</g>` + (cfg.hideLegend ? '' : leg) +
-          finSvgText(cx, cy - 2, meta.label, { anchor: 'middle', size: Math.max(12, Math.min(16, R / 4.5)) }) +
-          finSvgText(cx, cy + Math.max(14, R / 4), 'R$ ' + finCompact(sum), { anchor: 'middle', size: Math.max(12, Math.min(18, R / 4)) });
+        svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${arcs}</g>` + (cfg.hideLegend ? '' : leg) + pieLabels +
+          (isDonut ? finSvgText(cx, cy - 2, multi ? 'Total' : FIN_METRICS[metrics[0]].label, { anchor: 'middle', size: Math.max(12, Math.min(16, R / 4.5)) }) +
+            finSvgText(cx, cy + Math.max(14, R / 4), 'R$ ' + finCompact(sum), { anchor: 'middle', size: Math.max(12, Math.min(18, R / 4)) }) : '');
         return svg + '</svg>';
       }
 
       /* barras / linhas */
       svg += legendSvg;
-      const n = groups.length, padL = cfg.hideY ? 14 : 54, padR = 12;
+      const n = groups.length, padL = cfg.hideY ? 14 : Math.round(54 * finFS), padR = 12;
       const pw = W - padL - padR, band = pw / n;
       const maxLen = Math.max.apply(null, groups.map(g => g.label.length));
-      const rot = !cfg.hideX && band < maxLen * 7 && band < 90;
-      const padB = cfg.hideX ? 10 : (rot ? 56 : 30), padT = 12 + legendH, ph = Math.max(40, H - padT - padB);
+      const rot = !cfg.hideX && band < maxLen * 7 * finFS && band < 90 * finFS;
+      const padB = cfg.hideX ? 10 : Math.round((rot ? 56 : 30) * finFS), padT = 12 + legendH, ph = Math.max(40, H - padT - padB);
       const vals = [0]; groups.forEach(g => metrics.forEach(k => vals.push(g[k] / 100)));
       const nt = finNiceTicks(Math.min.apply(null, vals), Math.max.apply(null, vals), Math.max(2, Math.min(5, Math.floor(ph / 44))));
       const yOf = v => padT + ph - (v - nt.lo) / (nt.hi - nt.lo) * ph;
@@ -5120,7 +5152,7 @@
     function finRenderChartBox(note) {
       const wr = byId(note.id), box = wr && wr.querySelector('.fin-chart-box'); if (!box) return;
       const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return;
-      box.innerHTML = finChartSvg(note.cfg || {}, w, h);
+      box.innerHTML = finChartSvg(Object.assign({}, note.cfg || {}, { fontScale: (note.fs || 18) / 18 }), w, h);
     }
 
     /* ---------- janela "Montar gráfico" ---------- */
@@ -5129,8 +5161,8 @@
       if (!finIsFinance()) return;
       const n = editId ? findNote(editId) : null;
       finDraft = n && n.cfg
-        ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all', hideX: !!n.cfg.hideX, hideY: !!n.cfg.hideY, hideLegend: !!n.cfg.hideLegend }
-        : { editId: null, title: '', type: 'bar', x: 'date', metrics: ['in', 'out'], period: 'all', hideX: false, hideY: false, hideLegend: false };
+        ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all', hideX: !!n.cfg.hideX, hideY: !!n.cfg.hideY, hideLegend: !!n.cfg.hideLegend, hideTitle: !!n.noTitle }
+        : { editId: null, title: '', type: 'bar', x: 'date', metrics: ['in', 'out'], period: 'all', hideX: false, hideY: false, hideLegend: false, hideTitle: false };
       const months = finMonthsList();
       if (finDraft.period !== 'all' && months.indexOf(finDraft.period) < 0) months.push(finDraft.period);
       byId('finPeriodSel').innerHTML = '<option value="all">Todo o período</option>' + months.map(m => `<option value="${m}">${finMonthLong(m)}</option>`).join('');
@@ -5144,20 +5176,18 @@
     function finDraftSet(k, v) {
       if (!finDraft) return;
       finDraft[k] = v;
-      if (k === 'type' && v === 'pie' && finDraft.metrics.length > 1) finDraft.metrics = [finDraft.metrics[0]];
       syncFinChartModal();
     }
     function finDraftMetric(k) {
       if (!finDraft) return;
       const i = finDraft.metrics.indexOf(k);
-      if (finDraft.type === 'pie') finDraft.metrics = [k];
-      else if (i >= 0) finDraft.metrics.splice(i, 1);
+      if (i >= 0) finDraft.metrics.splice(i, 1);
       else finDraft.metrics.push(k);
       syncFinChartModal();
     }
     function finDraftShow(k) {
       if (!finDraft) return;
-      const key = { x: 'hideX', y: 'hideY', legend: 'hideLegend' }[k];
+      const key = { x: 'hideX', y: 'hideY', legend: 'hideLegend', title: 'hideTitle' }[k];
       finDraft[key] = !finDraft[key];
       syncFinChartModal();
     }
@@ -5167,10 +5197,10 @@
       on('#finChartModal [data-fin-type]', v => v === finDraft.type);
       on('#finChartModal [data-fin-x]', v => v === finDraft.x);
       on('#finChartModal [data-fin-met]', v => finDraft.metrics.indexOf(v) >= 0);
-      const showMap = { x: 'hideX', y: 'hideY', legend: 'hideLegend' };
+      const showMap = { x: 'hideX', y: 'hideY', legend: 'hideLegend', title: 'hideTitle' };
       on('#finChartModal [data-fin-show]', v => !finDraft[showMap[v]]);
       byId('finPeriodSel').value = finDraft.period;
-      byId('finMetHint').innerText = finDraft.type === 'pie' ? 'A pizza mostra um valor por vez.' : 'Marque quantos quiser.';
+      byId('finMetHint').innerText = (finDraft.type === 'pie' || finDraft.type === 'donut') ? 'Marque quantos quiser: cada valor vira fatias.' : 'Marque quantos quiser.';
       byId('finChartOkBtn').disabled = !finDraft.metrics.length;
       byId('finChartOkBtn').classList.toggle('opacity-40', !finDraft.metrics.length);
       const box = byId('finPreviewBox');
@@ -5182,9 +5212,9 @@
       const title = byId('finChartTitleIn').value.trim();
       if (finDraft.editId) {
         const n = findNote(finDraft.editId);
-        if (n) { n.cfg = cfg; n.title = title || finDefaultTitle(cfg); finDropMask(n); saveData(); renderNotes(); }
+        if (n) { n.cfg = cfg; n.title = title || finDefaultTitle(cfg); n.noTitle = !!finDraft.hideTitle; finDropMask(n); saveData(); renderNotes(); }
       } else {
-        finCreatePiece('finchart', { cfg, title: title || finDefaultTitle(cfg) });
+        finCreatePiece('finchart', { cfg, title: title || finDefaultTitle(cfg), noTitle: !!finDraft.hideTitle });
       }
       closeFinChartModal();
     }
