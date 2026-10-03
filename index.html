@@ -464,6 +464,74 @@
     .bend-mid::after { content: '+'; position: absolute; inset: 6px; border-radius: 50%; background: rgba(255,255,255,.78); color: #422006; font: 700 11px/12px Inter, sans-serif; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
     .bend-mid:hover::after { background: #fff; }
     .bend-pt.is-active::after { background: #f97316; }
+
+    /* =========================================================================
+       FINANÇAS (tabela, cards e gráficos em giz)
+       ========================================================================= */
+    #finDock { position: fixed; z-index: 9000; display: none; align-items: center; gap: 6px; padding: 5px 8px 5px 12px; border-radius: 999px; background: rgba(0,0,0,.5); border: 1px dashed rgba(255,255,255,.45); backdrop-filter: blur(3px); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+    #finDock.on { display: flex; }
+    .fin-dock-title { font-family: 'Patrick Hand','Caveat',cursive; font-size: 17px; color: #fde68a; white-space: nowrap; margin-right: 2px; }
+    .fin-dock-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-family: 'Patrick Hand','Caveat',cursive; font-size: 16px; line-height: 1; color: #f5f7f8; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.32); transition: background .2s ease, transform .12s ease; }
+    .fin-dock-btn:hover { background: rgba(255,255,255,.22); }
+    .fin-dock-btn:active { transform: scale(.95); }
+    .theme-marker #finDock { background: rgba(255,255,255,.94); border-color: #94a3b8; box-shadow: 0 2px 10px rgba(15,23,42,.22); }
+    .theme-marker .fin-dock-title { color: #065f46; }
+    .theme-marker .fin-dock-btn { color: #0f172a; background: #fff; border-color: #cbd5e1; }
+    .theme-marker .fin-dock-btn:hover { background: #e2e8f0; }
+    @media (max-width: 520px) { .fin-dock-label { display: none; } .fin-dock-btn { padding: 6px 10px; font-size: 15px; } }
+    .fin-toggle-btn.is-on { box-shadow: 0 0 0 2px #fbbf24, 0 1px 4px rgba(0,0,0,.35); }
+
+    .fin-frame { height: 100%; display: flex; flex-direction: column; }
+    .fin-layer { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .fin-cols { display: grid; grid-template-columns: 1.45em 7.4em 5.8em minmax(3.2em, 1fr) minmax(5.6em, 7.4em) 1em; gap: 6px; align-items: center; }
+    .fin-head { padding: 0 6px 2px 0; border-bottom: 2px solid currentColor; font-weight: 700; opacity: .92; }
+    .fin-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+    .fin-row { padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,.14); }
+    .theme-marker .fin-row { border-bottom-color: rgba(0,0,0,.16); }
+    .fin-row .chalk-check { width: 1.3em; height: 1.3em; }
+    .fin-row.is-pending .fin-in, .fin-row.is-pending .fin-cat { opacity: .6; }
+    .fin-in { width: 100%; min-width: 0; background: transparent; border: 0; border-bottom: 1px dashed transparent; border-radius: 0; color: inherit; font: inherit; padding: 0 2px; outline: none; }
+    .fin-in:focus { border-bottom-color: currentColor; }
+    .chalk-note.is-selected .fin-in { border-bottom-color: rgba(255,255,255,.22); }
+    .theme-marker .chalk-note.is-selected .fin-in { border-bottom-color: rgba(0,0,0,.25); }
+    .fin-in::placeholder { color: rgba(255,255,255,.3); }
+    .theme-marker .fin-in::placeholder { color: rgba(0,0,0,.3); }
+    .fin-val { text-align: right; }
+    .fin-in[type=date] { color-scheme: dark; }
+    .theme-marker .fin-in[type=date] { color-scheme: light; }
+    .fin-cat { font: inherit; font-size: .85em; padding: 0 .55em; border: 1.5px solid currentColor; border-radius: 999px; background: transparent; cursor: pointer; line-height: 1.5; white-space: nowrap; }
+    .fin-cat:hover { background: rgba(255,255,255,.12); }
+    .theme-marker .fin-cat:hover { background: rgba(0,0,0,.06); }
+    .fin-add { display: flex; align-items: center; gap: .4em; padding: .25em 2px; opacity: .85; background: none; border: 0; color: inherit; cursor: pointer; text-align: left; }
+    .fin-add:hover { opacity: 1; }
+    .fin-foot { display: flex; flex-wrap: wrap; gap: 2px 14px; padding-top: 6px; margin-top: 4px; border-top: 2px solid currentColor; }
+    .fin-empty { padding: 14px 4px; opacity: .6; text-align: center; font-size: .95em; }
+    .fin-sec { margin: 14px 0 8px; font-size: 1.1em; opacity: .85; border-bottom: 2px dashed currentColor; padding-bottom: 2px; }
+    .fin-cards-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 6px 4px 2px; }
+    .fin-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.8em, 1fr)); gap: 12px; }
+    .fin-card { position: relative; padding: .55em .7em .6em; line-height: 1.15; }
+    .fin-card::before { content: ''; position: absolute; inset: 0; border: 2px solid var(--c); border-radius: 10px 14px 9px 13px / 13px 9px 14px 10px; opacity: .85; filter: url(#chalkSoft); pointer-events: none; }
+    .theme-marker .fin-card::before { filter: none; }
+    .fin-card-top { display: flex; align-items: center; gap: .4em; }
+    .fin-emoji { font-size: 1.1em; }
+    .fin-card-val { font-size: 1.32em; font-weight: 700; margin: .15em 0 .1em; word-break: break-word; }
+    .fin-card-sub { font-size: .78em; opacity: .82; }
+    .fin-chart-box { position: relative; flex: 1; min-height: 0; }
+    .fin-svg { max-width: none; }
+    .theme-marker .fin-svg g[filter] { filter: none; }
+    .fin-sel { background: rgba(0,0,0,.35); color: inherit; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; font-size: 11px; padding: 1px 4px; max-width: 110px; }
+    .fin-sel option { color: #111; background: #fff; }
+    .theme-marker .fin-sel { background: #fff; border-color: #94a3b8; color: #0f172a; }
+    .fin-flash { animation: finFlash 1.1s ease; }
+    @keyframes finFlash { 0%, 100% { filter: none; } 30% { filter: drop-shadow(0 0 14px #fbbf24); } }
+    #finChartModal { z-index: 9995 !important; }
+    .fin-lbl { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fcd34d; margin-bottom: 6px; }
+    .fsb { padding: 6px 12px; border-radius: 10px; font-size: 13px; border: 1px solid #57534e; background: #1c1917; color: #e7e5e4; transition: background .15s ease; }
+    .fsb:hover { background: #292524; }
+    .fsb.on { background: #f59e0b; border-color: #fbbf24; color: #1c1917; font-weight: 700; }
+    .fin-modal-in { width: 100%; background: #1c1917; border: 1px solid #57534e; border-radius: 10px; padding: 7px 10px; color: #f5f5f4; font-size: 13px; outline: none; }
+    .fin-modal-in:focus { border-color: #fbbf24; }
+    body.theme-marker { --fin-prev-ink: #1f2937; }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -519,6 +587,7 @@
       <button onclick="toggleStickerMenu(event)" class="tb bg-yellow-100 hover:bg-yellow-200 text-yellow-600 border border-yellow-300" title="Adesivos"><i class="fa-solid fa-face-smile-beam"></i><span class="tb-label"></span></button>
       <button onclick="openCalendarModal()" class="tb bg-sky-100 hover:bg-sky-200 text-sky-700 border border-sky-300 " title="Calendário"><i class="fa-solid fa-calendar-days"></i><span class="tb-label"></span></button>
       <button onclick="openPlannerModal()" class="tb bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300 desk-only" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label"></span></button>
+      <button onclick="openFinanceBoard()" class="tb fin-toggle-btn bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 desk-only" title="Finanças (clique de novo para voltar à lousa anterior)"><i class="fa-solid fa-sack-dollar"></i><span class="tb-label"></span></button>
       <button id="moreBtn" onclick="toggleMore(event)" class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Mais opções"><i class="fa-solid fa-ellipsis"></i></button>
     </div>
 
@@ -536,6 +605,7 @@
         <button id="btnDeleteBoard" onclick="confirmDeleteCurrentBoard()" class="nav-btn nav-del" title="Excluir esta lousa"><i class="fa-solid fa-trash-can text-xs"></i></button>
       </div>
       <button onclick="openPlannerModal()" data-close class="tb mob-only bg-purple-100 text-purple-700 border border-purple-300" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label">Planner</span></button>
+      <button onclick="openFinanceBoard()" data-close class="tb fin-toggle-btn mob-only bg-emerald-100 text-emerald-800 border border-emerald-300" title="Finanças"><i class="fa-solid fa-sack-dollar"></i><span class="tb-label">Finanças</span></button>
       <button onclick="toggleTheme()" id="themeBtn" data-close class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300" title="Alternar estilo"><i id="themeBtnIcon" class="fa-solid fa-pen-fancy text-stone-700"></i><span id="themeBtnLabel" class="tb-label">Modo Canetão</span></button>
       <button onclick="toggleFullscreen()" id="fullscreenBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Tela cheia"><i class="fa-solid fa-expand"></i><span class="tb-label">Tela cheia</span></button>
       <button onclick="toggleQuoteEdit()" id="quoteBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ajustes: frase e apagador"><i class="fa-solid fa-gear"></i><span class="tb-label">Ajustes</span></button>
@@ -563,8 +633,8 @@
     <!-- Mensagem de Tela Vazia -->
     <div id="emptyBoardMsg" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-40 text-center p-6">
       <i class="fa-solid fa-hand-pointer text-5xl chalk-text mb-3 animate-bounce"></i>
-      <h2 class="font-chalk text-3xl chalk-text mb-1">Esta Lousa está vazia!</h2>
-      <p class="text-sm text-emerald-100 max-w-sm">Use a barra de ferramentas para adicionar post-its, tarefas, textos e imagens.</p>
+      <h2 id="emptyTitle" class="font-chalk text-3xl chalk-text mb-1">Esta Lousa está vazia!</h2>
+      <p id="emptyText" class="text-sm text-emerald-100 max-w-sm">Use a barra de ferramentas para adicionar post-its, tarefas, textos e imagens.</p>
     </div>
 
     <!-- Container onde são renderizados os Post-its -->
@@ -767,6 +837,78 @@
         </button>
       </div>
       <button onclick="closeImageModal()" class="text-sm text-stone-400 hover:text-stone-200 transition">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- FINANÇAS: botões que aparecem só nas lousas de finanças -->
+  <div id="finDock">
+    <span class="fin-dock-title"><i class="fa-solid fa-sack-dollar"></i> <span class="fin-dock-label">Finanças</span></span>
+    <button class="fin-dock-btn" onclick="finOpenTable()" title="Tabela de lançamentos"><i class="fa-solid fa-table-list"></i> Tabela</button>
+    <button class="fin-dock-btn" onclick="finOpenCards()" title="Cards com totais"><i class="fa-solid fa-wallet"></i> Cards</button>
+    <button class="fin-dock-btn" onclick="openFinChartModal()" title="Montar um gráfico"><i class="fa-solid fa-chart-column"></i> Gráficos</button>
+  </div>
+  <datalist id="finDestList"></datalist>
+
+  <!-- FINANÇAS: montar gráfico personalizado -->
+  <div id="finChartModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-2xl text-amber-300 font-bold"><i class="fa-solid fa-chart-column mr-2"></i><span id="finChartModalTitle">Montar gráfico</span></h3>
+        <button onclick="closeFinChartModal()" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5 grid md:grid-cols-2 gap-5">
+        <div class="space-y-4">
+          <div>
+            <div class="fin-lbl">Tipo de gráfico</div>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="fsb" data-fin-type data-v="bar" onclick="finDraftSet('type','bar')"><i class="fa-solid fa-chart-column mr-1"></i>Barras</button>
+              <button class="fsb" data-fin-type data-v="line" onclick="finDraftSet('type','line')"><i class="fa-solid fa-chart-line mr-1"></i>Linhas</button>
+              <button class="fsb" data-fin-type data-v="pie" onclick="finDraftSet('type','pie')"><i class="fa-solid fa-chart-pie mr-1"></i>Pizza</button>
+            </div>
+          </div>
+          <div>
+            <div class="fin-lbl">Eixo X — agrupar por</div>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="fsb" data-fin-x data-v="date" onclick="finDraftSet('x','date')">Data (dia)</button>
+              <button class="fsb" data-fin-x data-v="month" onclick="finDraftSet('x','month')">Mês</button>
+              <button class="fsb" data-fin-x data-v="dest" onclick="finDraftSet('x','dest')">Destino</button>
+              <button class="fsb" data-fin-x data-v="cat" onclick="finDraftSet('x','cat')">Categoria</button>
+            </div>
+          </div>
+          <div>
+            <div class="fin-lbl">O que mostrar <span id="finMetHint" class="normal-case font-normal opacity-70"></span></div>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="fsb" data-fin-met data-v="in" onclick="finDraftMetric('in')">Entradas</button>
+              <button class="fsb" data-fin-met data-v="out" onclick="finDraftMetric('out')">Saídas</button>
+              <button class="fsb" data-fin-met data-v="bal" onclick="finDraftMetric('bal')">Saldo</button>
+              <button class="fsb" data-fin-met data-v="cum" onclick="finDraftMetric('cum')">Saldo acumulado</button>
+              <button class="fsb" data-fin-met data-v="pin" onclick="finDraftMetric('pin')">A receber (pendente)</button>
+              <button class="fsb" data-fin-met data-v="pout" onclick="finDraftMetric('pout')">A pagar (pendente)</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="fin-lbl">Período</div>
+              <select id="finPeriodSel" onchange="finDraftSet('period', this.value)" class="fin-modal-in"></select>
+            </div>
+            <div>
+              <div class="fin-lbl">Título (opcional)</div>
+              <input id="finChartTitleIn" type="text" placeholder="Ex.: Entradas × Saídas" class="fin-modal-in">
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="fin-lbl">Pré-visualização</div>
+          <div class="chalkboard-bg rounded-xl border border-stone-600 relative" style="height:260px;color:var(--fin-prev-ink,#f5f7f8)">
+            <div id="finPreviewBox" class="absolute inset-2"></div>
+          </div>
+          <p class="text-[11px] text-stone-400 mt-2 leading-snug">O gráfico usa só os lançamentos marcados com ✓ (confirmados). Os pendentes só aparecem se você escolher “A receber” ou “A pagar”.</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2.5 px-5 py-3 border-t border-stone-600">
+        <button onclick="closeFinChartModal()" class="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-stone-200 rounded-lg text-sm transition">Cancelar</button>
+        <button id="finChartOkBtn" onclick="confirmFinChart()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-lg text-sm transition">Adicionar à lousa</button>
+      </div>
     </div>
   </div>
 
@@ -1011,7 +1153,7 @@
       if (!handles.length) return;
 
       const onPointerDown = (e) => {
-        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner')) {
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner')) {
           return;
         }
 
@@ -1152,7 +1294,8 @@
 
       // Limites de largura (200–650px; imagens: 80–1200px, sempre mantendo a proporção)
       const isSt = !!(note && note.type === 'sticker');
-      newWidth = Math.max(isSt ? 40 : (isImg ? 80 : 200), Math.min(newWidth, isSt ? 500 : (isImg ? 1200 : 650)));
+      const isFn = !!(note && isFinType(note.type));
+      newWidth = Math.max(isSt ? 40 : (isImg ? 80 : (isFn ? (note.type === 'fintable' ? 400 : 260) : 200)), Math.min(newWidth, isSt ? 500 : ((isImg || isFn) ? 1200 : 650)));
 
       activeResize.element.style.width = `${newWidth}px`;
 
@@ -1161,6 +1304,7 @@
         if (note.type === 'shape') updateShapeSvg(activeResize.element, note);
         if (isImg) syncImageUI(activeResize.element, note);
         if (isSt) syncStickerUI(activeResize.element, note);
+        if (isFn) finOnResize(activeResize.element, note);
       }
     }
 
@@ -1210,18 +1354,20 @@
       if (e.preventDefault && e.cancelable) e.preventDefault();
 
       const p = getClientXY(e);
-      const newW = Math.max(60, Math.min(activeCorner.startW + (p.x - activeCorner.startX) / boardScale, 800));
-      const newH = Math.max(36, Math.min(activeCorner.startH + (p.y - activeCorner.startY) / boardScale, 600));
+      const board = getActiveBoard();
+      const note = board.notes.find(n => n.id === activeCorner.noteId);
+      const fin = !!(note && isFinType(note.type));
+      const newW = Math.max(fin ? (note.type === 'fintable' ? 400 : 260) : 60, Math.min(activeCorner.startW + (p.x - activeCorner.startX) / boardScale, fin ? 1200 : 800));
+      const newH = Math.max(fin ? 170 : 36, Math.min(activeCorner.startH + (p.y - activeCorner.startY) / boardScale, fin ? 900 : 600));
 
       activeCorner.element.style.width = `${newW}px`;
       activeCorner.element.style.height = `${newH}px`;
 
-      const board = getActiveBoard();
-      const note = board.notes.find(n => n.id === activeCorner.noteId);
       if (note) {
         note.width = newW;
         note.height = newH;
-        updateShapeSvg(activeCorner.element, note);
+        if (fin) finOnResize(activeCorner.element, note);
+        else updateShapeSvg(activeCorner.element, note);
       }
     }
 
@@ -1302,11 +1448,11 @@
 
     /* Botão "restaurar": só existe na barra de peças apagáveis e só aparece se o apagador já passou por ela */
     function restoreBtnHtml(note) {
-      return `<button onclick="restoreErased('${note.id}')" class="chalk-restore chalk-btn text-[12px] px-1 rounded transition" title="Restaurar o que foi apagado" style="${note.erase ? '' : 'display:none'}"><i class="fa-solid fa-rotate-left"></i></button>`;
+      return `<button onclick="restoreErased('${note.id}')" class="chalk-restore chalk-btn text-[12px] px-1 rounded transition" title="Restaurar o que foi apagado" style="${finCanRestore(note) ? '' : 'display:none'}"><i class="fa-solid fa-rotate-left"></i></button>`;
     }
 
     function chalkBarHtml(note, extraHtml = '') {
-      const restore = (note.type === 'checklist' || note.type === 'chalktext') ? restoreBtnHtml(note) : '';
+      const restore = (note.type === 'checklist' || note.type === 'chalktext' || isFinType(note.type)) ? restoreBtnHtml(note) : '';
       return `
         <div class="drag-handle chalk-bar cursor-grab active:cursor-grabbing flex items-center justify-between gap-3 select-none">
           ${chalkColorDotsHtml(note)}
@@ -1314,7 +1460,7 @@
             ${extraHtml}
             ${restore}
             <span class="text-xs opacity-60" title="Arraste para mover"><i class="fa-solid fa-grip-vertical"></i></span>
-            <button onclick="deleteNote('${note.id}')" class="chalk-del text-xs p-0.5 transition" title="Excluir">
+            <button onclick="deleteNote('${note.id}')" class="chalk-del text-xs p-0.5 transition" title="${note.type === 'fintable' ? 'Fechar a tabela (os lançamentos continuam salvos)' : 'Excluir'}">
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
@@ -2018,7 +2164,7 @@
       board.notes.forEach(note => {
         const wrapper = document.createElement('div');
         const colorObj = POSTIT_COLORS.find(c => c.id === note.color) || POSTIT_COLORS[0];
-        const isChalk = (note.type === 'checklist' || note.type === 'chalktext' || note.type === 'shape' || note.type === 'image' || note.type === 'sticker');
+        const isChalk = (note.type === 'checklist' || note.type === 'chalktext' || note.type === 'shape' || note.type === 'image' || note.type === 'sticker' || isFinType(note.type));
         
         wrapper.id = note.id;
         wrapper.className = isChalk ? 'absolute group style-wrapper chalk-note' : 'absolute group style-wrapper';
@@ -2030,8 +2176,13 @@
         if (note.type === 'shape') {
           wrapper.style.height = `${note.height || 80}px`;
         }
+        if (isFinType(note.type)) {
+          wrapper.style.height = `${note.height || 320}px`;
+        }
 
-        if (note.type === 'checklist') {
+        if (isFinType(note.type)) {
+          wrapper.innerHTML = buildFinHtml(note);
+        } else if (note.type === 'checklist') {
           wrapper.innerHTML = buildChalkChecklistHtml(note);
         } else if (note.type === 'chalktext') {
           wrapper.innerHTML = buildChalkTextHtml(note);
@@ -2096,7 +2247,7 @@
         initDragAndDrop(wrapper, note.id);
         initHorizontalResize(wrapper, note.id);
         if (note.erase) syncRestoreUI(note, wrapper);
-        if (note.type === 'shape') initCornerResize(wrapper, note.id);
+        if (note.type === 'shape' || isFinType(note.type)) initCornerResize(wrapper, note.id);
         if (note.type === 'shape' && note.shape === 'bend') initBendHandles(wrapper, note.id);
         if (note.type === 'image') initImageCornerResize(wrapper, note.id);
       });
@@ -2107,6 +2258,7 @@
       renderEraser();
       preloadMasks();
       lastToggled = null; lastStickerId = null;
+      finAfterRender();
     }
 
     function onNoteTextInput(id, textarea) {
@@ -2588,8 +2740,8 @@
       const c = (err && err.code) || '';
       if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return '';
       if (c === 'auth/popup-blocked') return 'O navegador bloqueou a janela de login. Libere pop-ups para este site e tente de novo.';
-      if (c === 'auth/unauthorized-domain') return 'Este domínio não está autorizado no Firebase. Adicione-o em Authentication > Settings > Authorized domains.';
-      if (c === 'auth/operation-not-allowed') return 'O login com Google não está ativado no Firebase (Authentication > Sign-in method).';
+      if (c === 'auth/unauthorized-domain') return 'Este domínio não está autorizado. Adicione-o em Authentication > Settings > Authorized domains.';
+      if (c === 'auth/operation-not-allowed') return 'O login com Google não está ativado (Authentication > Sign-in method).';
       if (c === 'auth/network-request-failed') return 'Sem conexão. Verifique sua internet.';
       return 'Não foi possível entrar. ' + (c || (err && err.message) || '');
     }
@@ -2602,7 +2754,7 @@
     }
 
     async function doLogin() {
-      if (!window.FB) { showLoginMsg('O Firebase ainda não carregou. Aguarde um instante e tente de novo.'); return; }
+      if (!window.FB) { showLoginMsg('Aguarde um instante e tente de novo.'); return; }
       showLoginMsg('');
       try {
         await FB.login();
@@ -2686,7 +2838,7 @@
       try {
         cloud = await FB.loadAppData();
       } catch (err) {
-        console.error('Erro ao carregar do Firebase:', err);
+        console.error('Erro ao carregar o armazenamento:', err);
         setLoginState('error', firestoreErrorMsg(err));
         return;
       }
@@ -2742,6 +2894,7 @@
       closeCalendarModal();
       closePlannerModal();
       closeImageModal();
+      closeFinChartModal();
       setLoginState('login');
     }
 
@@ -3203,7 +3356,7 @@
       mn.style.width = W + 'px'; mn.style.height = H + 'px';
       mn.style.transform = `scale(${boardScale})`;
     }
-    function relayoutAll() { layoutStage(); if (typeof renderQuote === 'function') { renderQuote(); renderEraser(); } }
+    function relayoutAll() { layoutStage(); placeFinDock(); if (typeof renderQuote === 'function') { renderQuote(); renderEraser(); } }
     new ResizeObserver(() => relayoutAll()).observe(byId('boardViewport'));
     window.addEventListener('resize', relayoutAll);
 
@@ -3577,7 +3730,7 @@
        APAGADOR DE LOUSA
        ========================================================================= */
     const ERASER_BASE_W = 96, ERASER_RATIO = 0.46, ERASER_MARGIN = 10;
-    const ERASABLE = ['checklist', 'chalktext', 'shape'];   // post-its, imagens e adesivos nunca são apagados
+    const ERASABLE = ['checklist', 'chalktext', 'shape', 'fintable', 'fincards', 'finchart'];   // post-its, imagens e adesivos nunca são apagados
     const maskStore = {};          // id da peça -> { canvas, ctx, w, h, src }
     const maskDirty = {};          // peças com máscara a atualizar no próximo frame
     let eraserDrag = null, eraserPlace = false, eraserLastTap = 0, puffAt = 0, maskRaf = 0;
@@ -3754,6 +3907,11 @@
             const rg = document.createRange(); rg.selectNodeContents(sp);
             Array.from(rg.getClientRects()).forEach(r => { if (r.width > 1) rel(r); });
           });
+        } else if (isFinType(note.type)) {
+          target.querySelectorAll('[data-ink]').forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width > 1 && r.height > 1) rel(r);
+          });
         } else {
           const ta = target.querySelector('textarea');
           if (ta) {
@@ -3786,7 +3944,7 @@
     /* Mostra o botão de restaurar na barra só enquanto a peça estiver apagada em parte */
     function syncRestoreUI(note, wr) {
       if (!note || !wr) return;
-      wr.querySelectorAll('.chalk-restore').forEach(b => { b.style.display = note.erase ? '' : 'none'; });
+      wr.querySelectorAll('.chalk-restore').forEach(b => { b.style.display = finCanRestore(note) ? '' : 'none'; });
     }
 
     function clearMask(target) {
@@ -3800,6 +3958,12 @@
       const board = getActiveBoard();
       const note = board.notes.find(n => n.id === id);
       if (!note) return;
+      if (isFinType(note.type)) {
+        finRestore(note);
+        delete note.erase; delete maskStore[id]; delete maskDirty[id];
+        saveData(); renderNotes();
+        return;
+      }
       delete note.erase;
       delete maskStore[id]; delete maskDirty[id];
       const wr = byId(id);
@@ -3817,14 +3981,22 @@
       flushMasks();
       const board = getActiveBoard();
       const cleared = [];
+      let finDirty = false;
       touched.forEach(id => {
         const note = board.notes.find(n => n.id === id), m = maskStore[id], wr = byId(id);
         if (!note || !m || !wr) return;
         const t = eraseTargetOf(note, wr);
         if (!t) return;
+        let finRes = null;
+        if (note.type === 'fintable' || note.type === 'fincards') {
+          try { finRes = finEvalErase(note, t, m); } catch (err) { console.warn('Checagem das finanças falhou', err); }
+        }
         let alive = true;
         try { alive = inkAlive(note, t, m); } catch (err) { console.warn('Checagem de apagado falhou', err); }
+        const finHit = !!(finRes && (finRes.rows.length || finRes.cards.length));
+        if (finHit) { finApplyErase(note, finRes); finDirty = true; }
         if (!alive) { cleared.push(id); return; }
+        if (finHit) return;   // a máscara foi zerada e tudo é recalculado
         const sc = document.createElement('canvas');
         sc.width = Math.max(1, Math.round(m.w / 2)); sc.height = Math.max(1, Math.round(m.h / 2));
         sc.getContext('2d').drawImage(m.canvas, 0, 0, sc.width, sc.height);
@@ -3832,7 +4004,7 @@
         m.src = note.erase;
         syncRestoreUI(note, wr);
       });
-      if (cleared.length) {
+      if (cleared.length || finDirty) {
         board.notes = board.notes.filter(n => cleared.indexOf(n.id) < 0);
         cleared.forEach(id => { delete maskStore[id]; delete maskDirty[id]; });
         saveData();
@@ -4034,10 +4206,772 @@
       byId('eraserSound').checked = true;
       placeQuoteEditor();
     }
+
+    /* =========================================================================
+       FINANÇAS — lousa financeira (Tabela, Cards e Gráficos em giz)
+       Os lançamentos ficam em board.fin.rows; Tabela, Cards e Gráficos são
+       "visões" da lousa: mudou a tabela, tudo é recalculado.
+       ========================================================================= */
+    const FIN_TYPES = ['fintable', 'fincards', 'finchart'];
+    function isFinType(t) { return FIN_TYPES.indexOf(t) >= 0; }
+
+    const FIN_PRESET_DESTS = ['Casa', 'Carro', 'Dívidas', 'Energia', 'Água', 'Aluguel', 'Mercado', 'Investimento',
+      'Internet', 'Telefone', 'Saúde', 'Educação', 'Transporte', 'Alimentação', 'Lazer', 'Salário', 'Freelance', 'Outros'];
+
+    const FIN_EMOJI = [
+      ['casa', '🏠'], ['carro', '🚗'], ['divida', '💳'], ['cartao', '💳'], ['energia', '💡'], ['luz', '💡'],
+      ['agua', '💧'], ['aluguel', '🔑'], ['mercado', '🛒'], ['investimento', '📈'], ['internet', '🌐'],
+      ['telefone', '📱'], ['celular', '📱'], ['saude', '💊'], ['educacao', '🎓'], ['escola', '🎓'], ['curso', '🎓'],
+      ['transporte', '🚌'], ['combustivel', '⛽'], ['gasolina', '⛽'], ['alimentacao', '🍽️'], ['restaurante', '🍽️'],
+      ['lazer', '🎉'], ['salario', '💼'], ['freelance', '🧾'], ['viagem', '✈️'], ['pet', '🐾'], ['roupa', '👕']
+    ];
+
+    const FIN_METRICS = {
+      in:   { label: 'Entradas',        color: 'green', dash: false },
+      out:  { label: 'Saídas',          color: 'pink',  dash: false },
+      bal:  { label: 'Saldo',           color: 'blue',  dash: false },
+      cum:  { label: 'Saldo acumulado', color: 'white', dash: false },
+      pin:  { label: 'A receber',       color: 'green', dash: true },
+      pout: { label: 'A pagar',         color: 'pink',  dash: true }
+    };
+    const FIN_X = { date: 'Data (dia)', month: 'Mês', dest: 'Destino', cat: 'Categoria' };
+    const FIN_MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const FIN_MONTHS_LONG = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    const FIN_CHECK_SVG = `<svg viewBox="0 0 30 30" width="100%" height="100%" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 6.5 L22.5 5.5 L23.5 23 L5.5 24 Z" stroke-width="2.4"/>
+      <path d="M4.5 5.5 L23 6.5 L22.5 24.5 L4 23 Z" stroke-width="1.2" opacity="0.5"/>
+      <path class="check-mark" d="M7 15 L13 22 L28 3" stroke-width="3"/>
+      <path class="check-mark2" d="M8 16 L13.5 22.5 L27 5" stroke-width="1.5"/></svg>`;
+
+    let finLastToggled = null;
+
+    /* ---------- dados ---------- */
+    function finData(board) {
+      board = board || getActiveBoard();
+      if (!board.fin) board.fin = { rows: [], trash: [], seq: 0 };
+      if (!board.fin.rows) board.fin.rows = [];
+      if (!board.fin.trash) board.fin.trash = [];
+      if (!board.fin.seq) board.fin.seq = board.fin.rows.length;
+      return board.fin;
+    }
+    function finIsFinance() { return getActiveBoard().kind === 'finance'; }
+    function finNotes(type) { return getActiveBoard().notes.filter(n => type ? n.type === type : isFinType(n.type)); }
+    function finToday() { return getFormattedDateKey(new Date()); }
+    function finHex(id) { const p = getPalette(); return (p.find(c => c.id === id) || p[0]).hex; }
+
+    function finNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+    function finCleanDest(s) {
+      s = String(s || '').replace(/\s+/g, ' ').trim();
+      return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+    }
+    function finEmoji(dest) {
+      const k = finNorm(dest);
+      for (let i = 0; i < FIN_EMOJI.length; i++) if (k.indexOf(FIN_EMOJI[i][0]) >= 0) return FIN_EMOJI[i][1];
+      return '🏷️';
+    }
+
+    function finParseMoney(s) {
+      s = String(s == null ? '' : s).replace(/[^\d.,]/g, '');
+      if (!s) return 0;
+      const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+      if (lc >= 0 && ld >= 0) s = lc > ld ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+      else if (lc >= 0) s = s.replace(/\./g, '').replace(',', '.');
+      else if (ld >= 0 && /^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+      const v = parseFloat(s);
+      return isFinite(v) ? Math.round(v * 100) / 100 : 0;
+    }
+    function finFmtNum(v) { return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function finBRL(v) { return (v < 0 ? '-' : '') + 'R$ ' + finFmtNum(Math.abs(v)); }
+    function finCompact(v) {
+      const a = Math.abs(v), s = v < 0 ? '-' : '';
+      if (a >= 1e6) return s + (a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi';
+      if (a >= 1e3) return s + (a / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil';
+      return s + a.toLocaleString('pt-BR', { maximumFractionDigits: a < 10 ? 1 : 0 });
+    }
+    function finMonthShort(key) {
+      const m = /^(\d{4})-(\d{2})$/.exec(key || ''); if (!m) return 'Sem data';
+      return FIN_MONTHS[+m[2] - 1] + '/' + m[1].slice(2);
+    }
+    function finMonthLong(key) {
+      const m = /^(\d{4})-(\d{2})$/.exec(key || ''); if (!m) return key;
+      return FIN_MONTHS_LONG[+m[2] - 1] + ' ' + m[1];
+    }
+    function finDM(d) { const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(d || ''); return m ? m[2] + '/' + m[1] : 'Sem data'; }
+
+    /* lançamentos "em branco" (linha nova ainda sem nada) nunca entram nas contas */
+    function finIsBlank(r) { return !r.value && !r.dest; }
+    function finRowsFor(period) {
+      let rows = finData().rows.filter(r => !finIsBlank(r));
+      if (period && period !== 'all') rows = rows.filter(r => (r.date || '').slice(0, 7) === period);
+      return rows;
+    }
+    function finMonthsList() {
+      const set = {};
+      finData().rows.forEach(r => { const k = (r.date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) set[k] = 1; });
+      return Object.keys(set).sort().reverse();
+    }
+
+    /* totais em centavos (evita erro de arredondamento) */
+    function finTotals(rows) {
+      const t = { in: 0, out: 0, pin: 0, pout: 0, nIn: 0, nOut: 0, nPin: 0, nPout: 0 };
+      rows.forEach(r => {
+        const c = Math.round((r.value || 0) * 100);
+        if (r.cat === 'in') { if (r.done) { t.in += c; t.nIn++; } else { t.pin += c; t.nPin++; } }
+        else { if (r.done) { t.out += c; t.nOut++; } else { t.pout += c; t.nPout++; } }
+      });
+      return t;
+    }
+
+    function finDestGroups(rows) {
+      const map = {};
+      rows.forEach(r => {
+        const key = finNorm(r.dest);
+        const g = map[key] || (map[key] = { key: 'd:' + key, label: finCleanDest(r.dest) || 'Sem destino', rows: [] });
+        g.rows.push(r);
+      });
+      return Object.keys(map).map(k => {
+        const g = map[k]; g.t = finTotals(g.rows); g.n = g.rows.length;
+        g.weight = g.t.in + g.t.out + g.t.pin + g.t.pout;
+        return g;
+      }).sort((a, b) => b.weight - a.weight);
+    }
+
+    /* agrupamento do gráfico */
+    function finGroups(cfg) {
+      const rows = finRowsFor(cfg.period), map = {};
+      rows.forEach(r => {
+        let key, label, sort;
+        if (cfg.x === 'date') { key = r.date || '—'; label = finDM(r.date); sort = key; }
+        else if (cfg.x === 'month') { key = (r.date || '').slice(0, 7) || '—'; label = finMonthShort(key); sort = key; }
+        else if (cfg.x === 'cat') { key = r.cat === 'in' ? 'in' : 'out'; label = r.cat === 'in' ? 'Entrada' : 'Saída'; sort = r.cat === 'in' ? '0' : '1'; }
+        else { key = finNorm(r.dest); label = finCleanDest(r.dest) || 'Sem destino'; sort = label; }
+        const g = map[key] || (map[key] = { key, label, sort, in: 0, out: 0, pin: 0, pout: 0 });
+        const c = Math.round((r.value || 0) * 100);
+        if (r.cat === 'in') { if (r.done) g.in += c; else g.pin += c; } else { if (r.done) g.out += c; else g.pout += c; }
+      });
+      let arr = Object.keys(map).map(k => map[k]);
+      if (cfg.x === 'dest') arr.sort((a, b) => (b.in + b.out + b.pin + b.pout) - (a.in + a.out + a.pin + a.pout));
+      else arr.sort((a, b) => a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : 0);
+      let run = 0;
+      arr.forEach(g => { g.bal = g.in - g.out; run += g.bal; g.cum = run; });
+      return arr;
+    }
+
+    function finDefaultTitle(cfg) {
+      const ms = (cfg.metrics || []).map(k => FIN_METRICS[k] && FIN_METRICS[k].label).filter(Boolean);
+      return '📊 ' + (ms.join(' × ') || 'Gráfico') + ' por ' + (FIN_X[cfg.x] || 'data').toLowerCase().replace(' (dia)', '');
+    }
+
+    /* ---------- persistência / atualização ---------- */
+    function finDropMask(note) {
+      if (!note) return;
+      delete note.erase; delete maskStore[note.id]; delete maskDirty[note.id];
+      const wr = byId(note.id);
+      if (wr) { const t = wr.querySelector('.fin-layer'); if (t) clearMask(t); syncRestoreUI(note, wr); }
+    }
+    function finDropMasks(types) { finNotes().forEach(n => { if (!types || types.indexOf(n.type) >= 0) finDropMask(n); }); }
+
+    function finUpdateDatalist() {
+      const dl = byId('finDestList'); if (!dl) return;
+      const seen = {}, out = [];
+      FIN_PRESET_DESTS.concat(finData().rows.map(r => finCleanDest(r.dest))).forEach(d => {
+        const k = finNorm(d); if (!k || seen[k]) return; seen[k] = 1; out.push(d);
+      });
+      dl.innerHTML = out.map(d => `<option value="${escapeHtml(d)}"></option>`).join('');
+    }
+
+    function finRenderPiece(note) {
+      const wr = byId(note.id); if (!wr) return;
+      if (note.type === 'finchart') { finRenderChartBox(note); return; }
+      const layer = wr.querySelector('.fin-layer'); if (!layer) return;
+      if (note.type === 'fincards') {
+        const body = layer.querySelector('.fin-cards-body');
+        if (body) { const st = body.scrollTop; body.innerHTML = finCardsBodyHtml(note); body.scrollTop = st; }
+        return;
+      }
+      const sc = layer.querySelector('.fin-scroll'), st = sc ? sc.scrollTop : 0;
+      layer.innerHTML = finTableInner(note);
+      const sc2 = layer.querySelector('.fin-scroll'); if (sc2) sc2.scrollTop = st;
+    }
+
+    function finRefreshViews() {
+      finNotes().forEach(n => {
+        if (n.type === 'fintable') finUpdateFoot(n);
+        else finRenderPiece(n);
+      });
+    }
+    function finRefreshAll() { finNotes().forEach(n => finRenderPiece(n)); finUpdateDatalist(); }
+
+    /* ---------- HTML das peças ---------- */
+    function finFootHtml() {
+      const t = finTotals(finRowsFor('all')), bal = (t.in - t.out) / 100;
+      const col = (id, txt) => `<span style="color:${finHex(id)}">${txt}</span>`;
+      let h = col('green', '↑ Entradas ' + finBRL(t.in / 100)) + col('pink', '↓ Saídas ' + finBRL(t.out / 100)) +
+        col(bal < 0 ? 'pink' : 'blue', '= Saldo ' + finBRL(bal));
+      if (t.pin || t.pout) h += col('yellow', '⏳ Pendente: ' + (t.pin ? 'receber ' + finBRL(t.pin / 100) : '') + (t.pin && t.pout ? ' · ' : '') + (t.pout ? 'pagar ' + finBRL(t.pout / 100) : ''));
+      return h;
+    }
+    function finUpdateFoot(note) {
+      const f = document.getElementById('finfoot_' + note.id); if (f) f.innerHTML = finFootHtml();
+    }
+
+    function finTitleInput(note, def) {
+      const fs = note.fs || 18;
+      return `<input type="text" data-ink value="${escapeHtml(note.title == null ? def : note.title)}" onchange="finSetTitle('${note.id}', this.value)"
+        placeholder="Título..." class="chalk-ink chalk-input w-full bg-transparent border-0 font-chalk font-bold focus:outline-none pb-1" style="color:inherit;font-size:${Math.round(fs * 1.35)}px">
+        <div class="chalk-line mb-2" data-ink></div>`;
+    }
+
+    function finRowHtml(r) {
+      const isIn = r.cat === 'in';
+      const anim = finLastToggled === r.id && r.done;
+      return `<div class="fin-row fin-cols ${r.done ? '' : 'is-pending'}" data-row="${r.id}">
+        <button class="chalk-check ${r.done ? 'is-done' : ''} ${anim ? 'animate' : ''}" style="width:1.3em;height:1.3em" onclick="finToggleRow('${r.id}')"
+                title="${r.done ? 'Confirmado — já soma nos cards e gráficos' : 'Pendente — marque para somar'}">${FIN_CHECK_SVG}</button>
+        <div data-cell="date" data-ink><input type="date" class="fin-in" value="${escapeHtml(r.date || '')}" onchange="finSetField('${r.id}','date',this)"></div>
+        <div data-cell="cat" data-ink><button class="fin-cat" style="color:${finHex(isIn ? 'green' : 'pink')}" onclick="finToggleCat('${r.id}')" title="Toque para alternar Entrada / Saída">${isIn ? '↑ Entrada' : '↓ Saída'}</button></div>
+        <div data-cell="dest" data-ink><input type="text" list="finDestList" class="fin-in" value="${escapeHtml(r.dest || '')}" placeholder="Destino..." onchange="finSetField('${r.id}','dest',this)"></div>
+        <div data-cell="val" data-ink><input type="text" inputmode="decimal" class="fin-in fin-val" value="${r.value ? 'R$ ' + finFmtNum(r.value) : ''}" placeholder="R$ 0,00"
+             onfocus="this.select()" oninput="finLiveValue('${r.id}', this)" onchange="finCommitValue('${r.id}', this)" onkeydown="finValKey(event,'${r.id}')"></div>
+        <button class="item-remove chalk-del" onclick="finDeleteRow('${r.id}')" title="Excluir lançamento"><i class="fa-solid fa-xmark text-xs"></i></button>
+      </div>`;
+    }
+
+    function finTableInner(note) {
+      const rows = finData().rows, fs = note.fs || 18;
+      const allDone = rows.length > 0 && rows.every(r => r.done);
+      return `
+        ${finTitleInput(note, '💰 Controle financeiro')}
+        <div class="fin-head fin-cols font-chalk chalk-ink" style="font-size:${fs}px">
+          <button class="chalk-check ${allDone ? 'is-done' : ''}" style="width:1.3em;height:1.3em" onclick="finToggleAll()" title="Marcar / desmarcar todos">${FIN_CHECK_SVG}</button>
+          <span data-ink>Data</span><span data-ink>Categoria</span><span data-ink>Destino</span><span data-ink>Valor</span><span></span>
+        </div>
+        <div class="fin-scroll chalk-ink font-chalk" style="font-size:${fs}px">
+          ${rows.length ? rows.map(finRowHtml).join('') : `<div class="fin-empty" data-ink>Nenhum lançamento ainda. Toque em “+ Novo lançamento”.</div>`}
+        </div>
+        <button class="fin-add chalk-ink font-chalk" style="font-size:${fs}px" onclick="finAddRow('${note.id}')"><span>＋</span> Novo lançamento</button>
+        <div id="finfoot_${note.id}" class="fin-foot chalk-ink font-chalk" data-ink style="font-size:${Math.max(12, Math.round(fs * 0.8))}px">${finFootHtml()}</div>`;
+    }
+
+    /* cards */
+    function finCardsData(note) {
+      const rows = finRowsFor(note.period), t = finTotals(rows);
+      const bal = (t.in - t.out) / 100, forecast = (t.in - t.out + t.pin - t.pout) / 100;
+      const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+      const summary = [
+        { key: 'in',   emoji: '💰', title: 'Entradas', val: finBRL(t.in / 100),  color: 'green',  sub: plural(t.nIn, 'lançamento', 'lançamentos') },
+        { key: 'out',  emoji: '💸', title: 'Saídas',   val: finBRL(t.out / 100), color: 'pink',   sub: plural(t.nOut, 'lançamento', 'lançamentos') },
+        { key: 'bal',  emoji: '⚖️', title: 'Saldo',    val: finBRL(bal), color: bal < 0 ? 'pink' : 'blue', sub: 'previsto ' + finBRL(forecast) },
+        { key: 'pin',  emoji: '⏳', title: 'A receber', val: finBRL(t.pin / 100),  color: 'yellow', sub: plural(t.nPin, 'pendente', 'pendentes') },
+        { key: 'pout', emoji: '🧾', title: 'A pagar',   val: finBRL(t.pout / 100), color: 'yellow', sub: plural(t.nPout, 'pendente', 'pendentes') }
+      ];
+      const dests = finDestGroups(rows).map(g => {
+        const net = (g.t.in - g.t.out) / 100;
+        let val, color;
+        if (g.t.out && !g.t.in) { val = '− ' + finBRL(g.t.out / 100); color = 'pink'; }
+        else if (g.t.in && !g.t.out) { val = '+ ' + finBRL(g.t.in / 100); color = 'green'; }
+        else if (g.t.in && g.t.out) { val = (net < 0 ? '− ' : '+ ') + finBRL(Math.abs(net)); color = net < 0 ? 'pink' : 'green'; }
+        else { val = finBRL(0); color = 'yellow'; }
+        const pend = [g.t.pout ? 'a pagar ' + finBRL(g.t.pout / 100) : '', g.t.pin ? 'a receber ' + finBRL(g.t.pin / 100) : ''].filter(Boolean).join(' · ');
+        return { key: g.key, emoji: finEmoji(g.label), title: g.label, val, color, sub: plural(g.n, 'lançamento', 'lançamentos'), pend };
+      });
+      return { summary, dests, hasRows: rows.length > 0 };
+    }
+    function finCardHtml(c) {
+      return `<div class="fin-card" data-card="${escapeHtml(c.key)}" data-ink style="--c:${finHex(c.color)}">
+        <div class="fin-card-top"><span class="fin-emoji">${c.emoji}</span><span class="chalk-ink fin-card-title">${escapeHtml(c.title)}</span></div>
+        <div class="chalk-ink fin-card-val" style="color:${finHex(c.color)}">${escapeHtml(c.val)}</div>
+        <div class="chalk-ink fin-card-sub">${escapeHtml(c.sub)}</div>
+        ${c.pend ? `<div class="chalk-ink fin-card-sub" style="color:${finHex('yellow')}">${escapeHtml(c.pend)}</div>` : ''}
+      </div>`;
+    }
+    function finCardsBodyHtml(note) {
+      const d = finCardsData(note), hidden = note.hiddenCards || [];
+      const sum = d.summary.filter(c => hidden.indexOf(c.key) < 0), dst = d.dests.filter(c => hidden.indexOf(c.key) < 0);
+      if (!sum.length && !dst.length) return `<div class="fin-empty" data-ink>Todos os cards foram apagados. Use o botão ⟲ da barra para trazê-los de volta.</div>`;
+      return `<div class="fin-cards-grid">${sum.map(finCardHtml).join('')}</div>` +
+        (dst.length ? `<div class="fin-sec chalk-ink font-chalk" data-ink>Por destino</div><div class="fin-cards-grid">${dst.map(finCardHtml).join('')}</div>` :
+          (d.hasRows ? '' : `<div class="fin-empty" data-ink>Preencha a tabela: um card aparece aqui para cada destino.</div>`));
+    }
+    function finCardsInner(note) {
+      return `${finTitleInput(note, '📊 Resumo financeiro')}
+        <div class="fin-cards-body font-chalk" style="font-size:${note.fs || 18}px">${finCardsBodyHtml(note)}</div>`;
+    }
+
+    function finChartInner(note) {
+      return `${finTitleInput(note, finDefaultTitle(note.cfg || {}))}<div class="fin-chart-box"></div>`;
+    }
+
+    function buildFinHtml(note) {
+      const extra = [];
+      if (note.type === 'fincards') {
+        const months = finMonthsList();
+        if (note.period && note.period !== 'all' && months.indexOf(note.period) < 0) months.push(note.period);
+        extra.push(`<select class="fin-sel" onchange="finSetPeriod('${note.id}', this.value)" title="Período dos cards">
+          <option value="all">Tudo</option>${months.map(m => `<option value="${m}" ${note.period === m ? 'selected' : ''}>${finMonthLong(m)}</option>`).join('')}</select>`);
+      }
+      if (note.type === 'finchart') {
+        extra.push(`<button onclick="openFinChartModal('${note.id}')" class="chalk-btn text-[12px] px-1 rounded transition" title="Configurar gráfico"><i class="fa-solid fa-sliders"></i></button>`);
+      } else {
+        extra.push(`<button onclick="finChangeSize('${note.id}', -2)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button><button onclick="finChangeSize('${note.id}', 2)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>`);
+      }
+      const inner = note.type === 'fintable' ? finTableInner(note) : note.type === 'fincards' ? finCardsInner(note) : finChartInner(note);
+      return `
+        <div class="chalk-frame fin-frame rounded-lg p-3" style="color:${getChalkHex(note)}">
+          ${chalkBarHtml(note, extra.join(''))}
+          <div class="erase-layer fin-layer" style="${maskCss(note)}">${inner}</div>
+        </div>
+        ${resizeHandlesHtml()}
+        <div class="resize-corner absolute -right-1 -bottom-1 w-6 h-6 z-20 cursor-nwse-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-white/70 transition" title="Redimensionar">
+          <span style="font-size:13px; line-height:1;">◢</span>
+        </div>`;
+    }
+
+    function finPostRender(note) { if (note.type === 'finchart') finRenderChartBox(note); }
+    function finOnResize(el, note) {
+      if (note.type !== 'finchart') return;
+      if (note._raf) return;
+      note._raf = requestAnimationFrame(() => { note._raf = 0; finRenderChartBox(note); });
+    }
+
+    /* ---------- ações da tabela ---------- */
+    function finRow(id) { return finData().rows.find(r => r.id === id); }
+    function finSetTitle(id, v) { const n = findNote(id); if (n) { n.title = v; saveData(); } }
+    function finChangeSize(id, d) {
+      const n = findNote(id); if (!n) return;
+      n.fs = Math.max(12, Math.min((n.fs || 18) + d, 32));
+      saveData(); renderNotes();
+    }
+    function finSetPeriod(id, v) { const n = findNote(id); if (!n) return; n.period = v; finDropMask(n); saveData(); finRenderPiece(n); }
+
+    function finAddRow(noteId) {
+      const fin = finData(), last = fin.rows[fin.rows.length - 1];
+      const row = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seq: ++fin.seq,
+        date: finToday(), cat: last ? last.cat : 'out', dest: '', value: null, done: false };
+      fin.rows.push(row);
+      finDropMasks(['fintable', 'fincards']);
+      saveData(); finRefreshAll();
+      const wr = byId(noteId), sc = wr && wr.querySelector('.fin-scroll');
+      if (sc) sc.scrollTop = sc.scrollHeight;
+      const inp = wr && wr.querySelector(`[data-row="${row.id}"] [data-cell="dest"] input`);
+      if (inp) inp.focus();
+    }
+    function finToggleRow(id) {
+      const r = finRow(id); if (!r) return;
+      r.done = !r.done; finLastToggled = r.done ? id : null;
+      saveData(); finRefreshAll(); finLastToggled = null;
+    }
+    function finToggleAll() {
+      const rows = finData().rows; if (!rows.length) return;
+      const all = rows.every(r => r.done);
+      rows.forEach(r => { r.done = !all; });
+      saveData(); finRefreshAll();
+    }
+    function finToggleCat(id) {
+      const r = finRow(id); if (!r) return;
+      r.cat = r.cat === 'in' ? 'out' : 'in';
+      saveData(); finRefreshAll();
+    }
+    function finSetField(id, field, el) {
+      const r = finRow(id); if (!r) return;
+      if (field === 'dest') {
+        const v = finCleanDest(el.value);
+        const known = finData().rows.find(x => x.id !== id && finNorm(x.dest) === finNorm(v));
+        r.dest = known ? known.dest : v; el.value = r.dest;
+        finDropMasks(['fincards']);
+        finUpdateDatalist();
+      } else r[field] = el.value;
+      saveData(); finRefreshViews();
+    }
+    function finLiveValue(id, el) {
+      const r = finRow(id); if (!r) return;
+      r.value = finParseMoney(el.value) || null;
+      saveData(); finRefreshViews();
+    }
+    function finCommitValue(id, el) {
+      const r = finRow(id); if (!r) return;
+      r.value = finParseMoney(el.value) || null;
+      el.value = r.value ? 'R$ ' + finFmtNum(r.value) : '';
+      saveData(); finRefreshViews();
+    }
+    function finValKey(e, id) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const rows = finData().rows;
+      finCommitValue(id, e.target);
+      const wr = e.target.closest('.chalk-note');
+      if (rows.length && rows[rows.length - 1].id === id && wr) finAddRow(wr.id);
+      else e.target.blur();
+    }
+    function finDeleteRow(id) {
+      const fin = finData();
+      fin.rows = fin.rows.filter(r => r.id !== id);
+      finDropMasks(['fintable', 'fincards']);
+      saveData(); finRefreshAll();
+    }
+
+    /* ---------- abrir / criar peças ---------- */
+    function finCreatePiece(type, extra) {
+      if (!finIsFinance()) return null;
+      const board = getActiveBoard();
+      const sizes = { fintable: [680, 400], fincards: [640, 430], finchart: [500, 330] };
+      const mn = byId('boardCanvas');
+      const cw = mn ? mn.offsetWidth : 1000, ch = mn ? mn.offsetHeight : 600;
+      let w = Math.min(sizes[type][0], Math.max(300, cw - 30)), h = Math.min(sizes[type][1], Math.max(200, ch - 120));
+      const off = (finNotes().length % 5) * 34;
+      let x = 24 + off, y = 92 + off;
+      if (isMobileBar()) { const vc = visibleCenter(); x = vc.x - w / 2 + off; y = Math.max(92, vc.y - h / 2 + off); }
+      x = Math.max(8, Math.min(x, cw - w - 8)); y = Math.max(70, Math.min(y, Math.max(70, ch - h - 8)));
+      board.nextZIndex += 1;
+      const note = Object.assign({
+        id: 'note_' + Date.now() + Math.floor(Math.random() * 1000), type, color: 'yellow', chalk: 'white',
+        x, y, width: w, height: h, zIndex: board.nextZIndex
+      }, extra || {});
+      board.notes.push(note);
+      selectedNoteId = note.id;
+      saveData(); renderNotes();
+      return note;
+    }
+    function finOpenTable() {
+      if (!finIsFinance()) return;
+      const ex = finNotes('fintable')[0];
+      if (ex) {
+        setSelectedNote(ex.id);
+        const el = byId(ex.id);
+        if (el) { el.classList.remove('fin-flash'); void el.offsetWidth; el.classList.add('fin-flash'); }
+        return;
+      }
+      const fin = finData();
+      if (!fin.rows.length) {
+        fin.rows.push({ id: 'r' + Date.now().toString(36), seq: ++fin.seq, date: finToday(), cat: 'out', dest: '', value: null, done: false });
+      }
+      finCreatePiece('fintable');
+      finUpdateDatalist();
+    }
+    function finOpenCards() { finCreatePiece('fincards', { period: 'all', hiddenCards: [] }); }
+
+    /* ---------- lousa de finanças ---------- */
+    let finPrevBoardIdx = 0;
+    function openFinanceBoard() {
+      const cur = getActiveBoard();
+      if (cur.kind === 'finance') {   // clicar de novo volta para a lousa anterior
+        let back = appData.boards[finPrevBoardIdx] && appData.boards[finPrevBoardIdx].kind !== 'finance' ? finPrevBoardIdx : appData.boards.findIndex(b => b.kind !== 'finance');
+        if (back >= 0) { appData.activeBoardIndex = back; selectedNoteId = null; saveData(); renderNotes(); }
+        return;
+      }
+      finPrevBoardIdx = appData.activeBoardIndex;
+      let idx = appData.boards.findIndex(b => b.kind === 'finance');
+      if (idx < 0) {
+        appData.boards.push({ id: 'board_' + Date.now(), name: 'Finanças', kind: 'finance', nextZIndex: 5, notes: [], calendarEvents: {}, fin: { rows: [], trash: [], seq: 0 } });
+        idx = appData.boards.length - 1;
+      }
+      appData.activeBoardIndex = idx;
+      selectedNoteId = null;
+      saveData(); renderNotes();
+    }
+
+    function placeFinDock() {
+      const d = byId('finDock'), vp = byId('boardViewport'); if (!d || !vp) return;
+      const r = vp.getBoundingClientRect();
+      d.style.top = (r.top + 8) + 'px'; d.style.left = (r.left + 8) + 'px';
+    }
+    function updateFinDock() {
+      const on = finIsFinance(), d = byId('finDock');
+      if (d) d.classList.toggle('on', on);
+      document.querySelectorAll('.fin-toggle-btn').forEach(b => b.classList.toggle('is-on', on));
+      const t = byId('emptyTitle'), p = byId('emptyText');
+      if (t && p) {
+        t.innerText = on ? 'Sua lousa de finanças' : 'Esta Lousa está vazia!';
+        p.innerText = on ? 'Comece pelo botão Tabela (canto superior esquerdo). Depois monte Cards e Gráficos.' : 'Use a barra de ferramentas para adicionar post-its, tarefas, textos e imagens.';
+      }
+      placeFinDock();
+    }
+
+    /* ---------- restaurar o que o apagador tirou ---------- */
+    function finCanRestore(note) {
+      if (!note) return false;
+      if (note.erase) return true;
+      if (note.type === 'fintable') return finData().trash.length > 0;
+      if (note.type === 'fincards') return (note.hiddenCards || []).length > 0;
+      return false;
+    }
+    function finRestore(note) {
+      if (note.type === 'fintable') {
+        const fin = finData();
+        fin.rows = fin.rows.concat(fin.trash).sort((a, b) => (a.seq || 0) - (b.seq || 0));
+        fin.trash = [];
+        finDropMasks(['fintable', 'fincards']);
+      } else if (note.type === 'fincards') {
+        note.hiddenCards = [];
+      }
+    }
+
+    /* ---------- apagador: o que foi apagado é recalculado ---------- */
+    function finMaskFrac(m, br, sc, el, clip) {
+      let r = el.getBoundingClientRect();
+      let l = r.left, t = r.top, rr = r.right, b = r.bottom;
+      if (clip) {
+        const c = clip.getBoundingClientRect();
+        const vl = Math.max(l, c.left), vt = Math.max(t, c.top), vr = Math.min(rr, c.right), vb = Math.min(b, c.bottom);
+        if (vr - vl < 2 || vb - vt < 2) return null;
+        if ((vr - vl) * (vb - vt) < (rr - l) * (b - t) * 0.6) return null;   // linha meio escondida pela rolagem: não decide nada
+        l = vl; t = vt; rr = vr; b = vb;
+      }
+      const x0 = Math.max(0, Math.round((l - br.left) / sc)), y0 = Math.max(0, Math.round((t - br.top) / sc));
+      const x1 = Math.min(m.w, Math.round((rr - br.left) / sc)), y1 = Math.min(m.h, Math.round((b - br.top) / sc));
+      if (x1 - x0 < 2 || y1 - y0 < 2) return null;
+      const d = m.ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+      let alive = 0; const n = (x1 - x0) * (y1 - y0);
+      for (let i = 3; i < d.length; i += 4) if (d[i] > 128) alive++;
+      return alive / n;
+    }
+
+    /* Quais linhas / cards foram apagados o bastante para sumir de vez? */
+    function finEvalErase(note, target, m) {
+      const out = { rows: [], cards: [] };
+      const br = target.getBoundingClientRect();
+      const sc = target.offsetWidth ? br.width / target.offsetWidth : 1;
+      if (note.type === 'fintable') {
+        const scroll = target.querySelector('.fin-scroll');
+        target.querySelectorAll('[data-row]').forEach(row => {
+          const f = finMaskFrac(m, br, sc, row, scroll); if (f === null) return;
+          const v = row.querySelector('[data-cell="val"]'), fv = v ? finMaskFrac(m, br, sc, v, scroll) : null;
+          if (f < 0.35 || (fv !== null && fv < 0.3)) out.rows.push(row.getAttribute('data-row'));
+        });
+      } else if (note.type === 'fincards') {
+        const scroll = target.querySelector('.fin-cards-body');
+        target.querySelectorAll('[data-card]').forEach(card => {
+          const f = finMaskFrac(m, br, sc, card, scroll); if (f === null) return;
+          if (f < 0.35) out.cards.push(card.getAttribute('data-card'));
+        });
+      }
+      return out;
+    }
+    function finApplyErase(note, res) {
+      if (res.rows.length) {
+        const fin = finData(), gone = fin.rows.filter(r => res.rows.indexOf(r.id) >= 0);
+        fin.rows = fin.rows.filter(r => res.rows.indexOf(r.id) < 0);
+        gone.filter(r => !finIsBlank(r)).forEach(r => fin.trash.push(r));
+        if (fin.trash.length > 200) fin.trash = fin.trash.slice(-200);
+        finDropMasks(['fintable', 'fincards']);
+      }
+      if (res.cards.length) {
+        note.hiddenCards = (note.hiddenCards || []).concat(res.cards.filter(k => (note.hiddenCards || []).indexOf(k) < 0));
+        finDropMask(note);
+      }
+    }
+
+    /* ---------- gráficos ---------- */
+    function finNiceTicks(min, max, n) {
+      const span = (max - min) || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
+      const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+      const lo = Math.floor(min / step + 1e-9) * step, hi = Math.ceil(max / step - 1e-9) * step, ticks = [];
+      for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+      return { lo, hi: hi === lo ? lo + step : hi, ticks };
+    }
+    function finTrunc(s, n) { s = String(s); return s.length > n ? s.slice(0, Math.max(1, n - 1)) + '…' : s; }
+    function finSvgText(x, y, txt, o) {
+      o = o || {};
+      return `<text data-ink x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${o.fill || 'currentColor'}" font-size="${o.size || 13}" text-anchor="${o.anchor || 'start'}"${o.opacity ? ` opacity="${o.opacity}"` : ''}${o.rotate ? ` transform="rotate(${o.rotate} ${x.toFixed(1)} ${y.toFixed(1)})"` : ''}>${escapeHtml(String(txt))}</text>`;
+    }
+
+    /* caixa de referência invisível: o filtro de giz usa a caixa do desenho, e linhas retas (altura zero) sumiriam */
+    function finBox(W, H) { return `<rect x="-12" y="-12" width="${W + 24}" height="${H + 24}" fill="none" stroke="none"/>`; }
+
+    function finChartSvg(cfg, W, H) {
+      W = Math.max(120, Math.round(W)); H = Math.max(90, Math.round(H));
+      const open = `<svg class="fin-svg font-chalk" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible">`;
+      const metrics = (cfg.metrics || []).filter(k => FIN_METRICS[k]);
+      const groups = finGroups(cfg);
+      const total = groups.reduce((s, g) => s + metrics.reduce((a, k) => a + Math.abs(g[k]), 0), 0);
+      if (!metrics.length || !groups.length || !total) {
+        return open + finSvgText(W / 2, H / 2 - 4, 'Sem dados ainda', { anchor: 'middle', size: 20, opacity: .75 }) +
+          finSvgText(W / 2, H / 2 + 20, 'preencha a tabela e marque os lançamentos ✓', { anchor: 'middle', size: 14, opacity: .6 }) + '</svg>';
+      }
+      const type = cfg.type === 'line' || cfg.type === 'pie' ? cfg.type : 'bar';
+      let svg = open, legendH = 0;
+
+      /* legenda */
+      const legendItems = type === 'pie' ? [] : metrics.map(k => ({ k, label: FIN_METRICS[k].label }));
+      let legendSvg = '';
+      if (legendItems.length > 1) {
+        let lx = 6, ly = 10; const rowsL = [];
+        legendItems.forEach(it => {
+          const wI = 30 + it.label.length * 7.4;
+          if (lx + wI > W - 6 && lx > 6) { lx = 6; ly += 20; }
+          const c = finHex(FIN_METRICS[it.k].color), dash = FIN_METRICS[it.k].dash;
+          legendSvg += `<g data-ink><rect x="${lx}" y="${ly - 9}" width="14" height="11" rx="2" fill="${c}" fill-opacity="${dash ? .12 : .35}" stroke="${c}" stroke-width="1.8"${dash ? ' stroke-dasharray="3 2"' : ''}/>` +
+            finSvgText(lx + 20, ly + 1, it.label, { size: 14 }) + '</g>';
+          lx += wI;
+        });
+        legendH = ly + 8;
+      }
+
+      if (type === 'pie') {
+        const k = metrics[0], meta = FIN_METRICS[k];
+        let items = groups.map(g => ({ label: g.label, v: Math.abs(g[k]) / 100 })).filter(i => i.v > 0).sort((a, b) => b.v - a.v);
+        if (items.length > 8) { const rest = items.slice(7).reduce((s, i) => s + i.v, 0); items = items.slice(0, 7).concat([{ label: 'Outros', v: rest }]); }
+        const sum = items.reduce((s, i) => s + i.v, 0);
+        const lw = Math.min(230, Math.max(110, W * 0.42));
+        const R = Math.max(30, Math.min(H / 2 - 12, (W - lw) / 2 - 8));
+        const cx = (W - lw) / 2 + 2, cy = H / 2;
+        const ids = ['green', 'pink', 'blue', 'yellow', 'white'];
+        const rr = R * 0.74, sw = R * 0.48;
+        let ang = -Math.PI / 2, arcs = '', leg = '';
+        const pt = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+        items.forEach((it, i) => {
+          const c = finHex(ids[i % 5]), op = i < 5 ? 0.85 : 0.5, frac = it.v / sum, a2 = ang + frac * Math.PI * 2;
+          const gap = items.length > 1 ? Math.min(0.03, frac * 0.3) : 0;
+          if (frac > 0.9995) arcs += `<circle data-ink cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}"/>`;
+          else {
+            const p1 = pt(ang + gap, rr), p2 = pt(a2 - gap, rr), large = (a2 - ang - 2 * gap) > Math.PI ? 1 : 0;
+            arcs += `<path data-ink d="M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A ${rr} ${rr} 0 ${large} 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}"/>`;
+          }
+          ang = a2;
+          const ly = cy - (items.length * 24) / 2 + i * 24 + 12, lx = W - lw + 4;
+          leg += `<g data-ink><rect x="${lx}" y="${ly - 10}" width="13" height="13" rx="2" fill="${c}" fill-opacity="${op}"/>` +
+            finSvgText(lx + 19, ly + 1, finTrunc(it.label, Math.max(5, Math.floor((lw - 78) / 7.2))), { size: 14 }) +
+            finSvgText(W - 2, ly + 1, Math.round(frac * 100) + '%', { size: 14, anchor: 'end' }) + '</g>';
+        });
+        svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${arcs}</g>` + leg +
+          finSvgText(cx, cy - 2, meta.label, { anchor: 'middle', size: Math.max(12, Math.min(16, R / 4.5)) }) +
+          finSvgText(cx, cy + Math.max(14, R / 4), 'R$ ' + finCompact(sum), { anchor: 'middle', size: Math.max(12, Math.min(18, R / 4)) });
+        return svg + '</svg>';
+      }
+
+      /* barras / linhas */
+      svg += legendSvg;
+      const n = groups.length, padL = 54, padR = 12;
+      const pw = W - padL - padR, band = pw / n;
+      const maxLen = Math.max.apply(null, groups.map(g => g.label.length));
+      const rot = band < maxLen * 7 && band < 90;
+      const padB = rot ? 56 : 30, padT = 12 + legendH, ph = Math.max(40, H - padT - padB);
+      const vals = [0]; groups.forEach(g => metrics.forEach(k => vals.push(g[k] / 100)));
+      const nt = finNiceTicks(Math.min.apply(null, vals), Math.max.apply(null, vals), Math.max(2, Math.min(5, Math.floor(ph / 44))));
+      const yOf = v => padT + ph - (v - nt.lo) / (nt.hi - nt.lo) * ph;
+      let grid = '';
+      nt.ticks.forEach(v => {
+        const y = yOf(v);
+        grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="currentColor" stroke-opacity="${v === 0 ? .55 : .16}" stroke-width="${v === 0 ? 1.8 : 1}"${v === 0 ? '' : ' stroke-dasharray="4 4"'}/>` +
+          finSvgText(padL - 7, y + 4, finCompact(v), { anchor: 'end', size: 12, opacity: .8 });
+      });
+      svg += grid;
+
+      const step = rot ? Math.max(1, Math.ceil(15 / band)) : 1;
+      let xl = '', body = '';
+      groups.forEach((g, i) => {
+        const cx = padL + band * (i + .5);
+        if (i % step === 0) {
+          const lab = finTrunc(g.label, rot ? 13 : Math.max(4, Math.floor(band / 6.5)));
+          xl += rot ? finSvgText(cx + 4, H - padB + 15, lab, { anchor: 'end', size: 12, rotate: -40, opacity: .9 }) : finSvgText(cx, H - padB + 17, lab, { anchor: 'middle', size: 13, opacity: .9 });
+        }
+      });
+      svg += xl;
+
+      if (type === 'bar') {
+        const bw = Math.min(46, (band * 0.76) / metrics.length);
+        groups.forEach((g, i) => {
+          const start = padL + band * i + (band - bw * metrics.length) / 2;
+          metrics.forEach((k, j) => {
+            const v = g[k] / 100; if (!v) return;
+            const meta = FIN_METRICS[k], c = finHex(meta.color);
+            const yT = yOf(Math.max(v, 0)), yB = yOf(Math.min(v, 0)), x = start + j * bw;
+            body += `<rect data-ink x="${(x + 1).toFixed(1)}" y="${yT.toFixed(1)}" width="${Math.max(2, bw - 3).toFixed(1)}" height="${Math.max(1.5, yB - yT).toFixed(1)}" rx="2" fill="${c}" fill-opacity="${meta.dash ? .12 : .32}" stroke="${c}" stroke-width="2.2"${meta.dash ? ' stroke-dasharray="5 3"' : ''}/>`;
+            if (bw >= 24 && n * metrics.length <= 14) body += finSvgText(x + bw / 2, v >= 0 ? yT - 5 : yB + 13, finCompact(v), { anchor: 'middle', size: 12, fill: c });
+          });
+        });
+      } else {
+        metrics.forEach(k => {
+          const meta = FIN_METRICS[k], c = finHex(meta.color);
+          const pts = groups.map((g, i) => [padL + band * (i + .5), yOf(g[k] / 100), g[k] / 100]);
+          if (pts.length > 1) body += `<polyline data-ink points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"${meta.dash ? ' stroke-dasharray="7 5"' : ''}/>`;
+          pts.forEach(p => {
+            body += `<circle data-ink cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${n > 30 ? 2 : 3.8}" fill="${c}" fill-opacity=".85"/>`;
+            if (n <= 8) body += finSvgText(p[0], p[1] - 8, finCompact(p[2]), { anchor: 'middle', size: 12, fill: c });
+          });
+        });
+      }
+      svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${body}</g>`;
+      return svg + '</svg>';
+    }
+
+    function finRenderChartBox(note) {
+      const wr = byId(note.id), box = wr && wr.querySelector('.fin-chart-box'); if (!box) return;
+      const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return;
+      box.innerHTML = finChartSvg(note.cfg || {}, w, h);
+    }
+
+    /* ---------- janela "Montar gráfico" ---------- */
+    let finDraft = null;
+    function openFinChartModal(editId) {
+      if (!finIsFinance()) return;
+      const n = editId ? findNote(editId) : null;
+      finDraft = n && n.cfg
+        ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all' }
+        : { editId: null, title: '', type: 'bar', x: 'date', metrics: ['in', 'out'], period: 'all' };
+      const months = finMonthsList();
+      if (finDraft.period !== 'all' && months.indexOf(finDraft.period) < 0) months.push(finDraft.period);
+      byId('finPeriodSel').innerHTML = '<option value="all">Todo o período</option>' + months.map(m => `<option value="${m}">${finMonthLong(m)}</option>`).join('');
+      byId('finChartTitleIn').value = finDraft.title;
+      byId('finChartModalTitle').innerText = n ? 'Configurar gráfico' : 'Montar gráfico';
+      byId('finChartOkBtn').innerText = n ? 'Aplicar' : 'Adicionar à lousa';
+      byId('finChartModal').classList.remove('hidden');
+      syncFinChartModal();
+    }
+    function closeFinChartModal() { const m = byId('finChartModal'); if (m) m.classList.add('hidden'); finDraft = null; }
+    function finDraftSet(k, v) {
+      if (!finDraft) return;
+      finDraft[k] = v;
+      if (k === 'type' && v === 'pie' && finDraft.metrics.length > 1) finDraft.metrics = [finDraft.metrics[0]];
+      syncFinChartModal();
+    }
+    function finDraftMetric(k) {
+      if (!finDraft) return;
+      const i = finDraft.metrics.indexOf(k);
+      if (finDraft.type === 'pie') finDraft.metrics = [k];
+      else if (i >= 0) finDraft.metrics.splice(i, 1);
+      else finDraft.metrics.push(k);
+      syncFinChartModal();
+    }
+    function syncFinChartModal() {
+      if (!finDraft) return;
+      const on = (sel, test) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', test(b.dataset.v)));
+      on('#finChartModal [data-fin-type]', v => v === finDraft.type);
+      on('#finChartModal [data-fin-x]', v => v === finDraft.x);
+      on('#finChartModal [data-fin-met]', v => finDraft.metrics.indexOf(v) >= 0);
+      byId('finPeriodSel').value = finDraft.period;
+      byId('finMetHint').innerText = finDraft.type === 'pie' ? 'A pizza mostra um valor por vez.' : 'Marque quantos quiser.';
+      byId('finChartOkBtn').disabled = !finDraft.metrics.length;
+      byId('finChartOkBtn').classList.toggle('opacity-40', !finDraft.metrics.length);
+      const box = byId('finPreviewBox');
+      box.innerHTML = finChartSvg(finDraft, box.clientWidth, box.clientHeight);
+    }
+    function confirmFinChart() {
+      if (!finDraft || !finDraft.metrics.length) return;
+      const cfg = { type: finDraft.type, x: finDraft.x, metrics: finDraft.metrics.slice(), period: finDraft.period };
+      const title = byId('finChartTitleIn').value.trim();
+      if (finDraft.editId) {
+        const n = findNote(finDraft.editId);
+        if (n) { n.cfg = cfg; n.title = title || finDefaultTitle(cfg); finDropMask(n); saveData(); renderNotes(); }
+      } else {
+        finCreatePiece('finchart', { cfg, title: title || finDefaultTitle(cfg) });
+      }
+      closeFinChartModal();
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && finDraft) closeFinChartModal(); });
+    window.addEventListener('resize', placeFinDock);
+
+    function finAfterRender() {
+      finUpdateDatalist();
+      updateFinDock();
+      finNotes('finchart').forEach(finPostRender);
+    }
+
     // Inicialização: a lousa só aparece depois do login (evento "fb-auth" vindo do firebase.js)
     setTimeout(() => {
       if (!window.FB) {
-        setLoginState('error', 'Não foi possível carregar o Firebase. Abra o site pelo endereço do GitHub Pages (https) e confira sua conexão.');
+        setLoginState('error', 'Não foi possível carregar, confira sua conexão.');
       }
     }, 8000);
 
