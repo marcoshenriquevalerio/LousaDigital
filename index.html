@@ -105,8 +105,7 @@
       border: 1px dashed transparent;
       transition: border-color 0.2s ease;
     }
-    .chalk-note.is-selected .chalk-frame,
-    .chalk-note.is-dragging .chalk-frame {
+    .chalk-note.is-selected .chalk-frame {
       border-color: rgba(255, 255, 255, 0.28);
     }
 
@@ -118,13 +117,11 @@
       opacity: 0; pointer-events: none;
       transition: opacity 0.2s ease;
     }
-    .chalk-note.is-selected .chalk-bar,
-    .chalk-note.is-dragging .chalk-bar { opacity: 1; pointer-events: auto; }
+    .chalk-note.is-selected .chalk-bar { opacity: 1; pointer-events: auto; }
 
     .shape-controls { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
     .shape-controls-bg { background: rgba(0, 0, 0, 0.5); }
-    .chalk-note.is-selected .shape-controls,
-    .chalk-note.is-dragging .shape-controls { opacity: 1; pointer-events: auto; }
+    .chalk-note.is-selected .shape-controls { opacity: 1; pointer-events: auto; }
 
     /* Fora de seleção: só a escrita fica visível */
     .chalk-note:not(.is-selected) .resize-handle,
@@ -132,6 +129,30 @@
     .chalk-note:not(.is-selected) .item-remove { display: none; }
     .chalk-note:not(.is-selected) .chalk-add-row { display: none; }
     .chalk-note:not(.is-selected) .chalk-input::placeholder { color: transparent; }
+
+    /* Peça "travada" (sem 3 cliques): só move e marca o check; campos e botões só funcionam depois de ativar */
+    .style-wrapper:not(.is-selected) { touch-action: none; cursor: grab; }
+    .chalk-note:not(.is-selected) input,
+    .chalk-note:not(.is-selected) textarea,
+    .chalk-note:not(.is-selected) select,
+    .chalk-note:not(.is-selected) .fin-cat,
+    .chalk-note:not(.is-selected) .fin-add,
+    .chalk-note:not(.is-selected) [data-item-idx],
+    .chalk-note:not(.is-selected) .resize-handle,
+    .chalk-note:not(.is-selected) .resize-corner { pointer-events: none; }
+    .chalk-note:not(.is-selected) .fin-add { visibility: hidden; }
+    .chalk-note:not(.is-selected) .postit-head { opacity: 0; pointer-events: none; }
+
+    /* Ferramenta de mover para outra lousa */
+    .move-tool { touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+    .move-tool:active { cursor: grabbing; }
+    #moveOverlay { z-index: 9998; background: rgba(0,0,0,.6); backdrop-filter: blur(2px); touch-action: none; user-select: none; -webkit-user-select: none; }
+    .move-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 84px; padding: 10px 8px; border-radius: 14px; background: rgba(28,25,23,.92); border: 2px dashed rgba(251,191,36,.45); color: #fde68a; text-align: center; transition: transform .12s ease, background .15s ease, border-color .15s ease; }
+    .move-tile .mt-name { font-family: 'Patrick Hand','Caveat',cursive; font-size: 19px; line-height: 1.1; word-break: break-word; }
+    .move-tile .mt-sub { font-size: 11px; opacity: .65; }
+    .move-tile.is-over { transform: scale(1.06); background: rgba(251,191,36,.32); border: 2px solid #fbbf24; color: #fff; }
+    .move-tile.is-current { opacity: .5; }
+    .move-ghost { position: fixed; left: 0; top: 0; z-index: 10000; pointer-events: none; transform-origin: 0 0; opacity: .92; filter: drop-shadow(0 12px 14px rgba(0,0,0,.55)); }
 
     .chalk-dot { border-color: rgba(255, 255, 255, 0.35); }
     .chalk-dot.ring-2 { --tw-ring-color: rgba(255, 255, 255, 0.8); }
@@ -252,8 +273,7 @@
     /* Escrita de canetão */
     .theme-marker .chalk-ink { filter: none; text-shadow: none; font-weight: 700; letter-spacing: 0.2px; }
     .theme-marker .chalk-input::placeholder { color: rgba(0, 0, 0, 0.35); }
-    .theme-marker .chalk-note.is-selected .chalk-frame,
-    .theme-marker .chalk-note.is-dragging .chalk-frame { border-color: rgba(15, 23, 42, 0.3); }
+    .theme-marker .chalk-note.is-selected .chalk-frame { border-color: rgba(15, 23, 42, 0.3); }
     .theme-marker .chalk-bar,
     .theme-marker .shape-controls-bg { background: rgba(255, 255, 255, 0.94); box-shadow: 0 2px 10px rgba(15,23,42,0.25); }
     .theme-marker .chalk-dot { border-color: rgba(0, 0, 0, 0.25); }
@@ -311,7 +331,7 @@
 
     /* Barra de controles da imagem (aparece só quando selecionada) */
     .img-bar { position: absolute; left: 50%; top: -42px; transform: translateX(-50%); z-index: 25; display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; background: rgba(0,0,0,0.62); color: #f5f5f4; white-space: nowrap; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    .chalk-note.is-selected .img-bar, .chalk-note.is-dragging .img-bar { opacity: 1; pointer-events: auto; }
+    .chalk-note.is-selected .img-bar { opacity: 1; pointer-events: auto; }
     .img-bar-in .img-bar { top: 8px; }
     .img-bar-btn { padding: 2px 8px; border-radius: 8px; font-weight: 600; transition: background 0.2s ease; }
     .img-bar-btn:hover { background: rgba(255,255,255,0.18); }
@@ -456,7 +476,7 @@
     .shape-ico { width: 100%; height: 100%; padding: 6px 5px; display: block; }
     .shape-ico * { vector-effect: non-scaling-stroke; }
     .bend-layer { position: absolute; inset: 0; pointer-events: none; transform-origin: 50% 50%; z-index: 15; }
-    .chalk-note:not(.is-selected):not(.is-dragging) .bend-layer { display: none; }
+    .chalk-note:not(.is-selected) .bend-layer { display: none; }
     .bend-pt, .bend-mid { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; touch-action: none; }
     .bend-pt { width: 28px; height: 28px; cursor: move; }
     .bend-pt::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #fbbf24; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.55); box-sizing: border-box; }
@@ -988,6 +1008,15 @@
     </div>
   </div>
 
+  <!-- JANELA INSTANTÂNEA: mover a peça para outra lousa (aparece enquanto o botão é segurado) -->
+  <div id="moveOverlay" class="hidden fixed inset-0 flex items-center justify-center p-3">
+    <div class="wood-frame rounded-2xl p-4 w-full flex flex-col" style="max-width:min(760px, calc(100vw - 24px)); max-height:calc(100vh - 32px);">
+      <div class="font-chalk text-2xl text-amber-200 text-center mb-3"><i class="fa-solid fa-share-from-square mr-2"></i>Solte na lousa de destino</div>
+      <div id="moveGrid" class="grid gap-2.5 overflow-y-auto" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))"></div>
+      <div class="text-[11px] text-amber-100/60 text-center mt-3">Soltar fora de uma lousa cancela: a anotação volta para onde estava.</div>
+    </div>
+  </div>
+
   <!-- MODAL DE DIÁLOGO CUSTOMIZADO (SUBSTITUI ALERT E CONFIRM) -->
   <div id="customDialogModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-stone-800 border-2 border-amber-800 rounded-xl w-full max-w-md p-5 shadow-2xl flex flex-col gap-4">
@@ -1225,11 +1254,10 @@
     }
 
     function initDragAndDrop(element, noteId) {
-      const handles = element.querySelectorAll('.drag-handle');
-      if (!handles.length) return;
-
+      /* A peça inteira é a alça: dá para arrastar clicando em qualquer área vazia dela */
       const onPointerDown = (e) => {
-        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner')) {
+        if (e.type === 'pointerdown' && e.pointerType === 'mouse' && e.button !== 0) return;
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner') || e.target.closest('.bend-pt') || e.target.closest('.bend-mid') || e.target.closest('.edit-input')) {
           return;
         }
 
@@ -1250,7 +1278,9 @@
           element,
           noteId,
           offsetX: (clientX - rect.left) / boardScale,
-          offsetY: (clientY - rect.top) / boardScale
+          offsetY: (clientY - rect.top) / boardScale,
+          sx: clientX,
+          sy: clientY
         };
 
         element.classList.add('is-dragging');
@@ -1261,10 +1291,8 @@
         document.addEventListener('touchend', onPointerUp);
       };
 
-      handles.forEach(handle => {
-        handle.addEventListener('pointerdown', onPointerDown);
-        handle.addEventListener('touchstart', onPointerDown, { passive: true });
-      });
+      element.addEventListener('pointerdown', onPointerDown);
+      element.addEventListener('touchstart', onPointerDown, { passive: true });
     }
 
     /* Ajusta as barras de controle quando a peça está perto de uma borda */
@@ -1286,6 +1314,9 @@
 
       const clientX = e.clientX || (e.touches && e.touches[0].clientX);
       const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      /* se arrastou de verdade, não conta como clique do triplo clique */
+      if (tapState.id === activeDrag.noteId && Math.hypot(clientX - activeDrag.sx, clientY - activeDrag.sy) > 6) tapState.n = 0;
 
       let x = (clientX - boardRect.left) / boardScale - activeDrag.offsetX;
       let y = (clientY - boardRect.top) / boardScale - activeDrag.offsetY;
@@ -1491,7 +1522,7 @@
       };
 
       board.notes.push(newNote);
-      if (type !== 'text') selectedNoteId = id;
+      selectedNoteId = id;   // peça nova já nasce ativa para poder escrever
       saveData();
       renderNotes();
 
@@ -1535,6 +1566,8 @@
           <div class="flex items-center gap-2">
             ${extraHtml}
             ${restore}
+            ${note.type === 'chalktext' ? dupToolHtml(note.id, 'chalk-rot text-xs transition') : ''}
+            ${moveToolHtml(note.id, 'chalk-rot text-xs transition')}
             <span class="text-xs opacity-60" title="Arraste para mover"><i class="fa-solid fa-grip-vertical"></i></span>
             <button onclick="deleteNote('${note.id}')" class="chalk-del text-xs p-0.5 transition" title="${note.type === 'fintable' ? 'Fechar a tabela (os lançamentos continuam salvos)' : 'Excluir'}">
               <i class="fa-solid fa-xmark"></i>
@@ -1945,6 +1978,8 @@
         <div class="shape-controls shape-controls-bg absolute top-1 right-1 z-20 flex items-center gap-2 rounded-full px-2 py-1">
           ${chalkColorDotsHtml(note)}
           ${restoreBtnHtml(note)}
+          ${dupToolHtml(note.id, 'chalk-rot transition')}
+          ${moveToolHtml(note.id, 'chalk-rot transition')}
           ${note.shape === 'bend' ? `<button onclick="cycleBendHead('${note.id}')" class="chalk-rot transition" title="Pontas: ${note.head === 'both' ? 'nas duas pontas' : note.head === 'none' ? 'sem ponta' : 'só no fim'} (clique para mudar)"><i class="fa-solid ${note.head === 'both' ? 'fa-left-right' : note.head === 'none' ? 'fa-minus' : 'fa-arrow-right-long'} text-[11px]"></i></button>` : ''}
           <button onclick="toggleShapeDash('${note.id}')" class="chalk-rot transition ${note.dash ? 'text-amber-300' : ''}" title="${note.dash ? 'Traço contínuo' : 'Traço tracejado'}">
             <i class="fa-solid fa-ellipsis text-[11px]"></i>
@@ -2193,11 +2228,20 @@
       if (prev && prev !== id) cleanupEmptyChalkText(prev);
     }
 
+    /* Ativação por triplo clique: com 3 cliques seguidos na mesma peça aparecem a barra e a edição.
+       Antes disso a peça só se move e deixa marcar o check. */
+    let tapState = { id: null, n: 0, t: 0, x: 0, y: 0 };
     document.addEventListener('pointerdown', (e) => {
       /* Marcar/desmarcar tarefa só dá o check: não muda a seleção da lista */
       if (e.target.closest && e.target.closest('.chalk-check')) return;
       const n = e.target.closest && e.target.closest('.chalk-note');
-      setSelectedNote(n ? n.id : null);
+      if (!n) { tapState.id = null; tapState.n = 0; setSelectedNote(null); return; }
+      if (n.id === selectedNoteId) { tapState.id = n.id; tapState.n = 0; return; }   // já ativa
+      const now = Date.now();
+      const same = tapState.id === n.id && now - tapState.t < 600 && Math.hypot(e.clientX - tapState.x, e.clientY - tapState.y) < 16;
+      tapState = { id: n.id, n: same ? tapState.n + 1 : 1, t: now, x: e.clientX, y: e.clientY };
+      if (tapState.n >= 3) { tapState.n = 0; setSelectedNote(n.id); }
+      else if (selectedNoteId) setSelectedNote(null);
     }, true);
 
     /* Tema: giz (padrão) <-> canetão (lousa branca) */
@@ -2240,7 +2284,7 @@
       board.notes.forEach(note => {
         const wrapper = document.createElement('div');
         const colorObj = POSTIT_COLORS.find(c => c.id === note.color) || POSTIT_COLORS[0];
-        const isChalk = (note.type === 'checklist' || note.type === 'chalktext' || note.type === 'shape' || note.type === 'image' || note.type === 'sticker' || isFinType(note.type));
+        const isChalk = true;   // todas as peças (inclusive post-its) seguem a regra do triplo clique
         
         wrapper.id = note.id;
         wrapper.className = isChalk ? 'absolute group style-wrapper chalk-note' : 'absolute group style-wrapper';
@@ -2277,7 +2321,7 @@
           <div class="postit-paper ${colorObj.class} rounded-b-md rounded-tr-md p-4 pt-3 border flex flex-col w-full h-full relative">
             
             <!-- Barra Superior / Header do Post-it -->
-            <div class="drag-handle cursor-grab active:cursor-grabbing flex items-center justify-between pb-2 mb-2 border-b border-black/10 select-none">
+            <div class="postit-head drag-handle cursor-grab active:cursor-grabbing flex items-center justify-between pb-2 mb-2 border-b border-black/10 select-none">
               <!-- Seletor de Cores -->
               <div class="flex items-center gap-1">
                 ${POSTIT_COLORS.map(c => `
@@ -2290,6 +2334,7 @@
 
               <!-- Mover & Excluir -->
               <div class="flex items-center gap-2">
+                ${moveToolHtml(note.id, 'text-black/50 hover:text-black text-xs p-0.5 transition')}
                 <span class="text-xs opacity-40" title="Arraste para mover"><i class="fa-solid fa-grip-vertical"></i></span>
                 <button onclick="deleteNote('${note.id}')" class="text-xs text-red-800/60 hover:text-red-900 p-0.5 transition" title="Excluir Post-it">
                   <i class="fa-solid fa-xmark"></i>
@@ -3170,6 +3215,7 @@
           <input type="range" class="img-range" min="80" max="1200" step="10" value="${w}"
                  oninput="liveImageWidth('${note.id}', this.value)" onchange="commitImageWidth()" title="Tamanho">
           <button onclick="stepImageSize('${note.id}', 1)" class="img-bar-btn" title="Aumentar"><i class="fa-solid fa-plus"></i></button>
+          ${moveToolHtml(note.id, 'img-bar-btn')}
           <button onclick="deleteNote('${note.id}')" class="img-bar-btn chalk-del" title="Excluir imagem"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
@@ -3565,6 +3611,8 @@
           <button onclick="stepStickerSize('${note.id}', -1)" class="img-bar-btn" title="Diminuir"><i class="fa-solid fa-minus"></i></button>
           <button onclick="stepStickerSize('${note.id}', 1)" class="img-bar-btn" title="Aumentar"><i class="fa-solid fa-plus"></i></button>
           <button onclick="rotateSticker('${note.id}')" class="img-bar-btn" title="Girar"><i class="fa-solid fa-rotate-right"></i></button>
+          ${dupToolHtml(note.id, 'img-bar-btn')}
+          ${moveToolHtml(note.id, 'img-bar-btn')}
           <button onclick="deleteNote('${note.id}')" class="img-bar-btn chalk-del" title="Remover adesivo"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="drag-handle sticker-art cursor-grab ${note.id === lastStickerId ? 'sticker-paste' : ''}" style="--r:${note.rotation || 0}deg">${art}</div>
@@ -4330,8 +4378,11 @@
     let finLastToggled = null;
 
     /* ---------- dados ---------- */
+    /* Os lançamentos ficam sempre na lousa de finanças: tabelas, cards e gráficos movidos para
+       outra lousa continuam mostrando (e editando) os mesmos dados. */
+    function finBoard() { return appData.boards.find(b => b.kind === 'finance') || getActiveBoard(); }
     function finData(board) {
-      board = board || getActiveBoard();
+      board = board || finBoard();
       if (!board.fin) board.fin = { rows: [], trash: [], seq: 0 };
       if (!board.fin.rows) board.fin.rows = [];
       if (!board.fin.trash) board.fin.trash = [];
@@ -4459,7 +4510,14 @@
       const wr = byId(note.id);
       if (wr) { const t = wr.querySelector('.fin-layer'); if (t) clearMask(t); syncRestoreUI(note, wr); }
     }
-    function finDropMasks(types) { finNotes().forEach(n => { if (!types || types.indexOf(n.type) >= 0) finDropMask(n); }); }
+    function finDropMasks(types) {
+      const cur = getActiveBoard();
+      appData.boards.forEach(b => (b.notes || []).forEach(n => {
+        if (!isFinType(n.type) || (types && types.indexOf(n.type) < 0)) return;
+        if (b === cur) finDropMask(n);
+        else { delete n.erase; delete maskStore[n.id]; }   // peças de outras lousas: só limpa o apagado salvo
+      }));
+    }
 
     function finUpdateDatalist() {
       const dl = byId('finDestList'); if (!dl) return;
@@ -4830,7 +4888,7 @@
       saveData(); finRenderDestChips(); finUpdateDatalist();
     }
     function openFinTableModal(editId) {
-      if (!finIsFinance()) return;
+      if (!editId && !finIsFinance()) return;
       const n = editId ? findNote(editId) : null, count = finNotes('fintable').length;
       finTableDraft = {
         editId: n ? n.id : null,
@@ -5158,7 +5216,7 @@
     /* ---------- janela "Montar gráfico" ---------- */
     let finDraft = null;
     function openFinChartModal(editId) {
-      if (!finIsFinance()) return;
+      if (!editId && !finIsFinance()) return;
       const n = editId ? findNote(editId) : null;
       finDraft = n && n.cfg
         ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all', hideX: !!n.cfg.hideX, hideY: !!n.cfg.hideY, hideLegend: !!n.cfg.hideLegend, hideTitle: !!n.noTitle }
@@ -5225,6 +5283,144 @@
       finUpdateDatalist();
       updateFinDock();
       finNotes('finchart').forEach(finPostRender);
+    }
+
+    /* =========================================================================
+       MOVER PEÇA PARA OUTRA LOUSA
+       Segure a ferramenta ⇪ da peça: abre uma janela por cima de tudo com as lousas.
+       Arraste até a lousa desejada e solte. Soltar fora cancela e a peça fica onde estava.
+       ========================================================================= */
+    function moveToolHtml(id, cls) {
+      return `<button class="move-tool ${cls || ''}" onpointerdown="startMoveToBoard(event, '${id}')" oncontextmenu="return false" title="Segure e arraste até a lousa de destino"><i class="fa-solid fa-share-from-square text-[11px]"></i></button>`;
+    }
+
+    /* Duplicar (setas, formas, texto livre e adesivos): a cópia nasce deslocada e já ativa */
+    function dupToolHtml(id, cls) {
+      return `<button class="${cls || ''}" onclick="duplicateNote('${id}')" title="Duplicar"><i class="fa-solid fa-clone text-[11px]"></i></button>`;
+    }
+
+    function duplicateNote(id) {
+      const board = getActiveBoard();
+      const src = board.notes.find(n => n.id === id);
+      if (!src || ['shape', 'chalktext', 'sticker'].indexOf(src.type) < 0) return;
+      const copy = JSON.parse(JSON.stringify(src));
+      copy.id = 'note_' + Date.now() + Math.floor(Math.random() * 1000);
+      const mn = byId('boardCanvas'), cw = mn ? mn.offsetWidth : 1000, ch = mn ? mn.offsetHeight : 600;
+      const w = src.width || 120, h = src.height || 60;
+      copy.x = Math.max(0, Math.min((src.x || 0) + 32, cw - w));
+      copy.y = Math.max(0, Math.min((src.y || 0) + 32, ch - h));
+      board.nextZIndex += 1;
+      copy.zIndex = board.nextZIndex;
+      if (copy.type === 'sticker') lastStickerId = copy.id;   // mesma animação de "colar" dos adesivos novos
+      board.notes.push(copy);
+      selectedNoteId = copy.id;
+      saveData();
+      renderNotes();
+    }
+
+    let moveCtx = null;
+
+    function buildMoveTiles() {
+      const cur = appData.activeBoardIndex;
+      byId('moveGrid').innerHTML = appData.boards.map((b, i) => {
+        const n = (b.notes || []).length;
+        return `<div class="move-tile ${i === cur ? 'is-current' : ''}" data-board-idx="${i}">
+          <i class="fa-solid ${b.kind === 'finance' ? 'fa-sack-dollar' : 'fa-chalkboard'} text-xl"></i>
+          <span class="mt-name">${escapeHtml(b.name || ('Lousa ' + (i + 1)))}</span>
+          <span class="mt-sub">${i === cur ? 'lousa atual' : n + (n === 1 ? ' item' : ' itens')}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function startMoveToBoard(e, id) {
+      if (moveCtx) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const note = findNote(id), wr = byId(id);
+      if (!note || !wr) return;
+
+      const w = wr.offsetWidth, h = wr.offsetHeight;
+      const s = Math.max(0.2, Math.min(1, 200 / Math.max(w, h, 1)));
+      const ghost = wr.cloneNode(true);
+      ghost.removeAttribute('id');
+      ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+      ghost.querySelectorAll('.chalk-bar, .img-bar, .shape-controls, .resize-handle, .resize-corner, .bend-layer, .item-remove').forEach(n => n.remove());
+      ghost.classList.remove('absolute', 'group', 'is-selected', 'is-dragging');
+      ghost.classList.add('move-ghost');
+      ghost.style.cssText = `position:fixed;left:0;top:0;width:${w}px;height:${h}px;z-index:10000;pointer-events:none;`;
+      document.body.appendChild(ghost);
+
+      const ctx = moveCtx = { id, pid: e.pointerId, ghost, over: null, origOpacity: wr.style.opacity };
+      const place = (x, y) => { ghost.style.transform = `translate(${x - (w * s) / 2}px, ${y - (h * s) / 2}px) scale(${s})`; };
+      const tileAt = (x, y) => {
+        const el = document.elementFromPoint(x, y);
+        const t = el && el.closest ? el.closest('.move-tile') : null;
+        return (t && !t.classList.contains('is-current')) ? t : null;
+      };
+      const setOver = (t) => {
+        if (ctx.over === t) return;
+        if (ctx.over) ctx.over.classList.remove('is-over');
+        ctx.over = t;
+        if (t) t.classList.add('is-over');
+      };
+
+      const onMove = (ev) => {
+        if (ev.pointerId !== ctx.pid) return;
+        if (ev.cancelable) ev.preventDefault();
+        place(ev.clientX, ev.clientY);
+        setOver(tileAt(ev.clientX, ev.clientY));
+      };
+      const onUp = (ev) => {
+        if (ev.pointerId !== ctx.pid) return;
+        const t = tileAt(ev.clientX, ev.clientY);
+        finishMove(t ? Number(t.dataset.boardIdx) : null);
+      };
+      const onCancel = (ev) => { if (ev.pointerId === ctx.pid) finishMove(null); };
+      const onKey = (ev) => { if (ev.key === 'Escape') finishMove(null); };
+      ctx.off = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onCancel);
+        document.removeEventListener('keydown', onKey);
+      };
+      document.addEventListener('pointermove', onMove, { passive: false });
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onCancel);
+      document.addEventListener('keydown', onKey);
+
+      wr.style.opacity = '0.3';
+      buildMoveTiles();
+      byId('moveOverlay').classList.remove('hidden');
+      place(e.clientX, e.clientY);
+    }
+
+    function finishMove(targetIdx) {
+      const ctx = moveCtx;
+      if (!ctx) return;
+      moveCtx = null;
+      ctx.off();
+      ctx.ghost.remove();
+      byId('moveOverlay').classList.add('hidden');
+      byId('moveGrid').innerHTML = '';
+      const wr = byId(ctx.id);
+      if (wr) wr.style.opacity = ctx.origOpacity || '';
+      if (targetIdx !== null && targetIdx !== undefined) moveNoteToBoard(ctx.id, targetIdx);
+    }
+
+    function moveNoteToBoard(id, idx) {
+      const src = getActiveBoard(), dst = appData.boards[idx];
+      const note = src.notes.find(n => n.id === id);
+      if (!note || !dst || dst === src) return;
+      src.notes = src.notes.filter(n => n.id !== id);
+      dst.nextZIndex = (dst.nextZIndex || 5) + 1;
+      note.zIndex = dst.nextZIndex;
+      if (dst.kind === 'finance') note.y = Math.max(note.y || 0, 70);   // não fica escondida atrás dos botões de finanças
+      if (!dst.notes) dst.notes = [];
+      dst.notes.push(note);
+      selectedNoteId = null;
+      saveData();
+      renderNotes();
     }
 
     // Inicialização: a lousa só aparece depois do login (evento "fb-auth" vindo do firebase.js)
