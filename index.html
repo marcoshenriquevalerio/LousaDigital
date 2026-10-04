@@ -872,6 +872,16 @@
     <button class="fin-dock-btn" onclick="finOpenTable()" title="Adicionar uma tabela de lançamentos"><i class="fa-solid fa-table-list"></i> Tabela</button>
     <button class="fin-dock-btn" onclick="finOpenCards()" title="Adicionar cards (escolha quais)"><i class="fa-solid fa-wallet"></i> Cards</button>
     <button class="fin-dock-btn" onclick="openFinChartModal()" title="Montar um gráfico"><i class="fa-solid fa-chart-column"></i> Gráficos</button>
+    <button class="fin-dock-btn" onclick="newFinanceBoard()" title="Criar outra lousa de finanças (com dados próprios)"><i class="fa-solid fa-plus"></i> Nova</button>
+    <button class="fin-dock-btn" onclick="openFinLinks()" title="Ligar esta lousa a outras para somarem juntas"><i class="fa-solid fa-link"></i> Ligar <b id="finLinkBadge"></b></button>
+  </div>
+  <div id="finLinkModal" class="fixed inset-0 bg-black/75 flex items-center justify-center p-4 hidden" style="z-index:9995">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-sm p-5 text-stone-100 shadow-2xl">
+      <h3 id="finLinkTitle" class="font-chalk text-2xl text-amber-300 font-bold mb-2"></h3>
+      <p class="text-sm text-stone-400 mb-2">Lousas marcadas somam seus lançamentos juntas (nos dois sentidos). Desmarque para cortar a ligação.</p>
+      <div id="finLinkList"></div>
+      <button onclick="closeFinLinks()" class="mt-3 w-full py-2 rounded-lg bg-amber-700 hover:bg-amber-600 font-bold">Fechar</button>
+    </div>
   </div>
   <datalist id="finDestList"></datalist>
 
@@ -4380,7 +4390,17 @@
     /* ---------- dados ---------- */
     /* Os lançamentos ficam sempre na lousa de finanças: tabelas, cards e gráficos movidos para
        outra lousa continuam mostrando (e editando) os mesmos dados. */
-    function finBoard() { return appData.boards.find(b => b.kind === 'finance') || getActiveBoard(); }
+    function finBoard() { const a = getActiveBoard(); return a.kind === 'finance' ? a : (appData.boards.find(b => b.kind === 'finance') || a); }
+    /* lousas de finanças ligadas à atual (a soma inclui os lançamentos delas) */
+    function finLinked(board) {
+      board = board || finBoard();
+      return (board.links || []).map(id => appData.boards.find(b => b.id === id && b.kind === 'finance')).filter(b => b && b !== board);
+    }
+    function finAllRows() {
+      let rows = finData().rows.slice();
+      finLinked().forEach(b => { rows = rows.concat(finData(b).rows); });
+      return rows;
+    }
     function finData(board) {
       board = board || finBoard();
       if (!board.fin) board.fin = { rows: [], trash: [], seq: 0 };
@@ -4442,13 +4462,13 @@
     /* lançamentos "em branco" (linha nova ainda sem nada) nunca entram nas contas */
     function finIsBlank(r) { return !r.value && !r.dest; }
     function finRowsFor(period) {
-      let rows = finData().rows.filter(r => !finIsBlank(r));
+      let rows = finAllRows().filter(r => !finIsBlank(r));
       if (period && period !== 'all') rows = rows.filter(r => (r.date || '').slice(0, 7) === period);
       return rows;
     }
     function finMonthsList() {
       const set = {};
-      finData().rows.forEach(r => { const k = (r.date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) set[k] = 1; });
+      finAllRows().forEach(r => { const k = (r.date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) set[k] = 1; });
       return Object.keys(set).sort().reverse();
     }
 
@@ -4697,7 +4717,7 @@
     }
 
     /* ---------- ações da tabela ---------- */
-    function finRow(id) { return finData().rows.find(r => r.id === id); }
+    function finRow(id) { return finAllRows().find(r => r.id === id); }
     function finSetTitle(id, v) { const n = findNote(id); if (n) { n.title = v; saveData(); } }
     function finChangeSize(id, d) {
       const n = findNote(id); if (!n) return;
@@ -4961,6 +4981,28 @@
       saveData(); renderNotes();
     }
 
+    function newFinanceBoard() {
+      const n = appData.boards.filter(b => b.kind === 'finance').length + 1;
+      appData.boards.push({ id: 'board_' + Date.now(), name: 'Finanças ' + n, kind: 'finance', nextZIndex: 5, notes: [], calendarEvents: {}, fin: { rows: [], trash: [], seq: 0 }, links: [] });
+      appData.activeBoardIndex = appData.boards.length - 1;
+      selectedNoteId = null; saveData(); renderNotes();
+    }
+    function openFinLinks() {
+      const cur = finBoard(), others = appData.boards.filter(b => b.kind === 'finance' && b !== cur);
+      byId('finLinkList').innerHTML = others.length ? others.map(b =>
+        `<label class="flex items-center gap-3 py-2 text-lg cursor-pointer"><input type="checkbox" class="w-5 h-5" ${(cur.links || []).includes(b.id) ? 'checked' : ''} onchange="finToggleLink('${b.id}', this.checked)"> ${escapeHtml(b.name)}</label>`).join('')
+        : '<p class="text-stone-300 py-2">Crie outra lousa de finanças (botão "Nova") para poder ligá-las.</p>';
+      byId('finLinkTitle').innerText = 'Somar "' + cur.name + '" com:';
+      byId('finLinkModal').classList.remove('hidden');
+    }
+    function closeFinLinks() { byId('finLinkModal').classList.add('hidden'); }
+    function finToggleLink(id, on) {
+      const a = finBoard(), b = appData.boards.find(x => x.id === id); if (!b) return;
+      const set = (x, y, v) => { x.links = (x.links || []).filter(i => i !== y.id); if (v) x.links.push(y.id); };
+      set(a, b, on); set(b, a, on);   // a ligação vale nos dois sentidos; desmarcar corta a ligação
+      saveData(); finRefreshAll();
+      const l = finLinked(a).length; byId('finLinkBadge').innerText = l ? l : '';
+    }
     function placeFinDock() {
       const d = byId('finDock'), vp = byId('boardViewport'); if (!d || !vp) return;
       const r = vp.getBoundingClientRect();
@@ -4968,6 +5010,7 @@
     }
     function updateFinDock() {
       const on = finIsFinance(), d = byId('finDock');
+      if (on && byId('finLinkBadge')) { const l = finLinked().length; byId('finLinkBadge').innerText = l ? l : ''; }
       if (d) d.classList.toggle('on', on);
       document.querySelectorAll('.fin-toggle-btn').forEach(b => b.classList.toggle('is-on', on));
       const t = byId('emptyTitle'), p = byId('emptyText');
