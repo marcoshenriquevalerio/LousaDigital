@@ -14,7 +14,17 @@ import {
   doc,
   getDoc,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  onSnapshot,
+  collection,
+  query,
+  where,
+  addDoc,
+  updateDoc,
+  getDocs,
+  arrayUnion,
+  arrayRemove,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -100,6 +110,147 @@ window.FB = {
     await deleteDoc(imageRef(id));
   }
 };
+
+/* =====================================================================
+   LOUSAS COMPARTILHADAS (tempo real) + CONVITES
+   shared/{sid}            -> a lousa compartilhada (payload base64 + membros + rev)
+   shared/{sid}/images/{id}-> imagens da lousa compartilhada
+   invites/{id}            -> pedidos de compartilhamento (por e-mail)
+   ===================================================================== */
+const lc = (s) => String(s || "").trim().toLowerCase();
+const sharedRef = (sid) => doc(db, "shared", sid);
+const sharedImgRef = (sid, id) => doc(db, "shared", sid, "images", id);
+
+function packShared(obj) {
+  const payload = toBase64(JSON.stringify(obj));
+  if (payload.length > 950000) {
+    throw new Error("Lousa compartilhada grande demais para salvar (limite de ~950 KB de texto).");
+  }
+  return payload;
+}
+function unpackShared(d) {
+  return {
+    rev: d.rev || 0,
+    ownerUid: d.ownerUid,
+    ownerEmail: d.ownerEmail,
+    members: d.members || [],
+    memberEmails: d.memberEmails || [],
+    invitedEmails: d.invitedEmails || [],
+    content: d.payload ? JSON.parse(fromBase64(d.payload)) : {}
+  };
+}
+
+Object.assign(window.FB, {
+  me() {
+    const u = auth.currentUser;
+    return { uid: u.uid, email: lc(u.email), name: u.displayName || u.email };
+  },
+
+  async createShared(sid, content, invitedEmail) {
+    const u = auth.currentUser;
+    await setDoc(sharedRef(sid), {
+      ownerUid: u.uid,
+      ownerEmail: lc(u.email),
+      members: [u.uid],
+      memberEmails: [lc(u.email)],
+      invitedEmails: invitedEmail ? [lc(invitedEmail)] : [],
+      payload: packShared(content),
+      rev: 1,
+      updatedAt: Date.now(),
+      updatedBy: u.uid
+    });
+    return 1;
+  },
+
+  // Gravação com controle de versão: se alguém gravou antes, devolve { conflict, remote } para mesclar
+  async pushShared(sid, content, expectRev) {
+    const payload = packShared(content);
+    return runTransaction(db, async (tx) => {
+      const snap = await tx.get(sharedRef(sid));
+      if (!snap.exists()) return { gone: true };
+      const d = snap.data();
+      if ((d.rev || 0) !== expectRev) return { conflict: true, remote: unpackShared(d) };
+      const rev = expectRev + 1;
+      tx.update(sharedRef(sid), { payload, rev, updatedAt: Date.now(), updatedBy: auth.currentUser.uid });
+      return { rev };
+    });
+  },
+
+  // Tempo real: cb(dados) a cada mudança; cb(null, erro) se a lousa sumiu ou o acesso foi retirado
+  watchShared(sid, cb) {
+    return onSnapshot(
+      sharedRef(sid),
+      (snap) => cb(snap.exists() ? unpackShared(snap.data()) : null),
+      (err) => cb(null, err)
+    );
+  },
+
+  async addInvited(sid, email) { await updateDoc(sharedRef(sid), { invitedEmails: arrayUnion(lc(email)) }); },
+  async uninvite(sid, email) { await updateDoc(sharedRef(sid), { invitedEmails: arrayRemove(lc(email)) }); },
+
+  async joinShared(sid) {
+    const m = FB.me();
+    await updateDoc(sharedRef(sid), {
+      members: arrayUnion(m.uid),
+      memberEmails: arrayUnion(m.email),
+      invitedEmails: arrayRemove(m.email)
+    });
+  },
+  async declineShared(sid) {
+    await updateDoc(sharedRef(sid), { invitedEmails: arrayRemove(FB.me().email) });
+  },
+  async removeMember(sid, memberUid, memberEmail) {
+    await updateDoc(sharedRef(sid), {
+      members: arrayRemove(memberUid),
+      memberEmails: arrayRemove(lc(memberEmail)),
+      invitedEmails: arrayRemove(lc(memberEmail))
+    });
+  },
+  async deleteShared(sid) {
+    try {
+      const imgs = await getDocs(collection(db, "shared", sid, "images"));
+      await Promise.all(imgs.docs.map((d) => deleteDoc(d.ref)));
+    } catch (e) { console.warn("Imagens compartilhadas:", e); }
+    await deleteDoc(sharedRef(sid));
+  },
+
+  // Convites
+  async sendInvite(inv) {
+    const m = FB.me();
+    await addDoc(collection(db, "invites"), {
+      fromUid: m.uid, fromEmail: m.email, fromName: m.name,
+      toEmail: lc(inv.toEmail), sid: inv.sid, boardName: inv.boardName || "Lousa", kind: inv.kind || "board",
+      status: "pending", createdAt: Date.now(), updatedAt: Date.now()
+    });
+  },
+  async setInviteStatus(id, status) {
+    await updateDoc(doc(db, "invites", id), { status, updatedAt: Date.now() });
+  },
+  watchInvites(onIncoming, onOutgoing) {
+    const m = FB.me();
+    const pack = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const u1 = onSnapshot(query(collection(db, "invites"), where("toEmail", "==", m.email)), (s) => onIncoming(pack(s)), (e) => console.warn("invites in:", e));
+    const u2 = onSnapshot(query(collection(db, "invites"), where("fromUid", "==", m.uid)), (s) => onOutgoing(pack(s)), (e) => console.warn("invites out:", e));
+    return () => { u1(); u2(); };
+  },
+
+  // Imagens da lousa compartilhada
+  async saveSharedImage(sid, id, dataUrl) { await setDoc(sharedImgRef(sid, id), { data: dataUrl, createdAt: Date.now() }); },
+  async loadSharedImage(sid, id) {
+    const snap = await getDoc(sharedImgRef(sid, id));
+    return snap.exists() ? snap.data().data : null;
+  },
+  async deleteSharedImage(sid, id) { await deleteDoc(sharedImgRef(sid, id)); },
+  // garante que a imagem (que está no espaço privado do usuário) também exista na lousa compartilhada
+  async ensureSharedImage(sid, id) {
+    const ex = await getDoc(sharedImgRef(sid, id));
+    if (ex.exists()) return true;
+    const mine = await getDoc(imageRef(id));
+    if (!mine.exists()) return false;
+    await setDoc(sharedImgRef(sid, id), { data: mine.data().data, createdAt: Date.now() });
+    return true;
+  }
+});
 
 /* ---------- avisa o index.html quando o login muda ---------- */
 onAuthStateChanged(auth, (user) => {

@@ -558,6 +558,38 @@
     .fin-modal-in { width: 100%; background: #1c1917; border: 1px solid #57534e; border-radius: 10px; padding: 7px 10px; color: #f5f5f4; font-size: 13px; outline: none; }
     .fin-modal-in:focus { border-color: #fbbf24; }
     body.theme-marker { --fin-prev-ink: #1f2937; }
+
+    /* ===== v6: giz/canetão, lousas compartilhadas, ligações ===== */
+    #inkLayer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 7000; overflow: hidden; }
+    #inkDone { filter: url(#chalkSoft); }
+    .theme-marker #inkDone { filter: none; }
+    .chalkstick { position: absolute; z-index: 1000000; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.5)); --ck: #f5f7f8; }
+    .chalkstick.is-erasing { cursor: grabbing; filter: drop-shadow(0 10px 8px rgba(0,0,0,.55)); }
+    .chalkstick.ck-place { outline: 2px dashed #fbbf24; outline-offset: 5px; border-radius: 8px; }
+    .chalkstick .ck-body { position: absolute; inset: 0; border-radius: 7px 4px 4px 7px / 50% 30% 30% 50%; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,.16) 100%), var(--ck); box-shadow: inset 0 -2px 3px rgba(0,0,0,.18); }
+    .chalkstick .ck-body::after { content: ''; position: absolute; left: 0; top: 14%; bottom: 14%; width: 9%; border-radius: 50%; background: rgba(255,255,255,.55); }
+    .chalkstick.ck-writing .ck-body { box-shadow: 0 0 10px 2px var(--ck), inset 0 -2px 3px rgba(0,0,0,.18); }
+    .theme-marker .chalkstick .ck-body { background: linear-gradient(180deg, #fff 0%, #cbd5e1 100%); border-radius: 4px 9px 9px 4px / 30% 50% 50% 30%; border: 1px solid #94a3b8; }
+    .theme-marker .chalkstick .ck-body::after { left: 0; top: 0; bottom: 0; width: 26%; border-radius: 4px 0 0 4px; background: var(--ck); }
+    .nav-btn.is-shared { background: #059669; color: #fff; border-color: #10b981; }
+    #bellBtn { position: relative; }
+    #bellBadge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
+    #moreBtn { position: relative; }
+    #moreDot { position: absolute; top: 2px; right: 2px; width: 9px; height: 9px; border-radius: 50%; background: #ef4444; }
+    #notifPanel { position: fixed; z-index: 10040; top: 58px; right: 8px; width: min(380px, calc(100vw - 16px)); max-height: calc(100vh - 80px); overflow-y: auto; }
+    .nt-row { background: rgba(0,0,0,.28); border: 1px solid rgba(251,191,36,.25); border-radius: 10px; padding: 9px 10px; margin-bottom: 7px; color: #fef3c7; }
+    .sh-row { display: flex; align-items: center; gap: 10px; background: #1c1917; border: 1px solid #44403c; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; color: #e7e5e4; }
+    .sh-row small { color: #a8a29e; font-size: 11px; }
+    .sh-btn { padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #44403c; color: #e7e5e4; transition: background .15s ease; white-space: nowrap; }
+    .sh-btn:hover { background: #57534e; }
+    .sh-btn.ok { background: #059669; color: #fff; } .sh-btn.ok:hover { background: #10b981; }
+    .sh-btn.danger { background: #7f1d1d; color: #fecaca; } .sh-btn.danger:hover { background: #991b1b; }
+    .lk-row { display: flex; align-items: center; gap: 10px; width: 100%; background: #1c1917; border: 1px solid #44403c; border-radius: 10px; padding: 9px 12px; margin-bottom: 7px; color: #d6d3d1; font-size: 13px; transition: background .15s ease; }
+    .lk-row small { color: #a8a29e; font-size: 11px; }
+    .lk-row:hover { background: #292524; }
+    .lk-row.on { border-color: #34d399; background: rgba(5,150,105,.18); color: #ecfdf5; }
+    .lk-state { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: #292524; white-space: nowrap; }
+    .lk-row.on .lk-state { background: #059669; color: #fff; }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -614,7 +646,7 @@
       <button onclick="openCalendarModal()" class="tb bg-sky-100 hover:bg-sky-200 text-sky-700 border border-sky-300 " title="Calendário"><i class="fa-solid fa-calendar-days"></i><span class="tb-label"></span></button>
       <button onclick="openPlannerModal()" class="tb bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300 desk-only" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label"></span></button>
       <button onclick="openFinanceBoard()" class="tb fin-toggle-btn bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 desk-only" title="Finanças (clique de novo para voltar à lousa anterior)"><i class="fa-solid fa-sack-dollar"></i><span class="tb-label"></span></button>
-      <button id="moreBtn" onclick="toggleMore(event)" class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Mais opções"><i class="fa-solid fa-ellipsis"></i></button>
+      <button id="moreBtn" onclick="toggleMore(event)" class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Mais opções"><i class="fa-solid fa-ellipsis"></i><span id="moreDot" class="hidden"></span></button>
     </div>
 
     <div class="tb-spacer"></div>
@@ -628,6 +660,8 @@
         </div>
         <button id="btnNextBoard" onclick="navigateBoard(1)" class="nav-btn" title="Próxima lousa"><i class="fa-solid fa-chevron-right text-xs"></i></button>
         <button onclick="createNewBoard()" class="nav-btn nav-add" title="Nova lousa"><i class="fa-solid fa-plus text-xs"></i></button>
+        <button id="btnNewFin" onclick="createFinanceBoard()" class="nav-btn nav-add" title="Nova lousa de finanças"><i class="fa-solid fa-sack-dollar text-xs"></i></button>
+        <button id="btnShareBoard" onclick="openShareModal()" class="nav-btn" title="Compartilhar esta lousa"><i class="fa-solid fa-user-plus text-xs"></i></button>
         <button id="btnDeleteBoard" onclick="confirmDeleteCurrentBoard()" class="nav-btn nav-del" title="Excluir esta lousa"><i class="fa-solid fa-trash-can text-xs"></i></button>
       </div>
       <button onclick="openPlannerModal()" data-close class="tb mob-only bg-purple-100 text-purple-700 border border-purple-300" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label">Planner</span></button>
@@ -636,6 +670,7 @@
       <button onclick="toggleFullscreen()" id="fullscreenBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Tela cheia"><i class="fa-solid fa-expand"></i><span class="tb-label">Tela cheia</span></button>
       <button onclick="toggleQuoteEdit()" id="quoteBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ajustes: frase e apagador"><i class="fa-solid fa-gear"></i><span class="tb-label">Ajustes</span></button>
       <button onclick="toggleHeader()" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ocultar barra"><i class="fa-solid fa-eye-slash"></i><span class="tb-label">Ocultar</span></button>
+      <div class="nav-pill"><button id="bellBtn" onclick="toggleNotif(event)" class="nav-btn" title="Notificações"><i class="fa-solid fa-bell text-xs"></i><span id="bellBadge" class="hidden">0</span></button></div>
       <div id="userChip" class="hidden nav-pill">
         <span id="syncStatus" class="px-1 text-sm text-emerald-400" title="Salvo na nuvem"><i class="fa-solid fa-cloud"></i></span>
         <img id="userPhoto" class="w-7 h-7 rounded-full border border-amber-400/40 hidden" alt="" referrerpolicy="no-referrer">
@@ -672,6 +707,9 @@
       <div class="er-felt"></div>
       <div class="er-dust"></div>
     </div>
+
+    <svg id="inkLayer" aria-hidden="true"><g id="inkDone"></g><path id="inkLive" d="" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".93"/></svg>
+    <div id="chalkStick" class="chalkstick" title="Giz — arraste e pare onde quer escrever. Toque duas vezes para ajustar"><div class="ck-body"></div></div>
 
   </main></div></div>
 
@@ -810,6 +848,7 @@
       <div class="flex items-center gap-1.5">
         <button class="q-btn px-3" data-qtab="frase" onclick="setSettingsTab('frase')"><i class="fa-solid fa-quote-left mr-1"></i>Frase</button>
         <button class="q-btn px-3" data-qtab="apagador" onclick="setSettingsTab('apagador')"><i class="fa-solid fa-eraser mr-1"></i>Apagador</button>
+        <button class="q-btn px-3" data-qtab="giz" onclick="setSettingsTab('giz')"><i class="fa-solid fa-pen mr-1"></i><span id="gizTabLbl">Giz</span></button>
       </div>
       <span id="qeHint" class="text-[10px] text-amber-100/60 text-right">arraste a frase para mover</span>
     </div>
@@ -833,6 +872,21 @@
       <label class="mt-2.5 flex items-center justify-between text-[11px] text-amber-100/80 cursor-pointer"><span><i class="fa-solid fa-volume-high mr-1"></i>Som ao apagar</span><input id="eraserSound" type="checkbox" checked onchange="setEraserSound(this.checked)" style="accent-color:#fbbf24;width:16px;height:16px"></label>
       <button id="eraserPlaceBtn" onclick="toggleEraserPlace()" class="mt-2.5 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-up-down-left-right"></i><span>Mudar posição de descanso</span></button>
       <button onclick="resetEraser()" class="mt-1.5 w-full px-3 py-1.5 bg-stone-700/70 hover:bg-stone-600 text-stone-200 rounded-lg text-xs transition">Restaurar tamanho e posição</button>
+    </div>
+
+    <div id="qeGiz" class="hidden">
+      <div class="text-[11px] text-amber-100/80 mb-1.5">Cor do giz (canetão na lousa branca)</div>
+      <div id="chalkColors" class="flex flex-wrap gap-1.5"></div>
+      <label class="text-[11px] text-amber-100/80 flex items-center justify-between mt-2.5 mb-1">Espessura <span id="chalkWidthLbl"></span></label>
+      <input id="chalkWidth" type="range" min="2" max="14" step="1" oninput="setChalkWidth(this.value)" class="w-full" style="accent-color:#fbbf24">
+      <svg viewBox="0 0 120 14" class="w-full h-4 mt-1 opacity-90"><path id="chalkPrevLine" d="M4 8 Q30 2 60 8 T116 7" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>
+      <label class="mt-2 flex items-center justify-between text-[11px] text-amber-100/80 cursor-pointer"><span><i class="fa-solid fa-volume-high mr-1"></i>Som ao escrever</span><input id="chalkSound" type="checkbox" checked onchange="setChalkSound(this.checked)" style="accent-color:#fbbf24"></label>
+      <button id="chalkPlaceBtn" onclick="toggleChalkPlace()" class="mt-2.5 w-full px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"><i class="fa-solid fa-up-down-left-right"></i><span>Mudar posição de descanso</span></button>
+      <div class="flex gap-1.5 mt-1.5">
+        <button onclick="resetChalk()" class="flex-1 px-3 py-1.5 bg-stone-700/70 hover:bg-stone-600 text-stone-200 rounded-lg text-xs transition">Restaurar posição</button>
+        <button onclick="clearStrokes()" class="flex-1 px-3 py-1.5 bg-stone-700/70 hover:bg-stone-600 text-stone-200 rounded-lg text-xs transition">Apagar escritos</button>
+      </div>
+      <p class="text-[10px] text-amber-100/55 mt-2 leading-snug">Arraste o giz, pare um instante onde quer começar e escreva livremente. Solte e ele fica alguns segundos na lousa para você continuar; depois volta ao lugar. O apagador também apaga o giz.</p>
     </div>
 
     <div class="flex justify-end mt-2">
@@ -872,16 +926,7 @@
     <button class="fin-dock-btn" onclick="finOpenTable()" title="Adicionar uma tabela de lançamentos"><i class="fa-solid fa-table-list"></i> Tabela</button>
     <button class="fin-dock-btn" onclick="finOpenCards()" title="Adicionar cards (escolha quais)"><i class="fa-solid fa-wallet"></i> Cards</button>
     <button class="fin-dock-btn" onclick="openFinChartModal()" title="Montar um gráfico"><i class="fa-solid fa-chart-column"></i> Gráficos</button>
-    <button class="fin-dock-btn" onclick="newFinanceBoard()" title="Criar outra lousa de finanças (com dados próprios)"><i class="fa-solid fa-plus"></i> Nova</button>
-    <button class="fin-dock-btn" onclick="openFinLinks()" title="Ligar esta lousa a outras para somarem juntas"><i class="fa-solid fa-link"></i> Ligar <b id="finLinkBadge"></b></button>
-  </div>
-  <div id="finLinkModal" class="fixed inset-0 bg-black/75 flex items-center justify-center p-4 hidden" style="z-index:9995">
-    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-sm p-5 text-stone-100 shadow-2xl">
-      <h3 id="finLinkTitle" class="font-chalk text-2xl text-amber-300 font-bold mb-2"></h3>
-      <p class="text-sm text-stone-400 mb-2">Lousas marcadas somam seus lançamentos juntas (nos dois sentidos). Desmarque para cortar a ligação.</p>
-      <div id="finLinkList"></div>
-      <button onclick="closeFinLinks()" class="mt-3 w-full py-2 rounded-lg bg-amber-700 hover:bg-amber-600 font-bold">Fechar</button>
-    </div>
+    <button class="fin-dock-btn" onclick="openFinLinkModal()" title="Ligar esta lousa a outras lousas de finanças"><i class="fa-solid fa-link"></i> Ligar</button>
   </div>
   <datalist id="finDestList"></datalist>
 
@@ -1024,6 +1069,64 @@
       <div class="font-chalk text-2xl text-amber-200 text-center mb-3"><i class="fa-solid fa-share-from-square mr-2"></i>Solte na lousa de destino</div>
       <div id="moveGrid" class="grid gap-2.5 overflow-y-auto" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))"></div>
       <div class="text-[11px] text-amber-100/60 text-center mt-3">Soltar fora de uma lousa cancela: a anotação volta para onde estava.</div>
+    </div>
+  </div>
+
+  <!-- COMPARTILHAR LOUSA -->
+  <div id="shareModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden" style="z-index:10050" onclick="if(event.target===this) closeOv('shareModal')">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-2xl text-amber-300 font-bold truncate"><i class="fa-solid fa-user-plus mr-2"></i><span id="shareTitle">Compartilhar</span></h3>
+        <button onclick="closeOv('shareModal')" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5">
+        <div id="shareInviteBox">
+          <div class="fin-lbl">Convidar por e-mail (conta Google)</div>
+          <div class="flex gap-2">
+            <input id="shareEmail" type="email" placeholder="email@exemplo.com" onkeydown="if(event.key==='Enter') shSendInvite()" class="fin-modal-in">
+            <button id="shareSendBtn" onclick="shSendInvite()" class="px-3 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition whitespace-nowrap">Enviar pedido</button>
+          </div>
+          <p id="shareMsg" class="text-xs mt-2"></p>
+        </div>
+        <div class="fin-lbl mt-4">Participantes</div>
+        <div id="shareList"></div>
+        <p id="shareNote" class="text-[11px] text-stone-400 mt-2 leading-snug"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICAÇÕES -->
+  <div id="notifPanel" class="hidden wood-frame rounded-xl p-3 shadow-2xl">
+    <div class="font-chalk text-xl text-amber-200 mb-2"><i class="fa-solid fa-bell mr-2"></i>Notificações</div>
+    <div id="notifList"></div>
+  </div>
+
+  <!-- FINANÇAS: ligar lousas -->
+  <div id="finLinkModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden" style="z-index:10050" onclick="if(event.target===this) closeOv('finLinkModal')">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-2xl text-amber-300 font-bold truncate"><i class="fa-solid fa-link mr-2"></i><span id="finLinkTitle">Ligações</span></h3>
+        <button onclick="closeOv('finLinkModal')" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5">
+        <div id="finLinkBody"></div>
+        <p class="text-[11px] text-stone-400 mt-2 leading-snug">Lousas ligadas somam os lançamentos nos cards, gráficos e totais das duas. Os lançamentos continuam sendo editados cada um na sua lousa. Toque de novo para cortar a ligação.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINANÇAS: ligar card/gráfico -->
+  <div id="pieceLinkModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden" style="z-index:10050" onclick="if(event.target===this) closeOv('pieceLinkModal')">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-xl text-amber-300 font-bold truncate"><i class="fa-solid fa-link mr-2"></i><span id="pieceLinkTitle">Ligar</span></h3>
+        <button onclick="closeOv('pieceLinkModal')" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5">
+        <div class="fin-lbl">Somar junto com</div>
+        <div id="pieceLinkBody"></div>
+        <p class="text-[11px] text-stone-400 mt-2 leading-snug">Este item passa a incluir os lançamentos da lousa de cada item ligado (usando o período e as opções deste item). Só este card/gráfico muda; a lousa continua separada.</p>
+      </div>
     </div>
   </div>
 
@@ -2936,7 +3039,7 @@
       if (!window.FB || !currentUser || !appReady) return;
       setSyncStatus('saving');
       try {
-        await FB.saveAppData(appData);
+        await FB.saveAppData(cloudView());
         setSyncStatus(saveTimer ? 'pending' : 'saved');
       } catch (err) {
         console.error('Erro ao salvar na nuvem:', err);
@@ -3743,7 +3846,7 @@
     }
 
     function placeQuoteEditor() {
-      const ed = byId('quoteEditor'), el = (settingsTab === 'apagador' ? byId('eraser') : byId('boardQuote'));
+      const ed = byId('quoteEditor'), el = (settingsTab === 'apagador' ? byId('eraser') : settingsTab === 'giz' ? byId('chalkStick') : byId('boardQuote'));
       if (!ed || !el) return;
       const r = el.getBoundingClientRect();
       const lower = (r.top + r.height / 2) > window.innerHeight * 0.5;
@@ -3765,12 +3868,13 @@
     }
 
     function setSettingsTab(tab) {
-      settingsTab = tab === 'apagador' ? 'apagador' : 'frase';
+      settingsTab = (tab === 'apagador' || tab === 'giz') ? tab : 'frase';
       const isF = settingsTab === 'frase';
       quoteEditing = isF;                       // a frase só fica movível na aba Frase
-      if (!isF) setEraserPlace(false);
+      if (!isF) { setEraserPlace(false); setChalkPlace(false); }
       byId('qeFrase').classList.toggle('hidden', !isF);
-      byId('qeApagador').classList.toggle('hidden', isF);
+      byId('qeApagador').classList.toggle('hidden', settingsTab !== 'apagador');
+      byId('qeGiz').classList.toggle('hidden', settingsTab !== 'giz');
       byId('qeHint').classList.toggle('hidden', !isF);
       document.querySelectorAll('#quoteEditor [data-qtab]').forEach(b => b.classList.toggle('active', b.dataset.qtab === settingsTab));
       if (isF) {
@@ -3779,6 +3883,8 @@
         ta.rows = window.innerHeight < 500 ? 2 : 3;
         updateLinesButtons();
         setTimeout(() => ta.focus(), 50);
+      } else if (settingsTab === 'giz') {
+        syncChalkPanel();
       } else {
         const c = getEraserCfg();
         byId('eraserSize').value = Math.round((c.size || 1) * 100);
@@ -3791,7 +3897,7 @@
 
     function finishQuoteEdit() {
       quoteEditing = false;
-      setEraserPlace(false);
+      setEraserPlace(false); setChalkPlace(false);
       byId('quoteEditor').classList.add('hidden');
       saveData();
       renderQuote();
@@ -4390,17 +4496,7 @@
     /* ---------- dados ---------- */
     /* Os lançamentos ficam sempre na lousa de finanças: tabelas, cards e gráficos movidos para
        outra lousa continuam mostrando (e editando) os mesmos dados. */
-    function finBoard() { const a = getActiveBoard(); return a.kind === 'finance' ? a : (appData.boards.find(b => b.kind === 'finance') || a); }
-    /* lousas de finanças ligadas à atual (a soma inclui os lançamentos delas) */
-    function finLinked(board) {
-      board = board || finBoard();
-      return (board.links || []).map(id => appData.boards.find(b => b.id === id && b.kind === 'finance')).filter(b => b && b !== board);
-    }
-    function finAllRows() {
-      let rows = finData().rows.slice();
-      finLinked().forEach(b => { rows = rows.concat(finData(b).rows); });
-      return rows;
-    }
+    function finBoard() { return appData.boards.find(b => b.kind === 'finance') || getActiveBoard(); }
     function finData(board) {
       board = board || finBoard();
       if (!board.fin) board.fin = { rows: [], trash: [], seq: 0 };
@@ -4462,13 +4558,13 @@
     /* lançamentos "em branco" (linha nova ainda sem nada) nunca entram nas contas */
     function finIsBlank(r) { return !r.value && !r.dest; }
     function finRowsFor(period) {
-      let rows = finAllRows().filter(r => !finIsBlank(r));
+      let rows = finData().rows.filter(r => !finIsBlank(r));
       if (period && period !== 'all') rows = rows.filter(r => (r.date || '').slice(0, 7) === period);
       return rows;
     }
     function finMonthsList() {
       const set = {};
-      finAllRows().forEach(r => { const k = (r.date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) set[k] = 1; });
+      finData().rows.forEach(r => { const k = (r.date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) set[k] = 1; });
       return Object.keys(set).sort().reverse();
     }
 
@@ -4717,7 +4813,7 @@
     }
 
     /* ---------- ações da tabela ---------- */
-    function finRow(id) { return finAllRows().find(r => r.id === id); }
+    function finRow(id) { return finData().rows.find(r => r.id === id); }
     function finSetTitle(id, v) { const n = findNote(id); if (n) { n.title = v; saveData(); } }
     function finChangeSize(id, d) {
       const n = findNote(id); if (!n) return;
@@ -4981,28 +5077,6 @@
       saveData(); renderNotes();
     }
 
-    function newFinanceBoard() {
-      const n = appData.boards.filter(b => b.kind === 'finance').length + 1;
-      appData.boards.push({ id: 'board_' + Date.now(), name: 'Finanças ' + n, kind: 'finance', nextZIndex: 5, notes: [], calendarEvents: {}, fin: { rows: [], trash: [], seq: 0 }, links: [] });
-      appData.activeBoardIndex = appData.boards.length - 1;
-      selectedNoteId = null; saveData(); renderNotes();
-    }
-    function openFinLinks() {
-      const cur = finBoard(), others = appData.boards.filter(b => b.kind === 'finance' && b !== cur);
-      byId('finLinkList').innerHTML = others.length ? others.map(b =>
-        `<label class="flex items-center gap-3 py-2 text-lg cursor-pointer"><input type="checkbox" class="w-5 h-5" ${(cur.links || []).includes(b.id) ? 'checked' : ''} onchange="finToggleLink('${b.id}', this.checked)"> ${escapeHtml(b.name)}</label>`).join('')
-        : '<p class="text-stone-300 py-2">Crie outra lousa de finanças (botão "Nova") para poder ligá-las.</p>';
-      byId('finLinkTitle').innerText = 'Somar "' + cur.name + '" com:';
-      byId('finLinkModal').classList.remove('hidden');
-    }
-    function closeFinLinks() { byId('finLinkModal').classList.add('hidden'); }
-    function finToggleLink(id, on) {
-      const a = finBoard(), b = appData.boards.find(x => x.id === id); if (!b) return;
-      const set = (x, y, v) => { x.links = (x.links || []).filter(i => i !== y.id); if (v) x.links.push(y.id); };
-      set(a, b, on); set(b, a, on);   // a ligação vale nos dois sentidos; desmarcar corta a ligação
-      saveData(); finRefreshAll();
-      const l = finLinked(a).length; byId('finLinkBadge').innerText = l ? l : '';
-    }
     function placeFinDock() {
       const d = byId('finDock'), vp = byId('boardViewport'); if (!d || !vp) return;
       const r = vp.getBoundingClientRect();
@@ -5010,7 +5084,6 @@
     }
     function updateFinDock() {
       const on = finIsFinance(), d = byId('finDock');
-      if (on && byId('finLinkBadge')) { const l = finLinked().length; byId('finLinkBadge').innerText = l ? l : ''; }
       if (d) d.classList.toggle('on', on);
       document.querySelectorAll('.fin-toggle-btn').forEach(b => b.classList.toggle('is-on', on));
       const t = byId('emptyTitle'), p = byId('emptyText');
@@ -5473,6 +5546,786 @@
       }
     }, 8000);
 
+  </script>
+
+  <script>
+    /* =========================================================================
+       ADIÇÕES (v6): várias lousas de finanças + ligações · giz/canetão · compartilhamento em tempo real
+       Este bloco só ACRESCENTA: ele envolve funções existentes sem alterar o comportamento delas.
+       ========================================================================= */
+
+    /* ---------- util ---------- */
+    const html = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    function stable(o) {
+      return JSON.stringify(o === undefined ? null : o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v))
+        ? Object.keys(v).sort().reduce((a, key) => { a[key] = v[key]; return a; }, {}) : v);
+    }
+    function findPieceAnywhere(id) {
+      for (const b of appData.boards) { const n = (b.notes || []).find(x => x.id === id); if (n) return n; }
+      return null;
+    }
+    function boardOfPiece(id) { return appData.boards.find(b => (b.notes || []).some(x => x.id === id)) || null; }
+    function openOv(id) { byId(id).classList.remove('hidden'); }
+    function closeOv(id) { byId(id).classList.add('hidden'); }
+
+    /* =========================================================================
+       1) FINANÇAS: várias lousas, cada uma com seus próprios dados, e ligações opcionais
+       ========================================================================= */
+    let finCtxBoard = null, finCtxNote = null;
+    const finBoards = () => appData.boards.filter(b => b.kind === 'finance');
+    function finSrcOf(note) {
+      return (note && note.src && appData.boards.find(b => b.id === note.src && b.kind === 'finance')) || finBoards()[0] || null;
+    }
+    /* Ligações são pessoais (ficam na sua conta, não vão para a lousa compartilhada) */
+    function finLinks() {
+      const L = appData.finLinks || (appData.finLinks = {});
+      if (!L.boards) L.boards = {};
+      if (!L.pieces) L.pieces = {};
+      return L;
+    }
+    function finLinkedBoards(board, note) {
+      const L = finLinks(), out = [];
+      const add = (b) => { if (b && b.kind === 'finance' && b !== board && out.indexOf(b) < 0) out.push(b); };
+      (L.boards[board.id] || []).forEach(id => add(appData.boards.find(b => b.id === id)));
+      if (note) (L.pieces[note.id] || []).forEach(pid => { const p = findPieceAnywhere(pid); if (p) add(finSrcOf(p)); });
+      return out;
+    }
+    function finEffRows() {
+      const b = finBoard();
+      let rows = finData(b).rows.slice();
+      finLinkedBoards(b, finCtxNote).forEach(o => { rows = rows.concat(finData(o).rows); });
+      return rows;
+    }
+
+    /* a "lousa de finanças" em uso: a da peça sendo desenhada; senão a ativa; senão a primeira */
+    window.finBoard = function () {
+      if (finCtxBoard) return finCtxBoard;
+      const a = getActiveBoard();
+      return a.kind === 'finance' ? a : (finBoards()[0] || a);
+    };
+    window.finRowsFor = function (period) {
+      let rows = finEffRows().filter(r => !finIsBlank(r));
+      if (period && period !== 'all') rows = rows.filter(r => (r.date || '').slice(0, 7) === period);
+      return rows;
+    };
+    window.finMonthsList = function () {
+      const set = {};
+      finEffRows().forEach(r => { const k = (r.date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) set[k] = 1; });
+      return Object.keys(set).sort().reverse();
+    };
+
+    function finWrapNote(name) {
+      const o = window[name]; if (typeof o !== 'function') return;
+      window[name] = function () {
+        let n = arguments[0]; if (typeof n === 'string') n = findPieceAnywhere(n);
+        if (!n || !isFinType(n.type)) return o.apply(this, arguments);
+        const pb = finCtxBoard, pn = finCtxNote;
+        finCtxNote = n; finCtxBoard = finSrcOf(n);
+        try { return o.apply(this, arguments); } finally { finCtxBoard = pb; finCtxNote = pn; }
+      };
+    }
+    ['finRenderPiece', 'finTableInner', 'finCardsData', 'finCardForKey', 'finCardsBodyHtml', 'finCardsInner', 'finChartInner',
+      'finRenderChartBox', 'finUpdateFoot', 'finCanRestore', 'finRestore', 'finEvalErase', 'finApplyErase', 'finPostRender',
+      'finAddRow', 'buildFinHtml', 'openFinChartModal'].forEach(finWrapNote);
+
+    (function () {   // pré-visualização do gráfico em edição usa a lousa certa
+      const o = window.syncFinChartModal;
+      window.syncFinChartModal = function () {
+        const n = finDraft && finDraft.editId ? findPieceAnywhere(finDraft.editId) : null;
+        if (!n) return o.apply(this, arguments);
+        const pb = finCtxBoard, pn = finCtxNote; finCtxNote = n; finCtxBoard = finSrcOf(n);
+        try { return o.apply(this, arguments); } finally { finCtxBoard = pb; finCtxNote = pn; }
+      };
+    })();
+
+    /* edições de uma linha: usam a lousa que contém a linha (mesmo que a peça esteja em outra lousa) */
+    const finBoardOfRow = (id) => finBoards().find(b => finData(b).rows.some(r => r.id === id));
+    window.finRow = function (id) { const b = finBoardOfRow(id); return b ? finData(b).rows.find(r => r.id === id) : undefined; };
+    ['finToggleRow', 'finToggleCat', 'finSetField', 'finLiveValue', 'finCommitValue', 'finValKey', 'finDeleteRow', 'finSyncRowViews'].forEach(name => {
+      const o = window[name];
+      window[name] = function (id) {
+        const b = finBoardOfRow(id); if (!b) return o.apply(this, arguments);
+        const pb = finCtxBoard; finCtxBoard = b;
+        try { return o.apply(this, arguments); } finally { finCtxBoard = pb; }
+      };
+    });
+    (function () {
+      const o = window.finToggleAll;
+      window.finToggleAll = function () {
+        const ev = window.event, el = ev && ev.target && ev.target.closest && ev.target.closest('.chalk-note');
+        const n = el && findPieceAnywhere(el.id);
+        if (!n || !isFinType(n.type)) return o.apply(this, arguments);
+        const pb = finCtxBoard; finCtxBoard = finSrcOf(n);
+        try { return o.apply(this, arguments); } finally { finCtxBoard = pb; }
+      };
+      const c = window.finCreatePiece;   // toda peça nova guarda de qual lousa de finanças vêm os dados
+      window.finCreatePiece = function (type, extra) { return c(type, Object.assign({ src: getActiveBoard().id }, extra || {})); };
+
+      const b = window.buildFinHtml;     // botão "ligar" nos cards e gráficos
+      window.buildFinHtml = function (note) {
+        let h = b(note);
+        if (note.type === 'fincards' || note.type === 'finchart') {
+          const n = (finLinks().pieces[note.id] || []).length;
+          const btn = `<button onclick="openPieceLinks('${note.id}')" class="chalk-btn text-[12px] px-1 rounded transition" title="Ligar a cards/gráficos de outras lousas (soma junto)" ${n ? 'style="color:#fbbf24"' : ''}><i class="fa-solid fa-link"></i>${n ? `<span class="text-[10px] ml-0.5">${n}</span>` : ''}</button>`;
+          h = h.replace('<button onclick="finChangeSize(', btn + '<button onclick="finChangeSize(');
+        }
+        return h;
+      };
+    })();
+
+    function createFinanceBoard() {
+      const n = finBoards().length + 1;
+      appData.boards.push({ id: 'board_' + Date.now(), name: n === 1 ? 'Finanças' : 'Finanças ' + n, kind: 'finance', nextZIndex: 5, notes: [], calendarEvents: {}, fin: { rows: [], trash: [], seq: 0 } });
+      appData.activeBoardIndex = appData.boards.length - 1;
+      selectedNoteId = null;
+      saveData(); renderNotes();
+    }
+
+    /* ligação entre LOUSAS de finanças (simétrica: ligar A↔B vale para os dois lados) */
+    function openFinLinkModal() { renderFinLinkModal(); openOv('finLinkModal'); }
+    function renderFinLinkModal() {
+      const cur = getActiveBoard(), L = finLinks(), mine = L.boards[cur.id] || [];
+      const others = finBoards().filter(b => b !== cur);
+      byId('finLinkTitle').textContent = 'Ligações de “' + cur.name + '”';
+      byId('finLinkBody').innerHTML = others.length ? others.map(b => {
+        const on = mine.indexOf(b.id) >= 0;
+        return `<button class="lk-row ${on ? 'on' : ''}" onclick="finToggleBoardLink('${b.id}')">
+          <i class="fa-solid ${on ? 'fa-link' : 'fa-link-slash'}"></i>
+          <span class="flex-1 text-left"><b>${html(b.name)}</b><br><small>${finData(b).rows.length} lançamentos${b.shared ? ' · compartilhada' : ''}</small></span>
+          <span class="lk-state">${on ? 'Somando junto' : 'Separada'}</span></button>`;
+      }).join('') : '<p class="text-sm text-stone-300">Você só tem uma lousa de finanças. Crie outra no botão <b>$ +</b> da barra para poder ligá-las.</p>';
+    }
+    function finToggleBoardLink(id) {
+      const L = finLinks(), a = getActiveBoard().id;
+      const A = L.boards[a] || (L.boards[a] = []), B = L.boards[id] || (L.boards[id] = []);
+      if (A.indexOf(id) >= 0) { L.boards[a] = A.filter(x => x !== id); L.boards[id] = B.filter(x => x !== a); }
+      else { A.push(id); if (B.indexOf(a) < 0) B.push(a); }
+      saveData(); renderFinLinkModal(); renderNotes();
+    }
+
+    /* ligação entre CARDS / GRÁFICOS (individual) */
+    let pieceLinkId = null;
+    function pieceLabel(n) {
+      if (n.type === 'finchart') return '📊 ' + (n.title || finDefaultTitle(n.cfg || {}));
+      return '💳 ' + (n.only ? (n.onlyLabel || ({ in: 'Entradas', out: 'Saídas', bal: 'Saldo', pin: 'A receber', pout: 'A pagar' }[n.only]) || 'Card') : (n.title || 'Resumo financeiro'));
+    }
+    function openPieceLinks(id) { pieceLinkId = id; renderPieceLinks(); openOv('pieceLinkModal'); }
+    function renderPieceLinks() {
+      const me = findPieceAnywhere(pieceLinkId); if (!me) return closeOv('pieceLinkModal');
+      const mySrc = finSrcOf(me), mine = finLinks().pieces[me.id] || [];
+      byId('pieceLinkTitle').textContent = pieceLabel(me);
+      const rows = [];
+      appData.boards.forEach(b => (b.notes || []).forEach(n => {
+        if (n.id === me.id || (n.type !== 'fincards' && n.type !== 'finchart')) return;
+        const src = finSrcOf(n); if (!src || src === mySrc) return;
+        const on = mine.indexOf(n.id) >= 0;
+        rows.push(`<button class="lk-row ${on ? 'on' : ''}" onclick="togglePieceLink('${n.id}')">
+          <i class="fa-solid ${on ? 'fa-link' : 'fa-link-slash'}"></i>
+          <span class="flex-1 text-left"><b>${html(pieceLabel(n))}</b><br><small>dados da lousa “${html(src.name)}”${b !== src ? ' · peça em “' + html(b.name) + '”' : ''}</small></span>
+          <span class="lk-state">${on ? 'Somando junto' : 'Separado'}</span></button>`);
+      }));
+      byId('pieceLinkBody').innerHTML = rows.length ? rows.join('') :
+        '<p class="text-sm text-stone-300">Não há cards ou gráficos de <b>outras</b> lousas de finanças para ligar. Crie-os lá e volte aqui.</p>';
+    }
+    function togglePieceLink(pid) {
+      const L = finLinks(), a = pieceLinkId;
+      const A = L.pieces[a] || (L.pieces[a] = []), B = L.pieces[pid] || (L.pieces[pid] = []);
+      if (A.indexOf(pid) >= 0) { L.pieces[a] = A.filter(x => x !== pid); L.pieces[pid] = B.filter(x => x !== a); }
+      else { A.push(pid); if (B.indexOf(a) < 0) B.push(a); }
+      saveData(); renderPieceLinks(); renderNotes();
+    }
+
+    /* =========================================================================
+       2) GIZ / CANETÃO: escrever livremente, com som, cor configurável e posição fixa
+       ========================================================================= */
+    let chalkDrag = null, chalkPlace = false, chalkLastTap = 0, chalkRest = false, chalkRestTimer = null, strokeDirty = false, inkRaf = 0;
+    const CK_W = 86, CK_H = 16, CK_MAX_NUMS = 60000;
+    const getChalkCfg = () => appData.chalk || (appData.chalk = { color: 'white', width: 4, sound: true, hx: 0.7, hy: 1 });
+    const isMarker = () => appData.theme === 'marker';
+    function chalkHex(id) { const p = getPalette(); return (p.find(c => c.id === id) || p[0]).hex; }
+    function chalkDims() { const k = boardScale < 1 ? Math.max(1, 0.7 / boardScale) : 1; return { w: CK_W * k, h: CK_H * k, k }; }
+    function chalkHome() {
+      const mn = byId('boardCanvas'), c = getChalkCfg(), m = ERASER_MARGIN, d = chalkDims();
+      return { x: m + clamp01(c.hx) * Math.max(0, mn.clientWidth - d.w - 2 * m), y: m + clamp01(c.hy) * Math.max(0, mn.clientHeight - d.h - 2 * m) };
+    }
+    function renderChalk() {
+      const el = byId('chalkStick'); if (!el || chalkDrag || chalkRest) return;
+      const d = chalkDims(), p = chalkHome();
+      el.style.width = d.w + 'px'; el.style.height = d.h + 'px'; el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+      el.style.setProperty('--ck', chalkHex(getChalkCfg().color));
+      const t = byId('gizTabLbl'); if (t) t.textContent = isMarker() ? 'Canetão' : 'Giz';
+    }
+    function strokeWidth(s) { return (s.w || 4) * (isMarker() ? 1.3 : 1); }
+    function strokePath(p) {
+      if (p.length < 4) return `M${p[0]} ${p[1]} l0.01 0`;
+      let d = `M${p[0]} ${p[1]}`;
+      for (let i = 2; i < p.length - 2; i += 2) d += ` Q${p[i]} ${p[i + 1]} ${(p[i] + p[i + 2]) / 2} ${(p[i + 1] + p[i + 3]) / 2}`;
+      return d + ` L${p[p.length - 2]} ${p[p.length - 1]}`;
+    }
+    function renderStrokes() {
+      const g = byId('inkDone'); if (!g) return;
+      const b = getActiveBoard();
+      g.innerHTML = (b.strokes || []).map(s => `<path d="${strokePath(s.p)}" stroke="${chalkHex(s.c)}" stroke-width="${strokeWidth(s)}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="${isMarker() ? 1 : 0.93}"/>`).join('');
+    }
+    function scheduleInkRender() { if (!inkRaf) inkRaf = requestAnimationFrame(() => { inkRaf = 0; renderStrokes(); }); }
+
+    /* som do giz (Web Audio, sem arquivos): riscado seco e agudo que acompanha a velocidade */
+    const chalkSnd = (() => {
+      let ctx = null, g = null, raf = 0, active = false, speed = 0, lastX = 0, lastY = 0, lastT = 0, lastMoveT = 0;
+      const enabled = () => getChalkCfg().sound !== false;
+      function build() {
+        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+        ctx = new AC();
+        const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (Math.random() > 0.55 ? 1 : 0.25);   // ruído "granulado"
+        const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3000; bp.Q.value = 1.1;
+        const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+        const gn = ctx.createGain(); gn.gain.value = 0;
+        const am = ctx.createGain(); am.gain.value = 0.7;
+        const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 40;
+        const depth = ctx.createGain(); depth.gain.value = 0.3; osc.connect(depth); depth.connect(am.gain);
+        const out = ctx.createGain(); out.gain.value = 0.55;
+        src.connect(hp); hp.connect(bp); bp.connect(gn); gn.connect(am); am.connect(out); out.connect(ctx.destination);
+        src.start(); osc.start(); g = { bp, gn, osc };
+        return true;
+      }
+      function tick() {
+        if (!active) return;
+        const now = performance.now(), t = ctx.currentTime;
+        const level = Math.pow(Math.min((now - lastMoveT > 80 ? 0 : speed) / 1.4, 1), 0.7);
+        g.gn.gain.setTargetAtTime(level * 0.3, t, 0.02);
+        g.bp.frequency.setTargetAtTime(2200 + level * 2800, t, 0.05);
+        g.osc.frequency.setTargetAtTime(22 + level * 60, t, 0.05);
+        raf = requestAnimationFrame(tick);
+      }
+      return {
+        start(x, y) {
+          if (!enabled() || (!ctx && !build())) return;
+          if (ctx.state === 'suspended') ctx.resume();
+          active = true; speed = 0; lastX = x; lastY = y; lastT = lastMoveT = performance.now();
+          cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+        },
+        move(x, y) {
+          if (!active || !enabled()) return;
+          const now = performance.now(), dist = Math.hypot(x - lastX, y - lastY); if (dist < 0.5) return;
+          speed = speed * 0.55 + (dist / Math.max(now - lastT, 6)) * 0.45; lastX = x; lastY = y; lastT = lastMoveT = now;
+        },
+        stop() {
+          if (!active) return; active = false; cancelAnimationFrame(raf);
+          g.gn.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
+          setTimeout(() => { if (!active && ctx && ctx.state === 'running') ctx.suspend(); }, 500);
+        }
+      };
+    })();
+
+    (function initChalk() {
+      const el = byId('chalkStick');
+      const tip = (x, y, d) => [x + 3, y + d.h / 2];
+      function addPt(d, x, y) {
+        const s = d.stroke, p = s.p, lx = p[p.length - 2], ly = p[p.length - 1];
+        const dist = Math.hypot(x - lx, y - ly); if (dist < 1.8) return;
+        const n = Math.max(1, Math.ceil(dist / 5));
+        for (let i = 1; i <= n; i++) p.push(+(lx + (x - lx) * i / n).toFixed(1), +(ly + (y - ly) * i / n).toFixed(1));
+        byId('inkLive').setAttribute('d', strokePath(p));
+      }
+      function beginStroke(d, x, y) {
+        const c = getChalkCfg();
+        d.stroke = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), c: c.color, w: c.width || 4, p: [+x.toFixed(1), +y.toFixed(1)] };
+        const live = byId('inkLive');
+        live.setAttribute('stroke', chalkHex(c.color)); live.setAttribute('stroke-width', strokeWidth(d.stroke));
+        live.setAttribute('d', strokePath(d.stroke.p));
+        d.writing = true; el.classList.add('ck-writing');
+        chalkSnd.start(d.cx, d.cy);
+      }
+      function endStroke(d) {
+        chalkSnd.stop(); el.classList.remove('ck-writing');
+        byId('inkLive').setAttribute('d', '');
+        if (!d.stroke) return false;
+        const b = getActiveBoard(); if (!b.strokes) b.strokes = [];
+        b.strokes.push(d.stroke);
+        let total = b.strokes.reduce((a, s) => a + s.p.length, 0);
+        while (total > CK_MAX_NUMS && b.strokes.length > 1) total -= b.strokes.shift().p.length;   // mantém a lousa leve
+        saveData(); renderStrokes();
+        return true;
+      }
+      function goHome() {
+        chalkRest = false; clearTimeout(chalkRestTimer); chalkRestTimer = null;
+        const p = chalkHome();
+        el.style.transition = 'left .35s cubic-bezier(.2,.8,.3,1), top .35s cubic-bezier(.2,.8,.3,1)';
+        el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+        setTimeout(() => { if (!chalkDrag) el.style.transition = 'none'; }, 380);
+      }
+      window.chalkGoHome = goHome;
+
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        clearTimeout(chalkRestTimer);
+        const r = el.getBoundingClientRect(), pd = chalkDims();
+        chalkDrag = { pid: e.pointerId, ox: (e.clientX - r.left) / boardScale, oy: (e.clientY - r.top) / boardScale, sx: e.clientX, sy: e.clientY,
+          x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0, moved: false, writing: false, stroke: null, wrote: false, pt: 0, cx: e.clientX, cy: e.clientY, h: pd.h };
+        el.style.transition = 'none'; el.classList.add('is-erasing');
+        if (chalkRest && !chalkPlace) {   // ainda está na lousa: continua escrevendo na hora
+          const t = tip(chalkDrag.x, chalkDrag.y, pd); beginStroke(chalkDrag, t[0], t[1]); chalkDrag.wrote = true;
+        }
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      el.addEventListener('pointermove', (e) => {
+        const d = chalkDrag; if (!d || e.pointerId !== d.pid) return;
+        e.preventDefault();
+        if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) return;
+        d.moved = true; d.cx = e.clientX; d.cy = e.clientY;
+        const mn = byId('boardCanvas'), cr = mn.getBoundingClientRect(), pd = chalkDims();
+        d.x = Math.max(0, Math.min((e.clientX - cr.left) / boardScale - d.ox, mn.clientWidth - pd.w));
+        d.y = Math.max(0, Math.min((e.clientY - cr.top) / boardScale - d.oy, mn.clientHeight - pd.h));
+        el.style.left = d.x + 'px'; el.style.top = d.y + 'px';
+        if (chalkPlace) return;
+        const t = tip(d.x, d.y, pd);
+        if (d.writing) { addPt(d, t[0], t[1]); chalkSnd.move(e.clientX, e.clientY); d.wrote = true; }
+        else {   // carregando o giz: pare um instante onde quer começar para ele passar a escrever
+          clearTimeout(d.pt);
+          d.pt = setTimeout(() => { if (chalkDrag === d && !d.writing && !chalkPlace) { const q = tip(d.x, d.y, chalkDims()); beginStroke(d, q[0], q[1]); } }, 230);
+        }
+      });
+      const end = (e) => {
+        const d = chalkDrag; if (!d || (e && e.pointerId !== d.pid)) return;
+        clearTimeout(d.pt); chalkDrag = null;
+        el.classList.remove('is-erasing');
+        try { el.releasePointerCapture(d.pid); } catch (err) {}
+        const wrote = endStroke(d), pd = chalkDims();
+        if (d.moved && chalkPlace) {
+          const mn = byId('boardCanvas'), c = getChalkCfg(), m = ERASER_MARGIN;
+          c.hx = clamp01((d.x - m) / Math.max(1, mn.clientWidth - pd.w - 2 * m)); c.hy = clamp01((d.y - m) / Math.max(1, mn.clientHeight - pd.h - 2 * m));
+          saveData(); setChalkPlace(false); chalkRest = false; renderChalk(); return;
+        }
+        if (wrote) { chalkRest = true; clearTimeout(chalkRestTimer); chalkRestTimer = setTimeout(goHome, 4000); return; }   // fica um tempo na lousa
+        if (d.moved || chalkRest) { goHome(); if (d.moved) return; }
+        const now = Date.now();
+        if (now - chalkLastTap < 400) { chalkLastTap = 0; startQuoteEdit('giz'); } else chalkLastTap = now;
+      };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    })();
+
+    /* o apagador também apaga o que foi escrito com o giz */
+    function eraseStrokes(R) {
+      const b = getActiveBoard(); if (!b.strokes || !b.strokes.length) return false;
+      let hit = false; const out = [];
+      b.strokes.forEach(s => {
+        const p = s.p, segs = []; let seg = [], cut = false;
+        for (let i = 0; i < p.length; i += 2) {
+          const inside = p[i] >= R.x - 2 && p[i] <= R.x + R.w + 2 && p[i + 1] >= R.y - 2 && p[i + 1] <= R.y + R.h + 2;
+          if (inside) { cut = true; if (seg.length) { segs.push(seg); seg = []; } } else seg.push(p[i], p[i + 1]);
+        }
+        if (seg.length) segs.push(seg);
+        if (!cut) { out.push(s); return; }
+        hit = true;
+        segs.forEach(sg => { if (sg.length >= 2) out.push({ id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), c: s.c, w: s.w, p: sg }); });
+      });
+      if (hit) { b.strokes = out; strokeDirty = true; scheduleInkRender(); }
+      return hit;
+    }
+    (function () {
+      const er = window.eraseRect, ce = window.commitErase;
+      window.eraseRect = function (R, touched) { const a = er(R, touched), b = eraseStrokes(R); return a || b; };
+      window.commitErase = function (touched) { const r = ce(touched); if (strokeDirty) { strokeDirty = false; saveData(); } return r; };
+    })();
+
+    /* ajustes do giz (aba "Giz" da engrenagem) */
+    function syncChalkPanel() {
+      const c = getChalkCfg();
+      byId('chalkColors').innerHTML = getPalette().map(p => `<button type="button" onclick="setChalkColor('${p.id}')" title="${html(p.label)}" class="w-7 h-7 rounded-full border-2 transition ${c.color === p.id ? 'border-amber-300 scale-110' : 'border-black/40'}" style="background:${p.hex}"></button>`).join('');
+      byId('chalkWidth').value = c.width || 4; byId('chalkWidthLbl').textContent = (c.width || 4) + ' px';
+      byId('chalkSound').checked = c.sound !== false;
+      byId('chalkPrevLine').setAttribute('stroke', chalkHex(c.color)); byId('chalkPrevLine').setAttribute('stroke-width', strokeWidth({ w: c.width }));
+      renderChalk();
+    }
+    function setChalkColor(id) { getChalkCfg().color = id; saveData(); syncChalkPanel(); }
+    function setChalkWidth(v) { getChalkCfg().width = Math.max(2, Math.min(+v, 14)); saveData(); syncChalkPanel(); }
+    function setChalkSound(on) { getChalkCfg().sound = !!on; if (!on) chalkSnd.stop(); saveData(); }
+    function setChalkPlace(on) {
+      chalkPlace = on; byId('chalkStick').classList.toggle('ck-place', on);
+      const b = byId('chalkPlaceBtn'); if (b) b.querySelector('span').textContent = on ? 'Arraste o giz e solte no lugar novo' : 'Mudar posição de descanso';
+    }
+    function toggleChalkPlace() { if (!chalkPlace && chalkRest && window.chalkGoHome) window.chalkGoHome(); setChalkPlace(!chalkPlace); }
+    function resetChalk() {
+      const c = getChalkCfg(); Object.assign(c, { hx: 0.7, hy: 1 }); saveData(); setChalkPlace(false); chalkRest = false; renderChalk(); placeQuoteEditor();
+    }
+    function clearStrokes() {
+      const b = getActiveBoard(); if (!b.strokes || !b.strokes.length) return;
+      showCustomDialog({ title: 'Apagar escritos', message: 'Apagar tudo o que foi escrito à mão com o giz/canetão nesta lousa?', onConfirm: () => { b.strokes = []; saveData(); renderStrokes(); } });
+    }
+
+    /* =========================================================================
+       3) COMPARTILHAMENTO EM TEMPO REAL (convites por e-mail, notificações, cancelar a qualquer momento)
+       ========================================================================= */
+    const SH = { unsubs: {}, rev: {}, base: {}, sig: {}, info: {}, timers: {}, pushing: {}, again: {}, imgKnown: {}, inc: [], out: [], unInv: null, on: false };
+    const sharedBoards = () => appData.boards.filter(b => b.shared && b.shared.sid);
+    const shBoard = (sid) => sharedBoards().find(b => b.shared.sid === sid);
+    const shMe = () => FB.me();
+    function shContent(b) {
+      return { name: b.name, kind: b.kind || null, nextZIndex: b.nextZIndex || 5, notes: b.notes || [], calendarEvents: b.calendarEvents || {}, strokes: b.strokes || [], fin: b.fin || null };
+    }
+    function shNorm(c) {
+      return { name: c.name || 'Lousa', kind: c.kind || null, nextZIndex: c.nextZIndex || 5, notes: c.notes || [], calendarEvents: c.calendarEvents || {}, strokes: c.strokes || [], fin: c.fin || null };
+    }
+    const shMap = (a) => { const o = {}; (a || []).forEach(x => { o[x.id] = stable(x); }); return o; };
+    function shBase(c) {
+      c = shNorm(c);
+      return { notes: shMap(c.notes), strokes: shMap(c.strokes), rows: shMap(c.fin && c.fin.rows),
+        f: { name: stable(c.name), kind: stable(c.kind), nextZIndex: stable(c.nextZIndex), calendarEvents: stable(c.calendarEvents), fin: stable(c.fin) } };
+    }
+    /* mescla por item (3 vias: meu estado, o da nuvem e o último que eu conhecia) */
+    function shMergeList(local, remote, base) {
+      const L = {}, R = {}, out = [], seen = {};
+      local.forEach(x => { L[x.id] = x; }); remote.forEach(x => { R[x.id] = x; });
+      remote.concat(local).forEach(x => {
+        const id = x.id; if (seen[id]) return; seen[id] = 1;
+        const l = L[id], r = R[id], ls = l ? stable(l) : undefined, rs = r ? stable(r) : undefined, bs = base[id];
+        const pick = ls === rs ? l : (ls === bs ? r : l);   // só eu mudei → eu · só a nuvem mudou → nuvem · os dois → eu
+        if (pick) out.push(pick);
+      });
+      return out;
+    }
+    function shMerge(b, remote, base) {
+      remote = shNorm(remote);
+      if (!base) {   // primeira leitura: a nuvem manda
+        b.name = remote.name; b.kind = remote.kind || undefined; b.nextZIndex = remote.nextZIndex; b.notes = remote.notes;
+        b.calendarEvents = remote.calendarEvents; b.strokes = remote.strokes; if (remote.fin) b.fin = remote.fin; else delete b.fin;
+        return;
+      }
+      const c = shNorm(shContent(b));
+      const pick = (k) => { const ls = stable(c[k]), rs = stable(remote[k]); return ls === rs ? c[k] : (ls === base.f[k] ? remote[k] : c[k]); };
+      b.name = pick('name'); b.calendarEvents = pick('calendarEvents');
+      b.nextZIndex = Math.max(c.nextZIndex, remote.nextZIndex);
+      b.notes = shMergeList(c.notes, remote.notes, base.notes);
+      b.strokes = shMergeList(c.strokes, remote.strokes, base.strokes);
+      if (c.kind || remote.kind) b.kind = c.kind || remote.kind;
+      let fin = pick('fin');
+      if (c.fin && remote.fin) {   // lançamentos mesclados linha a linha
+        const lrows = c.fin.rows || [], rrows = remote.fin.rows || [];
+        fin = Object.assign({}, pick('fin'), { rows: shMergeList(lrows, rrows, base.rows) });
+        fin.seq = Math.max(c.fin.seq || 0, remote.fin.seq || 0);
+      }
+      if (fin) b.fin = fin;
+    }
+
+    function shAnyBusy() {
+      const a = document.activeElement;
+      return !!(activeDrag || activeResize || activeCorner || chalkDrag || eraserDrag ||
+        (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest && a.closest('#boardCanvas')));
+    }
+    let shRenderTimer = 0;
+    function shRender() {
+      clearTimeout(shRenderTimer);
+      if (shAnyBusy()) { shRenderTimer = setTimeout(shRender, 700); return; }   // não interrompe quem está digitando/arrastando
+      renderNotes();
+    }
+    function shCacheLocal() { try { localStorage.setItem(localKey(), JSON.stringify(appData)); } catch (e) {} }
+
+    function shApplyRemote(sid, data, force) {
+      const b = shBoard(sid); if (!b) return;
+      if (!force && (data.rev || 0) <= (SH.rev[sid] || 0) && SH.rev[sid] !== undefined) return;
+      SH.info[sid] = { ownerUid: data.ownerUid, ownerEmail: data.ownerEmail, members: data.members, memberEmails: data.memberEmails, invitedEmails: data.invitedEmails };
+      if (data.members.indexOf(shMe().uid) < 0) { shDropLocalBoard(sid, 'Seu acesso a esta lousa foi encerrado.'); return; }
+      shMerge(b, data.content, SH.base[sid] || null);
+      SH.rev[sid] = data.rev; SH.sig[sid] = stable(shNorm(data.content)); SH.base[sid] = shBase(data.content);
+      shCacheLocal();
+      const activeB = getActiveBoard();
+      if (activeB === b || activeB.kind === 'finance') shRender(); else updateBoardWidgetControls();
+      if (byId('shareModal') && !byId('shareModal').classList.contains('hidden')) renderShareModal();
+      if (stable(shNorm(shContent(b))) !== SH.sig[sid]) shSchedule(sid, 80);   // sobrou algo meu para enviar
+    }
+
+    function shSchedule(sid, ms) {
+      clearTimeout(SH.timers[sid]);
+      if (SH.pushing[sid]) { SH.again[sid] = true; return; }
+      SH.timers[sid] = setTimeout(() => shPush(sid), ms == null ? 350 : ms);
+    }
+    async function shEnsureImages(sid, b) {
+      const known = SH.imgKnown[sid] || (SH.imgKnown[sid] = new Set());
+      const ids = [];
+      (b.notes || []).forEach(n => { if (n.imageId) ids.push(n.imageId); if (n.type === 'sticker' && n.kind === 'img' && n.stickerId) ids.push(n.stickerId); });
+      for (const id of ids) {
+        if (known.has(id)) continue;
+        try { if (await FB.ensureSharedImage(sid, id)) known.add(id); } catch (e) { console.warn('Imagem compartilhada:', e); }
+      }
+    }
+    async function shPush(sid) {
+      const b = shBoard(sid); if (!b || !SH.on) return;
+      if (SH.pushing[sid]) { SH.again[sid] = true; return; }
+      const content = shContent(b), sg = stable(shNorm(content));
+      if (sg === SH.sig[sid]) return;
+      SH.pushing[sid] = true; setSyncStatus('saving');
+      try {
+        await shEnsureImages(sid, b);
+        const res = await FB.pushShared(sid, content, SH.rev[sid] || 0);
+        if (res.gone) { shHandleGone(sid); return; }
+        if (res.conflict) {   // alguém gravou antes de mim: mescla e tenta de novo
+          shApplyRemote(sid, res.remote, true); SH.again[sid] = true;
+        } else {
+          SH.rev[sid] = res.rev; SH.sig[sid] = sg; SH.base[sid] = shBase(content); setSyncStatus('saved');
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar lousa compartilhada:', err);
+        setSyncStatus('error', err && err.message);
+      } finally {
+        SH.pushing[sid] = false;
+        if (SH.again[sid]) { SH.again[sid] = false; shSchedule(sid, 60); }
+      }
+    }
+
+    function shWatch(sid) {
+      if (SH.unsubs[sid]) return;
+      SH.unsubs[sid] = FB.watchShared(sid, (data, err) => {
+        if (data) return shApplyRemote(sid, data, false);
+        if (!err || err.code === 'permission-denied') shHandleGone(sid);   // outros erros: o Firestore tenta de novo sozinho
+      });
+    }
+    function shUnwatch(sid) {
+      if (SH.unsubs[sid]) { try { SH.unsubs[sid](); } catch (e) {} delete SH.unsubs[sid]; }
+      ['rev', 'base', 'sig', 'info', 'imgKnown', 'again', 'pushing'].forEach(k => delete SH[k][sid]);
+      clearTimeout(SH.timers[sid]);
+    }
+    function shDropLocalBoard(sid, msg) {
+      const i = appData.boards.findIndex(b => b.shared && b.shared.sid === sid);
+      shUnwatch(sid);
+      if (i < 0) return;
+      appData.boards.splice(i, 1);
+      if (!appData.boards.length) createInitialDefaultBoard();
+      else { if (i < appData.activeBoardIndex) appData.activeBoardIndex--; if (appData.activeBoardIndex >= appData.boards.length) appData.activeBoardIndex = appData.boards.length - 1; }
+      selectedNoteId = null; saveData(); renderNotes();
+      if (msg) showCustomDialog({ title: 'Lousa compartilhada', message: msg });
+    }
+    function shHandleGone(sid) {
+      const b = shBoard(sid); if (!b) return;
+      if (b.shared.owner === shMe().uid) { delete b.shared; shUnwatch(sid); saveData(); updateBoardWidgetControls(); }   // dona: a lousa volta a ser só dela
+      else shDropLocalBoard(sid, 'O compartilhamento de “' + b.name + '” foi encerrado. Você pode pedir acesso de novo, se quiser.');
+    }
+
+    /* trocar o id de uma lousa (peças de finanças e ligações apontam para ele) */
+    function shRenameBoard(oldId, newId) {
+      appData.boards.forEach(bb => { if (bb.id === oldId) bb.id = newId; (bb.notes || []).forEach(n => { if (n.src === oldId) n.src = newId; }); });
+      const L = finLinks(), nb = {};
+      Object.keys(L.boards).forEach(k => { nb[k === oldId ? newId : k] = L.boards[k].map(x => x === oldId ? newId : x); });
+      L.boards = nb;
+    }
+    async function shMakeShared(b, firstEmail) {
+      const oldId = b.id, sid = 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      shRenameBoard(oldId, sid);
+      try { await FB.createShared(sid, shContent(b), firstEmail); }
+      catch (e) { shRenameBoard(sid, oldId); throw e; }
+      b.shared = { sid, owner: shMe().uid };
+      SH.rev[sid] = 1; SH.sig[sid] = stable(shNorm(shContent(b))); SH.base[sid] = shBase(shContent(b));
+      SH.info[sid] = { ownerUid: shMe().uid, ownerEmail: shMe().email, members: [shMe().uid], memberEmails: [shMe().email], invitedEmails: firstEmail ? [firstEmail] : [] };
+      await shEnsureImages(sid, b);
+      saveData(); shWatch(sid);
+    }
+
+    /* ----- enviar / aceitar / recusar / cancelar ----- */
+    async function shSendInvite() {
+      const inp = byId('shareEmail'), msg = byId('shareMsg'), email = inp.value.trim().toLowerCase();
+      const say = (t, ok) => { msg.textContent = t; msg.className = 'text-xs mt-2 ' + (ok ? 'text-emerald-300' : 'text-red-300'); };
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return say('Digite um e-mail válido.');
+      if (email === shMe().email) return say('Esse é o seu próprio e-mail.');
+      const b = getActiveBoard(), sid = b.shared && b.shared.sid, info = sid && SH.info[sid];
+      if (info && info.memberEmails.indexOf(email) >= 0) return say('Essa pessoa já participa desta lousa.');
+      if (sid && SH.out.some(i => i.sid === sid && i.toEmail === email && i.status === 'pending')) return say('Já existe um pedido pendente para esse e-mail.');
+      const btn = byId('shareSendBtn'); btn.disabled = true; say('Enviando...', true);
+      try {
+        if (!sid) await shMakeShared(b, email); else await FB.addInvited(sid, email);
+        await FB.sendInvite({ toEmail: email, sid: b.shared.sid, boardName: b.name, kind: b.kind === 'finance' ? 'finance' : 'board' });
+        inp.value = ''; say('Pedido enviado! A pessoa verá no botão de notificações.', true);
+      } catch (e) { console.error(e); say('Não foi possível enviar: ' + (e && e.code === 'permission-denied' ? 'faltam as regras do Firestore (veja firestore.rules).' : (e && e.message) || 'erro')); }
+      btn.disabled = false; renderShareModal(true);
+    }
+    async function shAccept(id) {
+      const inv = SH.inc.find(i => i.id === id); if (!inv) return;
+      try {
+        await FB.joinShared(inv.sid); await FB.setInviteStatus(id, 'accepted');
+        if (!shBoard(inv.sid)) appData.boards.push({ id: inv.sid, name: inv.boardName || 'Lousa compartilhada', kind: inv.kind === 'finance' ? 'finance' : undefined, nextZIndex: 5, notes: [], calendarEvents: {}, shared: { sid: inv.sid, owner: inv.fromUid } });
+        appData.activeBoardIndex = appData.boards.findIndex(b => b.shared && b.shared.sid === inv.sid);
+        shWatch(inv.sid); saveData(); renderNotes(); closeNotif();
+      } catch (e) { console.error(e); showCustomDialog({ title: 'Não foi possível aceitar', message: 'O pedido pode ter sido cancelado por quem enviou. Peça para enviarem de novo.' }); }
+    }
+    async function shReject(id) {
+      const inv = SH.inc.find(i => i.id === id); if (!inv) return;
+      try { await FB.setInviteStatus(id, 'rejected'); } catch (e) { console.error(e); }
+      try { await FB.declineShared(inv.sid); } catch (e) {}
+    }
+    async function shRemoveMember(sid, email) {
+      const info = SH.info[sid]; if (!info) return;
+      const i = info.memberEmails.indexOf(email); if (i < 0) return;
+      try {
+        await FB.removeMember(sid, info.members[i], email);
+        for (const inv of SH.out.filter(x => x.sid === sid && x.toEmail === email && x.status === 'accepted')) await FB.setInviteStatus(inv.id, 'cancelled');
+      } catch (e) { console.error(e); showCustomDialog({ title: 'Erro', message: 'Não foi possível remover agora. Tente de novo.' }); }
+      renderShareModal();
+    }
+    async function shCancelInvite(id) {
+      const inv = SH.out.find(i => i.id === id); if (!inv) return;
+      try { await FB.uninvite(inv.sid, inv.toEmail); await FB.setInviteStatus(id, 'cancelled'); } catch (e) { console.error(e); }
+    }
+    async function shLeave(sid) {
+      const me = shMe();
+      try {
+        await FB.removeMember(sid, me.uid, me.email);
+        for (const inv of SH.inc.filter(x => x.sid === sid && x.status === 'accepted')) await FB.setInviteStatus(inv.id, 'cancelled');
+      } catch (e) { console.error(e); showCustomDialog({ title: 'Erro', message: 'Não foi possível sair agora. Tente de novo.' }); return; }
+      closeOv('shareModal'); shDropLocalBoard(sid, null);
+    }
+    function confirmLeaveOrStop(sid) {
+      const b = shBoard(sid); if (!b) return;
+      showCustomDialog({ title: 'Cancelar ligação', message: 'Você sai de “' + b.name + '” e perde o acesso. Para voltar, será preciso pedir de novo e a outra pessoa aceitar.', onConfirm: () => shLeave(sid) });
+    }
+    function confirmRemoveMember(sid, email) {
+      showCustomDialog({ title: 'Cancelar ligação', message: email + ' perde o acesso a esta lousa. Para voltar, precisa de um novo pedido e aceitar.', onConfirm: () => shRemoveMember(sid, email) });
+    }
+
+    /* excluir uma lousa compartilhada: dona apaga para todos; participante apenas sai */
+    (function () {
+      const o = window.confirmDeleteCurrentBoard;
+      window.confirmDeleteCurrentBoard = function () {
+        const b = getActiveBoard();
+        if (!(b.shared && b.shared.sid) || appData.boards.length <= 1) return o.apply(this, arguments);
+        const sid = b.shared.sid, own = b.shared.owner === shMe().uid;
+        showCustomDialog({
+          title: own ? 'Excluir lousa compartilhada' : 'Sair da lousa compartilhada',
+          message: own ? `Excluir “${b.name}” apaga a lousa para todos os participantes.` : `Você sai de “${b.name}” e perde o acesso até receber um novo convite.`,
+          onConfirm: async () => {
+            try {
+              if (own) {
+                await FB.deleteShared(sid);
+                for (const inv of SH.out.filter(x => x.sid === sid && (x.status === 'pending' || x.status === 'accepted'))) { try { await FB.setInviteStatus(inv.id, 'cancelled'); } catch (e) {} }
+                shDropLocalBoard(sid, null);
+              } else await shLeave(sid);
+            } catch (e) { console.error(e); showCustomDialog({ title: 'Erro', message: 'Não foi possível concluir agora.' }); }
+          }
+        });
+      };
+    })();
+
+    /* ----- janela de compartilhar ----- */
+    function openShareModal() { renderShareModal(); openOv('shareModal'); setTimeout(() => { const i = byId('shareEmail'); if (i) i.focus(); }, 60); }
+    function renderShareModal(keepMsg) {
+      const b = getActiveBoard(), sid = b.shared && b.shared.sid, info = sid && SH.info[sid], me = shMe();
+      byId('shareTitle').textContent = 'Compartilhar “' + b.name + '”';
+      if (!keepMsg) byId('shareMsg').textContent = '';
+      let h = '';
+      const iAmOwner = !sid || b.shared.owner === me.uid;
+      if (!sid) h += `<div class="sh-row"><i class="fa-solid fa-user"></i><span class="flex-1">${html(me.email)}<br><small>só você, por enquanto</small></span></div>`;
+      else if (info) {
+        info.memberEmails.forEach((em, i) => {
+          const isOwner = info.members[i] === info.ownerUid, isMe = em === me.email;
+          const btn = isMe && !iAmOwner ? `<button class="sh-btn danger" onclick="confirmLeaveOrStop('${sid}')">Sair</button>`
+            : (iAmOwner && !isMe ? `<button class="sh-btn danger" onclick="confirmRemoveMember('${sid}','${html(em)}')">Cancelar ligação</button>` : '');
+          h += `<div class="sh-row"><i class="fa-solid ${isOwner ? 'fa-crown' : 'fa-user'}"></i><span class="flex-1">${html(em)}${isMe ? ' (você)' : ''}<br><small>${isOwner ? 'dona(o) da lousa' : 'participante'}</small></span>${btn}</div>`;
+        });
+      } else h += '<p class="text-xs text-stone-400">Carregando participantes...</p>';
+      const pend = sid ? SH.out.filter(i => i.sid === sid && i.status === 'pending') : [];
+      pend.forEach(i => { h += `<div class="sh-row"><i class="fa-regular fa-clock"></i><span class="flex-1">${html(i.toEmail)}<br><small>aguardando resposta</small></span><button class="sh-btn" onclick="shCancelInvite('${i.id}')">Cancelar pedido</button></div>`; });
+      byId('shareList').innerHTML = h;
+      byId('shareNote').textContent = sid && !iAmOwner ? 'Você pode sair quando quiser; só quem é dona(o) convida novas pessoas.' : 'Todos que aceitarem editam esta mesma lousa ao vivo. Qualquer lado pode cancelar quando quiser.';
+      byId('shareInviteBox').classList.toggle('hidden', !iAmOwner);
+    }
+
+    /* ----- notificações (sino) ----- */
+    const dismissKey = () => 'lousa_dismissed_' + (currentUser ? currentUser.uid : '');
+    function shDismissed() { try { return JSON.parse(localStorage.getItem(dismissKey()) || '[]'); } catch (e) { return []; } }
+    function shNotifItems() {
+      const dis = shDismissed(), now = Date.now(), week = 14 * 864e5, items = [];
+      SH.inc.filter(i => i.status === 'pending').forEach(i => items.push({ kind: 'invite', i, t: i.createdAt }));
+      SH.out.filter(i => i.status !== 'pending' && dis.indexOf(i.id) < 0 && now - (i.updatedAt || 0) < week).forEach(i => items.push({ kind: 'out', i, t: i.updatedAt }));
+      SH.inc.filter(i => i.status === 'cancelled' && dis.indexOf(i.id) < 0 && now - (i.updatedAt || 0) < week).forEach(i => items.push({ kind: 'inCancel', i, t: i.updatedAt }));
+      return items.sort((a, b) => (b.t || 0) - (a.t || 0));
+    }
+    function updateBell() {
+      const n = shNotifItems().length, bd = byId('bellBadge');
+      if (bd) { bd.textContent = n > 9 ? '9+' : n; bd.classList.toggle('hidden', !n); }
+      const dot = byId('moreDot'); if (dot) dot.classList.toggle('hidden', !n);
+    }
+    function renderNotif() {
+      const items = shNotifItems();
+      byId('notifList').innerHTML = items.length ? items.map(x => {
+        const i = x.i;
+        if (x.kind === 'invite') return `<div class="nt-row"><div class="text-sm"><b>${html(i.fromName || i.fromEmail)}</b> quer usar a lousa <b>“${html(i.boardName)}”</b> junto com você.<br><small class="opacity-70">${html(i.fromEmail)} · ${i.kind === 'finance' ? 'lousa de finanças' : 'lousa'}</small></div>
+          <div class="flex gap-2 mt-2"><button class="sh-btn ok" onclick="shAccept('${i.id}')"><i class="fa-solid fa-check mr-1"></i>Aceitar</button><button class="sh-btn danger" onclick="shReject('${i.id}')"><i class="fa-solid fa-xmark mr-1"></i>Recusar</button></div></div>`;
+        const txt = x.kind === 'out'
+          ? (i.status === 'accepted' ? `<b>${html(i.toEmail)}</b> aceitou compartilhar “${html(i.boardName)}”.` : i.status === 'rejected' ? `<b>${html(i.toEmail)}</b> recusou compartilhar “${html(i.boardName)}”.` : `Ligação com <b>${html(i.toEmail)}</b> em “${html(i.boardName)}” foi cancelada.`)
+          : `A ligação de “${html(i.boardName)}” com <b>${html(i.fromEmail)}</b> foi cancelada.`;
+        return `<div class="nt-row flex items-start gap-2"><div class="text-sm flex-1">${txt}</div><button class="sh-btn" onclick="shDismiss('${i.id}')" title="Dispensar"><i class="fa-solid fa-xmark"></i></button></div>`;
+      }).join('') : '<p class="text-sm text-amber-100/70 p-2">Nenhuma notificação.</p>';
+    }
+    function shDismiss(id) { const d = shDismissed(); d.push(id); try { localStorage.setItem(dismissKey(), JSON.stringify(d.slice(-200))); } catch (e) {} updateBell(); renderNotif(); }
+    function toggleNotif(e) { if (e) e.stopPropagation(); const p = byId('notifPanel'); if (p.classList.contains('hidden')) { renderNotif(); p.classList.remove('hidden'); } else p.classList.add('hidden'); }
+    function closeNotif() { byId('notifPanel').classList.add('hidden'); }
+    document.addEventListener('click', (e) => { const p = byId('notifPanel'); if (p && !p.classList.contains('hidden') && !p.contains(e.target) && !e.target.closest('#bellBtn')) closeNotif(); });
+
+    /* ----- ligar tudo ao ciclo de login/salvamento ----- */
+    function cloudView() {   // na sua conta ficam só "atalhos" das lousas compartilhadas; o conteúdo vive em shared/{id}
+      const o = Object.assign({}, appData);
+      o.boards = appData.boards.map(b => (b.shared && b.shared.sid) ? { id: b.id, name: b.name, kind: b.kind, nextZIndex: b.nextZIndex, shared: b.shared, notes: [], calendarEvents: {} } : b);
+      return o;
+    }
+    function shWrapImages() {
+      if (FB._imgWrapped) return; FB._imgWrapped = true;
+      const save = FB.saveImage, load = FB.loadImage, del = FB.deleteImage;
+      FB.saveImage = async (id, d) => {
+        await save(id, d);
+        const b = getActiveBoard();
+        if (b.shared) { try { await FB.saveSharedImage(b.shared.sid, id, d); (SH.imgKnown[b.shared.sid] || (SH.imgKnown[b.shared.sid] = new Set())).add(id); } catch (e) { console.warn(e); } }
+      };
+      FB.loadImage = async (id) => {
+        let d = await load(id); if (d) return d;
+        for (const b of sharedBoards()) { try { d = await FB.loadSharedImage(b.shared.sid, id); if (d) return d; } catch (e) {} }
+        return null;
+      };
+      FB.deleteImage = async (id) => {
+        try { await del(id); } catch (e) {}
+        for (const b of sharedBoards()) { try { await FB.deleteSharedImage(b.shared.sid, id); } catch (e) {} }
+      };
+    }
+    function startSharing() {
+      SH.on = true; shWrapImages();
+      sharedBoards().forEach(b => shWatch(b.shared.sid));
+      if (SH.unInv) SH.unInv();
+      SH.unInv = FB.watchInvites((l) => { SH.inc = l; shInvChanged(); }, (l) => { SH.out = l; shInvChanged(); });
+    }
+    function shInvChanged() {
+      updateBell();
+      if (!byId('notifPanel').classList.contains('hidden')) renderNotif();
+      if (!byId('shareModal').classList.contains('hidden')) renderShareModal(true);
+    }
+    function stopSharing() {
+      SH.on = false;
+      Object.keys(SH.unsubs).forEach(shUnwatch);
+      if (SH.unInv) { SH.unInv(); SH.unInv = null; }
+      SH.inc = []; SH.out = []; updateBell();
+      ['shareModal', 'finLinkModal', 'pieceLinkModal'].forEach(closeOv); closeNotif();
+    }
+
+    (function () {
+      const hi = window.handleSignedIn, ho = window.handleSignedOut, sd = window.saveData, rn = window.renderNotes, ub = window.updateBoardWidgetControls, ra = window.relayoutAll, at = window.applyTheme;
+      window.handleSignedIn = async function (u) { await hi(u); if (appReady && currentUser) { try { startSharing(); } catch (e) { console.error(e); } } };
+      window.handleSignedOut = function () { stopSharing(); return ho(); };
+      window.saveData = function () {
+        sd();
+        if (appReady && currentUser && SH.on) sharedBoards().forEach(b => shSchedule(b.shared.sid));
+      };
+      window.renderNotes = function () {
+        rn.apply(this, arguments);
+        try { renderStrokes(); renderChalk(); } catch (e) { console.warn(e); }
+      };
+      window.updateBoardWidgetControls = function () {
+        ub.apply(this, arguments);
+        const b = getActiveBoard(), btn = byId('btnShareBoard');
+        if (btn) { btn.classList.toggle('is-shared', !!b.shared); btn.title = b.shared ? 'Lousa compartilhada — gerenciar' : 'Compartilhar esta lousa'; }
+        const fb = byId('btnNewFin'); if (fb) fb.style.display = '';
+      };
+      window.relayoutAll = function () { ra.apply(this, arguments); try { renderChalk(); } catch (e) {} };
+      window.applyTheme = function () { at.apply(this, arguments); try { renderStrokes(); renderChalk(); } catch (e) {} };
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && SH.on) sharedBoards().forEach(b => shPush(b.shared.sid)); });
+    })();
   </script>
 
   <!-- Firebase (login Google + banco de dados) -->
