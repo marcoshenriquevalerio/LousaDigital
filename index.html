@@ -571,9 +571,9 @@
     .chalkstick.ck-writing .ck-body { box-shadow: 0 0 10px 2px var(--ck), inset 0 -2px 3px rgba(0,0,0,.18); }
     .theme-marker .chalkstick .ck-body { background: linear-gradient(180deg, #fff 0%, #cbd5e1 100%); border-radius: 4px 9px 9px 4px / 30% 50% 50% 30%; border: 1px solid #94a3b8; }
     .theme-marker .chalkstick .ck-body::after { left: 0; top: 0; bottom: 0; width: 26%; border-radius: 4px 0 0 4px; background: var(--ck); }
-    /* giz na mão: de pé (escreve pela ponta de cima, levemente inclinada para a direita); no lugar fixo fica deitado */
+    /* giz na mão: de pé (escreve pela ponta de cima, levemente inclinada para a esquerda); no lugar fixo fica deitado */
     .chalkstick { transform-origin: 3px 50%; }
-    .chalkstick.ck-up { transform: rotate(102deg); }
+    .chalkstick.ck-up { transform: rotate(78deg); }
     /* barrinha discreta que enche enquanto o giz está parado, antes de começar a escrever */
     #chalkHold { position: absolute; z-index: 1000001; pointer-events: none; border-radius: 3px; background: rgba(255,255,255,.2); opacity: 0; transition: opacity .15s ease; overflow: hidden; }
     #chalkHold.on { opacity: .9; }
@@ -5835,8 +5835,8 @@
        ========================================================================= */
     let chalkDrag = null, chalkPlace = false, chalkLastTap = 0, chalkRest = false, chalkRestTimer = null, strokeDirty = false, inkRaf = 0;
     const CK_W = 86, CK_H = 16, CK_MAX_NUMS = 60000;
-    const CK_HOLD_MS = 1000, CK_STILL_MS = 150, CK_STILL_PX = 8;   // tempo parado para começar a escrever (a barra enche até ele)
-    const CK_ANG = 102 * Math.PI / 180, CK_UX = Math.cos(CK_ANG), CK_UY = Math.sin(CK_ANG);   // direção do corpo do giz em pé (igual ao rotate(102deg) do CSS: ponta de escrever em cima, corpo para baixo)
+    const CK_HOLD_MS = 90, CK_STILL_MS = 0, CK_STILL_PX = 3;   // quase instantâneo (1 ms puro cortaria o traço entre dois eventos do dedo)   // tempo parado para começar a escrever (a barra enche até ele)
+    const CK_ANG = 78 * Math.PI / 180, CK_UX = Math.cos(CK_ANG), CK_UY = Math.sin(CK_ANG);   // direção do corpo do giz em pé (igual ao rotate(78deg) do CSS: ponta de escrever em cima inclinada para a esquerda, corpo para baixo)
     const getChalkCfg = () => appData.chalk || (appData.chalk = { color: 'white', width: 4, sound: true, hx: 0.7, hy: 1 });
     const isMarker = () => appData.theme === 'marker';
     function chalkHex(id) { const p = getPalette(); return (p.find(c => c.id === id) || p[0]).hex; }
@@ -5985,7 +5985,7 @@
         d.ax = d.lx; d.ay = d.ly;
         d.stillT = setTimeout(() => {
           if (chalkDrag !== d || d.writing || chalkPlace) return;
-          holdShow(d, CK_HOLD_MS - CK_STILL_MS);
+          if (CK_HOLD_MS >= 300) holdShow(d, CK_HOLD_MS - CK_STILL_MS);   // com espera curta a barra nem aparece
           d.holdT = setTimeout(() => {
             if (chalkDrag !== d || d.writing || chalkPlace) return;
             holdHide(); const q = tip(d.x, d.y, chalkDims()); beginStroke(d, q[0], q[1]);
