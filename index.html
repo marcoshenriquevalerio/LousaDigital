@@ -5835,7 +5835,7 @@
        ========================================================================= */
     let chalkDrag = null, chalkPlace = false, chalkLastTap = 0, chalkRest = false, chalkRestTimer = null, strokeDirty = false, inkRaf = 0;
     const CK_W = 86, CK_H = 16, CK_MAX_NUMS = 60000;
-    const CK_HOLD_MS = 90, CK_STILL_MS = 0, CK_STILL_PX = 3;   // quase instantâneo (1 ms puro cortaria o traço entre dois eventos do dedo)   // tempo parado para começar a escrever (a barra enche até ele)
+    const CK_HOLD_MS = 500, CK_STILL_MS = 0, CK_STILL_PX = 5;   // meio segundo parado: para começar a escrever e para cancelar o traço   // tempo parado para começar a escrever (a barra enche até ele)
     const CK_ANG = 78 * Math.PI / 180, CK_UX = Math.cos(CK_ANG), CK_UY = Math.sin(CK_ANG);   // direção do corpo do giz em pé (igual ao rotate(78deg) do CSS: ponta de escrever em cima inclinada para a esquerda, corpo para baixo)
     const getChalkCfg = () => appData.chalk || (appData.chalk = { color: 'white', width: 4, sound: true, hx: 0.7, hy: 1 });
     const isMarker = () => appData.theme === 'marker';
