@@ -5834,7 +5834,7 @@
        2) GIZ / CANETÃO: escrever livremente, com som, cor configurável e posição fixa
        ========================================================================= */
     let chalkDrag = null, chalkPlace = false, chalkLastTap = 0, chalkRest = false, chalkRestTimer = null, strokeDirty = false, inkRaf = 0;
-    const CK_W = 86, CK_H = 16, CK_MAX_NUMS = 60000;
+    const CK_W = 86, CK_H = 16, CK_MAX_NUMS = 60000, CK_MARGIN = 2;
     const CK_HOLD_MS = 500, CK_STILL_MS = 0, CK_STILL_PX = 5;   // meio segundo parado: para começar a escrever e para cancelar o traço   // tempo parado para começar a escrever (a barra enche até ele)
     const CK_ANG = 78 * Math.PI / 180, CK_UX = Math.cos(CK_ANG), CK_UY = Math.sin(CK_ANG);   // direção do corpo do giz em pé (igual ao rotate(78deg) do CSS: ponta de escrever em cima inclinada para a esquerda, corpo para baixo)
     const getChalkCfg = () => appData.chalk || (appData.chalk = { color: 'white', width: 4, sound: true, hx: 0.7, hy: 1 });
@@ -5842,7 +5842,7 @@
     function chalkHex(id) { const p = getPalette(); return (p.find(c => c.id === id) || p[0]).hex; }
     function chalkDims() { const k = boardScale < 1 ? Math.max(1, 0.7 / boardScale) : 1; return { w: CK_W * k, h: CK_H * k, k }; }
     function chalkHome() {
-      const mn = byId('boardCanvas'), c = getChalkCfg(), m = ERASER_MARGIN, d = chalkDims();
+      const mn = byId('boardCanvas'), c = getChalkCfg(), m = CK_MARGIN, d = chalkDims();
       return { x: m + clamp01(c.hx) * Math.max(0, mn.clientWidth - d.w - 2 * m), y: m + clamp01(c.hy) * Math.max(0, mn.clientHeight - d.h - 2 * m) };
     }
     function renderChalk() {
@@ -5994,7 +5994,7 @@
       }
       /* pegou o giz: ele levanta (de pé, ponta para baixo inclinada para a esquerda) */
       function pickUp(d) {
-        if (chalkDrag !== d || d.up) return;
+        if (chalkDrag !== d || d.up || chalkPlace) return;   // ajustando a posição de descanso: fica deitado
         d.up = true; clearTimeout(d.upT);
         const mn = byId('boardCanvas'), cr = mn.getBoundingClientRect(), pd = chalkDims(), s = pd.w * 0.45;
         d.ox = 3 + CK_UX * s; d.oy = pd.h / 2 + CK_UY * s;   // o dedo segura o giz mais ou menos no meio do corpo
@@ -6041,9 +6041,9 @@
         try { el.releasePointerCapture(d.pid); } catch (err) {}
         const wrote = endStroke(d), pd = chalkDims();
         if (d.moved && chalkPlace) {
-          const mn = byId('boardCanvas'), c = getChalkCfg(), m = ERASER_MARGIN;
+          const mn = byId('boardCanvas'), c = getChalkCfg(), m = CK_MARGIN;
           c.hx = clamp01((d.x - m) / Math.max(1, mn.clientWidth - pd.w - 2 * m)); c.hy = clamp01((d.y - m) / Math.max(1, mn.clientHeight - pd.h - 2 * m));
-          saveData(); setChalkPlace(false); chalkRest = false; renderChalk(); return;
+          saveData(); chalkRest = false; renderChalk(); return;   // continua no modo de posição até clicar no botão de novo ou em Concluir
         }
         if (wrote || d.moved || d.up) { goHome(); return; }   // soltou o giz: volta (deitado) para o lugar fixo
         if (chalkRest) goHome();
