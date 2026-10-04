@@ -571,9 +571,9 @@
     .chalkstick.ck-writing .ck-body { box-shadow: 0 0 10px 2px var(--ck), inset 0 -2px 3px rgba(0,0,0,.18); }
     .theme-marker .chalkstick .ck-body { background: linear-gradient(180deg, #fff 0%, #cbd5e1 100%); border-radius: 4px 9px 9px 4px / 30% 50% 50% 30%; border: 1px solid #94a3b8; }
     .theme-marker .chalkstick .ck-body::after { left: 0; top: 0; bottom: 0; width: 26%; border-radius: 4px 0 0 4px; background: var(--ck); }
-    /* giz na mão: de pé (ponta para baixo, levemente inclinada para a esquerda); no lugar fixo fica deitado */
+    /* giz na mão: de pé (escreve pela ponta de cima, levemente inclinada para a direita); no lugar fixo fica deitado */
     .chalkstick { transform-origin: 3px 50%; }
-    .chalkstick.ck-up { transform: rotate(-78deg); }
+    .chalkstick.ck-up { transform: rotate(102deg); }
     /* barrinha discreta que enche enquanto o giz está parado, antes de começar a escrever */
     #chalkHold { position: absolute; z-index: 1000001; pointer-events: none; border-radius: 3px; background: rgba(255,255,255,.2); opacity: 0; transition: opacity .15s ease; overflow: hidden; }
     #chalkHold.on { opacity: .9; }
@@ -721,7 +721,7 @@
     </div>
 
     <svg id="inkLayer" aria-hidden="true"><g id="inkDone"></g><path id="inkLive" d="" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".93"/></svg>
-    <div id="chalkStick" class="chalkstick" title="Giz — pegue, segure parado por 2 segundos e escreva. Toque duas vezes para ajustar"><div class="ck-body"></div></div>
+    <div id="chalkStick" class="chalkstick" title="Giz — pegue, segure parado por 1 segundo e escreva. Toque duas vezes para ajustar"><div class="ck-body"></div></div>
 
   </main></div></div>
 
@@ -2336,7 +2336,7 @@
         const el = document.getElementById(id);
         if (el) el.remove();
         const emptyMsg = document.getElementById('emptyBoardMsg');
-        if (emptyMsg && board.notes.length === 0) emptyMsg.classList.remove('hidden');
+        if (emptyMsg && board.notes.length === 0 && !(board.strokes && board.strokes.length)) emptyMsg.classList.remove('hidden');
       }
     }
 
@@ -2400,7 +2400,7 @@
       container.innerHTML = '';
       updateBoardWidgetControls();
 
-      if (board.notes.length === 0) {
+      if (board.notes.length === 0 && !(board.strokes && board.strokes.length)) {
         if (emptyMsg) emptyMsg.classList.remove('hidden');
       } else {
         if (emptyMsg) emptyMsg.classList.add('hidden');
@@ -5835,8 +5835,8 @@
        ========================================================================= */
     let chalkDrag = null, chalkPlace = false, chalkLastTap = 0, chalkRest = false, chalkRestTimer = null, strokeDirty = false, inkRaf = 0;
     const CK_W = 86, CK_H = 16, CK_MAX_NUMS = 60000;
-    const CK_HOLD_MS = 2000, CK_STILL_MS = 250, CK_STILL_PX = 8;   // tempo parado para começar a escrever (a barra enche até ele)
-    const CK_ANG = -78 * Math.PI / 180, CK_UX = Math.cos(CK_ANG), CK_UY = Math.sin(CK_ANG);   // direção do corpo do giz em pé (igual ao rotate(-78deg) do CSS)
+    const CK_HOLD_MS = 1000, CK_STILL_MS = 150, CK_STILL_PX = 8;   // tempo parado para começar a escrever (a barra enche até ele)
+    const CK_ANG = 102 * Math.PI / 180, CK_UX = Math.cos(CK_ANG), CK_UY = Math.sin(CK_ANG);   // direção do corpo do giz em pé (igual ao rotate(102deg) do CSS: ponta de escrever em cima, corpo para baixo)
     const getChalkCfg = () => appData.chalk || (appData.chalk = { color: 'white', width: 4, sound: true, hx: 0.7, hy: 1 });
     const isMarker = () => appData.theme === 'marker';
     function chalkHex(id) { const p = getPalette(); return (p.find(c => c.id === id) || p[0]).hex; }
@@ -5862,6 +5862,7 @@
     function renderStrokes() {
       const g = byId('inkDone'); if (!g) return;
       const b = getActiveBoard();
+      const em = byId('emptyBoardMsg'); if (em) em.classList.toggle('hidden', (b.notes || []).length > 0 || (b.strokes || []).length > 0);   // o que foi escrito com o giz conta como conteúdo
       g.innerHTML = (b.strokes || []).map(s => `<path d="${strokePath(s.p)}" stroke="${chalkHex(s.c)}" stroke-width="${strokeWidth(s)}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="${isMarker() ? 1 : 0.93}"/>`).join('');
     }
     function scheduleInkRender() { if (!inkRaf) inkRaf = requestAnimationFrame(() => { inkRaf = 0; renderStrokes(); }); }
@@ -5926,6 +5927,14 @@
         for (let i = 1; i <= n; i++) p.push(+(lx + (x - lx) * i / n).toFixed(1), +(ly + (y - ly) * i / n).toFixed(1));
         byId('inkLive').setAttribute('d', strokePath(p));
       }
+      /* pausa de 1s escrevendo (sem soltar): encerra o traço; para voltar a escrever é preciso mover e parar de novo */
+      function armPause(d) {
+        clearTimeout(d.pauseT); d.px = d.lx; d.py = d.ly;
+        d.pauseT = setTimeout(() => {
+          if (chalkDrag !== d || !d.writing) return;
+          endStroke(d); d.stroke = null; d.writing = false; d.ax = d.lx; d.ay = d.ly;
+        }, CK_HOLD_MS);
+      }
       function beginStroke(d, x, y) {
         const c = getChalkCfg();
         d.stroke = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), c: c.color, w: c.width || 4, p: [+x.toFixed(1), +y.toFixed(1)] };
@@ -5934,6 +5943,7 @@
         live.setAttribute('d', strokePath(d.stroke.p));
         d.writing = true; el.classList.add('ck-writing');
         chalkSnd.start(d.cx, d.cy);
+        armPause(d);
       }
       function endStroke(d) {
         chalkSnd.stop(); el.classList.remove('ck-writing');
@@ -5963,7 +5973,7 @@
       function holdShow(d, ms) {
         if (!holdBar.isConnected) el.parentNode.appendChild(holdBar);
         const pd = chalkDims(), w = 38 * pd.k, h = 4 * pd.k;
-        const topX = d.x + 3 + CK_UX * pd.w, topY = d.y + pd.h / 2 + CK_UY * pd.w;   // ponta de cima do giz em pé
+        const topX = d.x + 3, topY = d.y + pd.h / 2;   // a ponta de escrever agora é a de cima
         holdBar.style.width = w + 'px'; holdBar.style.height = h + 'px';
         holdBar.style.left = (topX - w / 2) + 'px'; holdBar.style.top = Math.max(2, topY - 12 * pd.k - h) + 'px';
         holdBar.style.setProperty('--ckd', ms + 'ms');
@@ -6003,7 +6013,7 @@
         const r = el.getBoundingClientRect(), pd = chalkDims();
         const d = chalkDrag = { pid: e.pointerId, ox: (e.clientX - r.left) / boardScale, oy: (e.clientY - r.top) / boardScale, sx: e.clientX, sy: e.clientY,
           x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0, moved: false, writing: false, stroke: null, wrote: false, up: false,
-          cx: e.clientX, cy: e.clientY, lx: e.clientX, ly: e.clientY, ax: e.clientX, ay: e.clientY, h: pd.h, upT: 0, stillT: 0, holdT: 0 };
+          cx: e.clientX, cy: e.clientY, lx: e.clientX, ly: e.clientY, ax: e.clientX, ay: e.clientY, h: pd.h, upT: 0, stillT: 0, holdT: 0, pauseT: 0, px: e.clientX, py: e.clientY };
         el.style.transition = 'none'; el.classList.add('is-erasing');
         d.upT = setTimeout(() => pickUp(d), 180);   // segurou sem mover: também levanta (um toque rápido não levanta)
         try { el.setPointerCapture(e.pointerId); } catch (err) {}
@@ -6021,12 +6031,12 @@
         el.style.left = d.x + 'px'; el.style.top = d.y + 'px';
         if (chalkPlace) return;
         const t = tip(d.x, d.y, pd);
-        if (d.writing) { addPt(d, t[0], t[1]); chalkSnd.move(e.clientX, e.clientY); d.wrote = true; }
+        if (d.writing) { addPt(d, t[0], t[1]); chalkSnd.move(e.clientX, e.clientY); d.wrote = true; if (Math.hypot(e.clientX - d.px, e.clientY - d.py) > CK_STILL_PX) armPause(d); }
         else if (Math.hypot(e.clientX - d.ax, e.clientY - d.ay) > CK_STILL_PX) armStill(d);   // carregando: saiu do lugar, a espera recomeça
       });
       const end = (e) => {
         const d = chalkDrag; if (!d || (e && e.pointerId !== d.pid)) return;
-        clearTimeout(d.upT); clearTimeout(d.stillT); clearTimeout(d.holdT); holdHide(); chalkDrag = null;
+        clearTimeout(d.upT); clearTimeout(d.stillT); clearTimeout(d.holdT); clearTimeout(d.pauseT); holdHide(); chalkDrag = null;
         el.classList.remove('is-erasing', 'ck-up');
         try { el.releasePointerCapture(d.pid); } catch (err) {}
         const wrote = endStroke(d), pd = chalkDims();
