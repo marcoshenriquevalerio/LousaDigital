@@ -571,6 +571,18 @@
     .chalkstick.ck-writing .ck-body { box-shadow: 0 0 10px 2px var(--ck), inset 0 -2px 3px rgba(0,0,0,.18); }
     .theme-marker .chalkstick .ck-body { background: linear-gradient(180deg, #fff 0%, #cbd5e1 100%); border-radius: 4px 9px 9px 4px / 30% 50% 50% 30%; border: 1px solid #94a3b8; }
     .theme-marker .chalkstick .ck-body::after { left: 0; top: 0; bottom: 0; width: 26%; border-radius: 4px 0 0 4px; background: var(--ck); }
+    /* giz na mão: de pé (ponta para baixo, levemente inclinada para a esquerda); no lugar fixo fica deitado */
+    .chalkstick { transform-origin: 3px 50%; }
+    .chalkstick.ck-up { transform: rotate(-78deg); }
+    /* barrinha discreta que enche enquanto o giz está parado, antes de começar a escrever */
+    #chalkHold { position: absolute; z-index: 1000001; pointer-events: none; border-radius: 3px; background: rgba(255,255,255,.2); opacity: 0; transition: opacity .15s ease; overflow: hidden; }
+    #chalkHold.on { opacity: .9; }
+    #chalkHold i { display: block; width: 100%; height: 100%; border-radius: 3px; background: rgba(255,255,255,.9); transform-origin: 0 50%; transform: scaleX(0); }
+    #chalkHold.on i { animation: ckHold var(--ckd, 1750ms) linear forwards; }
+    @keyframes ckHold { to { transform: scaleX(1); } }
+    .theme-marker #chalkHold { background: rgba(15,23,42,.16); }
+    .theme-marker #chalkHold i { background: rgba(15,23,42,.75); }
+    .fin-lock { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #a8a29e; }
     .nav-btn.is-shared { background: #059669; color: #fff; border-color: #10b981; }
     #bellBtn { position: relative; }
     #bellBadge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
@@ -709,7 +721,7 @@
     </div>
 
     <svg id="inkLayer" aria-hidden="true"><g id="inkDone"></g><path id="inkLive" d="" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".93"/></svg>
-    <div id="chalkStick" class="chalkstick" title="Giz — arraste e pare onde quer escrever. Toque duas vezes para ajustar"><div class="ck-body"></div></div>
+    <div id="chalkStick" class="chalkstick" title="Giz — pegue, segure parado por 2 segundos e escreva. Toque duas vezes para ajustar"><div class="ck-body"></div></div>
 
   </main></div></div>
 
@@ -5736,10 +5748,95 @@
     }
 
     /* =========================================================================
+       CATEGORIAS (destinos) das finanças: cada lousa tem as suas; lousas ligadas somam entre si;
+       categoria em uso nunca pode ser removida
+       ========================================================================= */
+    let finModalBoard = null;   // lousa dona das categorias mostradas no modal da tabela
+    const finDestBoard = () => finModalBoard || finBoard();
+    function finOwnDests(b) {
+      const f = finData(b);
+      if (!Array.isArray(f.dests)) f.dests = FIN_PRESET_DESTS.slice();
+      return f.dests;
+    }
+    /* a lousa + todas as que estão ligadas a ela (direta ou indiretamente) */
+    function finDestGroup(b) {
+      const L = finLinks().boards, out = [b], q = [b];
+      while (q.length) {
+        const x = q.shift();
+        (L[x.id] || []).forEach(id => {
+          const o = appData.boards.find(y => y.id === id && y.kind === 'finance');
+          if (o && out.indexOf(o) < 0) { out.push(o); q.push(o); }
+        });
+      }
+      return out;
+    }
+    /* soma as categorias que faltam em cada lousa do grupo (sincronização) */
+    function finSyncDests(b) {
+      const grp = finDestGroup(b); if (grp.length < 2) return false;
+      const all = []; let changed = false;
+      grp.forEach(x => finOwnDests(x).forEach(d => { if (!all.some(a => finNorm(a) === finNorm(d))) all.push(d); }));
+      grp.forEach(x => {
+        const list = finOwnDests(x);
+        all.forEach(d => { if (!list.some(a => finNorm(a) === finNorm(d))) { list.push(d); changed = true; } });
+      });
+      return changed;
+    }
+    /* categorias usadas em algum lançamento da lousa ou das ligadas a ela */
+    function finUsedDestKeys(b) {
+      const used = {};
+      finDestGroup(b).forEach(x => finData(x).rows.forEach(r => { const k = finNorm(r.dest); if (k) used[k] = true; }));
+      return used;
+    }
+    window.finDests = function () {
+      const b = finDestBoard(); finSyncDests(b);
+      return finOwnDests(b).slice();
+    };
+    window.finRenderDestChips = function () {
+      const el = byId('finDestChips'); if (!el) return;
+      const list = finDests(), used = finUsedDestKeys(finDestBoard());
+      el.innerHTML = list.length
+        ? list.map((d, i) => used[finNorm(d)]
+          ? `<span class="fin-chip">${escapeHtml(d)}<span class="fin-lock" title="Em uso em uma tabela: não dá para remover"><i class="fa-solid fa-lock"></i></span></span>`
+          : `<span class="fin-chip">${escapeHtml(d)}<button onclick="finRemoveDest(${i})" title="Remover da lista"><i class="fa-solid fa-xmark"></i></button></span>`).join('')
+        : '<span class="text-xs text-stone-500">Nenhuma categoria. Adicione abaixo.</span>';
+    };
+    window.finAddDest = function () {
+      const inp = byId('finNewDest'), v = finCleanDest(inp.value); if (!v) return;
+      const b = finDestBoard(), list = finOwnDests(b);
+      if (!list.some(d => finNorm(d) === finNorm(v))) { list.push(v); finSyncDests(b); saveData(); }
+      inp.value = ''; finRenderDestChips(); finUpdateDatalist(); inp.focus();
+    };
+    window.finRemoveDest = function (i) {
+      const b = finDestBoard(), name = finDests()[i]; if (name == null) return;
+      const k = finNorm(name);
+      if (finUsedDestKeys(b)[k]) { finRenderDestChips(); return; }   // em uso: não remove (evita quebrar tabelas/gráficos)
+      finDestGroup(b).forEach(x => { const f = finData(x); f.dests = finOwnDests(x).filter(d => finNorm(d) !== k); });
+      saveData(); finRenderDestChips(); finUpdateDatalist();
+    };
+    (function () {
+      const o = window.openFinTableModal, c = window.closeFinTableModal, lk = window.finToggleBoardLink;
+      window.openFinTableModal = function (editId) {   // o modal mexe nas categorias da lousa de onde a tabela tira os dados
+        const n = editId ? findNote(editId) : null;
+        finModalBoard = n ? finSrcOf(n) : null;
+        const r = o.apply(this, arguments);
+        const m = byId('finTableModal'); if (!m || m.classList.contains('hidden')) finModalBoard = null;
+        return r;
+      };
+      window.closeFinTableModal = function () { finModalBoard = null; return c.apply(this, arguments); };
+      window.finToggleBoardLink = function () {   // ligou: as categorias das lousas se somam na hora
+        const r = lk.apply(this, arguments);
+        const a = getActiveBoard(); if (a && a.kind === 'finance') { finSyncDests(a); saveData(); }
+        return r;
+      };
+    })();
+
+    /* =========================================================================
        2) GIZ / CANETÃO: escrever livremente, com som, cor configurável e posição fixa
        ========================================================================= */
     let chalkDrag = null, chalkPlace = false, chalkLastTap = 0, chalkRest = false, chalkRestTimer = null, strokeDirty = false, inkRaf = 0;
     const CK_W = 86, CK_H = 16, CK_MAX_NUMS = 60000;
+    const CK_HOLD_MS = 2000, CK_STILL_MS = 250, CK_STILL_PX = 8;   // tempo parado para começar a escrever (a barra enche até ele)
+    const CK_ANG = -78 * Math.PI / 180, CK_UX = Math.cos(CK_ANG), CK_UY = Math.sin(CK_ANG);   // direção do corpo do giz em pé (igual ao rotate(-78deg) do CSS)
     const getChalkCfg = () => appData.chalk || (appData.chalk = { color: 'white', width: 4, sound: true, hx: 0.7, hy: 1 });
     const isMarker = () => appData.theme === 'marker';
     function chalkHex(id) { const p = getPalette(); return (p.find(c => c.id === id) || p[0]).hex; }
@@ -5852,29 +5949,72 @@
       function goHome() {
         chalkRest = false; clearTimeout(chalkRestTimer); chalkRestTimer = null;
         const p = chalkHome();
-        el.style.transition = 'left .35s cubic-bezier(.2,.8,.3,1), top .35s cubic-bezier(.2,.8,.3,1)';
+        el.classList.remove('ck-up');
+        el.style.transition = 'left .35s cubic-bezier(.2,.8,.3,1), top .35s cubic-bezier(.2,.8,.3,1), transform .3s ease';
         el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
         setTimeout(() => { if (!chalkDrag) el.style.transition = 'none'; }, 380);
       }
       window.chalkGoHome = goHome;
 
+      /* barra de espera (fica no mesmo plano do giz) */
+      const holdBar = document.createElement('div'); holdBar.id = 'chalkHold'; holdBar.innerHTML = '<i></i>';
+      el.parentNode.appendChild(holdBar);
+      function holdHide() { holdBar.classList.remove('on'); }
+      function holdShow(d, ms) {
+        if (!holdBar.isConnected) el.parentNode.appendChild(holdBar);
+        const pd = chalkDims(), w = 38 * pd.k, h = 4 * pd.k;
+        const topX = d.x + 3 + CK_UX * pd.w, topY = d.y + pd.h / 2 + CK_UY * pd.w;   // ponta de cima do giz em pé
+        holdBar.style.width = w + 'px'; holdBar.style.height = h + 'px';
+        holdBar.style.left = (topX - w / 2) + 'px'; holdBar.style.top = Math.max(2, topY - 12 * pd.k - h) + 'px';
+        holdBar.style.setProperty('--ckd', ms + 'ms');
+        holdBar.classList.remove('on'); void holdBar.offsetWidth; holdBar.classList.add('on');
+      }
+      /* parado (sem sair do lugar) por CK_HOLD_MS → começa a escrever; mexeu → recomeça a contagem */
+      function armStill(d) {
+        clearTimeout(d.stillT); clearTimeout(d.holdT); holdHide();
+        d.ax = d.lx; d.ay = d.ly;
+        d.stillT = setTimeout(() => {
+          if (chalkDrag !== d || d.writing || chalkPlace) return;
+          holdShow(d, CK_HOLD_MS - CK_STILL_MS);
+          d.holdT = setTimeout(() => {
+            if (chalkDrag !== d || d.writing || chalkPlace) return;
+            holdHide(); const q = tip(d.x, d.y, chalkDims()); beginStroke(d, q[0], q[1]);
+          }, CK_HOLD_MS - CK_STILL_MS);
+        }, CK_STILL_MS);
+      }
+      /* pegou o giz: ele levanta (de pé, ponta para baixo inclinada para a esquerda) */
+      function pickUp(d) {
+        if (chalkDrag !== d || d.up) return;
+        d.up = true; clearTimeout(d.upT);
+        const mn = byId('boardCanvas'), cr = mn.getBoundingClientRect(), pd = chalkDims(), s = pd.w * 0.45;
+        d.ox = 3 + CK_UX * s; d.oy = pd.h / 2 + CK_UY * s;   // o dedo segura o giz mais ou menos no meio do corpo
+        d.x = Math.max(0, Math.min((d.lx - cr.left) / boardScale - d.ox, mn.clientWidth - pd.w));
+        d.y = Math.max(0, Math.min((d.ly - cr.top) / boardScale - d.oy, mn.clientHeight - pd.h));
+        el.classList.add('ck-up');
+        el.style.transition = 'left .15s ease, top .15s ease, transform .18s ease';
+        el.style.left = d.x + 'px'; el.style.top = d.y + 'px';
+        setTimeout(() => { if (chalkDrag === d) el.style.transition = 'transform .18s ease'; }, 170);
+        if (!chalkPlace) armStill(d);
+      }
+
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault(); e.stopPropagation();
         clearTimeout(chalkRestTimer);
         const r = el.getBoundingClientRect(), pd = chalkDims();
-        chalkDrag = { pid: e.pointerId, ox: (e.clientX - r.left) / boardScale, oy: (e.clientY - r.top) / boardScale, sx: e.clientX, sy: e.clientY,
-          x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0, moved: false, writing: false, stroke: null, wrote: false, pt: 0, cx: e.clientX, cy: e.clientY, h: pd.h };
+        const d = chalkDrag = { pid: e.pointerId, ox: (e.clientX - r.left) / boardScale, oy: (e.clientY - r.top) / boardScale, sx: e.clientX, sy: e.clientY,
+          x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0, moved: false, writing: false, stroke: null, wrote: false, up: false,
+          cx: e.clientX, cy: e.clientY, lx: e.clientX, ly: e.clientY, ax: e.clientX, ay: e.clientY, h: pd.h, upT: 0, stillT: 0, holdT: 0 };
         el.style.transition = 'none'; el.classList.add('is-erasing');
-        if (chalkRest && !chalkPlace) {   // ainda está na lousa: continua escrevendo na hora
-          const t = tip(chalkDrag.x, chalkDrag.y, pd); beginStroke(chalkDrag, t[0], t[1]); chalkDrag.wrote = true;
-        }
+        d.upT = setTimeout(() => pickUp(d), 180);   // segurou sem mover: também levanta (um toque rápido não levanta)
         try { el.setPointerCapture(e.pointerId); } catch (err) {}
       });
       el.addEventListener('pointermove', (e) => {
         const d = chalkDrag; if (!d || e.pointerId !== d.pid) return;
         e.preventDefault();
+        d.lx = e.clientX; d.ly = e.clientY;
         if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) return;
         d.moved = true; d.cx = e.clientX; d.cy = e.clientY;
+        if (!d.up) pickUp(d);
         const mn = byId('boardCanvas'), cr = mn.getBoundingClientRect(), pd = chalkDims();
         d.x = Math.max(0, Math.min((e.clientX - cr.left) / boardScale - d.ox, mn.clientWidth - pd.w));
         d.y = Math.max(0, Math.min((e.clientY - cr.top) / boardScale - d.oy, mn.clientHeight - pd.h));
@@ -5882,15 +6022,12 @@
         if (chalkPlace) return;
         const t = tip(d.x, d.y, pd);
         if (d.writing) { addPt(d, t[0], t[1]); chalkSnd.move(e.clientX, e.clientY); d.wrote = true; }
-        else {   // carregando o giz: pare um instante onde quer começar para ele passar a escrever
-          clearTimeout(d.pt);
-          d.pt = setTimeout(() => { if (chalkDrag === d && !d.writing && !chalkPlace) { const q = tip(d.x, d.y, chalkDims()); beginStroke(d, q[0], q[1]); } }, 230);
-        }
+        else if (Math.hypot(e.clientX - d.ax, e.clientY - d.ay) > CK_STILL_PX) armStill(d);   // carregando: saiu do lugar, a espera recomeça
       });
       const end = (e) => {
         const d = chalkDrag; if (!d || (e && e.pointerId !== d.pid)) return;
-        clearTimeout(d.pt); chalkDrag = null;
-        el.classList.remove('is-erasing');
+        clearTimeout(d.upT); clearTimeout(d.stillT); clearTimeout(d.holdT); holdHide(); chalkDrag = null;
+        el.classList.remove('is-erasing', 'ck-up');
         try { el.releasePointerCapture(d.pid); } catch (err) {}
         const wrote = endStroke(d), pd = chalkDims();
         if (d.moved && chalkPlace) {
@@ -5898,8 +6035,8 @@
           c.hx = clamp01((d.x - m) / Math.max(1, mn.clientWidth - pd.w - 2 * m)); c.hy = clamp01((d.y - m) / Math.max(1, mn.clientHeight - pd.h - 2 * m));
           saveData(); setChalkPlace(false); chalkRest = false; renderChalk(); return;
         }
-        if (wrote) { chalkRest = true; clearTimeout(chalkRestTimer); chalkRestTimer = setTimeout(goHome, 4000); return; }   // fica um tempo na lousa
-        if (d.moved || chalkRest) { goHome(); if (d.moved) return; }
+        if (wrote || d.moved || d.up) { goHome(); return; }   // soltou o giz: volta (deitado) para o lugar fixo
+        if (chalkRest) goHome();
         const now = Date.now();
         if (now - chalkLastTap < 400) { chalkLastTap = 0; startQuoteEdit('giz'); } else chalkLastTap = now;
       };
@@ -5987,11 +6124,27 @@
       });
       return out;
     }
+    /* categorias de finanças: soma as dos dois lados; o que um lado removeu sai, a não ser que ainda esteja em uso */
+    function shMergeDests(l, r, base, rows) {
+      const hasL = Array.isArray(l), hasR = Array.isArray(r); if (!hasL && !hasR) return null;
+      const L = hasL ? l : [], R = hasR ? r : [], B = Array.isArray(base) ? base : null;
+      const has = (a, k) => a.some(x => finNorm(x) === k);
+      const used = {}; (rows || []).forEach(x => { const k = finNorm(x.dest); if (k) used[k] = true; });
+      const out = [], seen = {};
+      L.concat(R).forEach(d => {
+        const k = finNorm(d); if (!k || seen[k]) return; seen[k] = 1;
+        const removed = B && has(B, k) && ((hasL && !has(L, k)) || (hasR && !has(R, k)));
+        if (!removed || used[k]) out.push(d);
+      });
+      return out;
+    }
     function shMerge(b, remote, base) {
       remote = shNorm(remote);
       if (!base) {   // primeira leitura: a nuvem manda
+        const localDests = b.fin && b.fin.dests;
         b.name = remote.name; b.kind = remote.kind || undefined; b.nextZIndex = remote.nextZIndex; b.notes = remote.notes;
         b.calendarEvents = remote.calendarEvents; b.strokes = remote.strokes; if (remote.fin) b.fin = remote.fin; else delete b.fin;
+        if (b.fin && Array.isArray(localDests)) { const dd = shMergeDests(localDests, b.fin.dests, null, b.fin.rows); if (dd) b.fin.dests = dd; }   // categorias que só eu tinha entram juntas
         return;
       }
       const c = shNorm(shContent(b));
@@ -6006,6 +6159,11 @@
         const lrows = c.fin.rows || [], rrows = remote.fin.rows || [];
         fin = Object.assign({}, pick('fin'), { rows: shMergeList(lrows, rrows, base.rows) });
         fin.seq = Math.max(c.fin.seq || 0, remote.fin.seq || 0);
+      }
+      if (fin && (c.fin || remote.fin)) {
+        let bd = null; try { const bf = JSON.parse(base.f.fin || 'null'); bd = bf && bf.dests; } catch (e) {}
+        const dd = shMergeDests(c.fin && c.fin.dests, remote.fin && remote.fin.dests, bd, fin.rows);
+        if (dd) fin = Object.assign({}, fin, { dests: dd });
       }
       if (fin) b.fin = fin;
     }
