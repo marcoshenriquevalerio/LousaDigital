@@ -281,6 +281,45 @@ Object.assign(window.FB, {
   }
 });
 
+
+/* =====================================================================
+   CALENDÁRIO / PLANNER — privados de cada usuário
+   users/{uid}/calendar/{idDaLousa} -> { events: "JSON {data:[textos]}", updatedAt }
+   (já coberto pela regra users/{uid}/{document=**}; não precisa mudar as regras)
+   ===================================================================== */
+const calCol = () => collection(db, "users", uid(), "calendar");
+Object.assign(window.FB, {
+  async loadCalendars() {
+    const snap = await getDocs(calCol());
+    const out = {};
+    snap.forEach((d) => {
+      try { out[d.id] = JSON.parse(d.data().events || "{}"); } catch (e) { out[d.id] = {}; }
+    });
+    return out;
+  },
+  saveCalendar(boardId, events) {
+    return setDoc(doc(db, "users", uid(), "calendar", boardId), {
+      events: JSON.stringify(events || {}),
+      updatedAt: Date.now()
+    });
+  },
+  deleteCalendar(boardId) {
+    return deleteDoc(doc(db, "users", uid(), "calendar", boardId));
+  },
+  // cb(idDaLousa, eventos) quando OUTRO aparelho muda algo (as próprias gravações são ignoradas)
+  watchCalendars(cb) {
+    return onSnapshot(calCol(), (snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.doc.metadata.hasPendingWrites) return;
+        if (ch.type === "removed") return cb(ch.doc.id, {});
+        let ev = {};
+        try { ev = JSON.parse(ch.doc.data().events || "{}"); } catch (e) {}
+        cb(ch.doc.id, ev);
+      });
+    }, (e) => console.warn("calendar watch:", e));
+  }
+});
+
 /* ---------- avisa o index.html quando o login muda ---------- */
 onAuthStateChanged(auth, (user) => {
   window.dispatchEvent(

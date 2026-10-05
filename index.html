@@ -1249,6 +1249,7 @@
         console.warn('Cache local indisponível:', e);
       }
       scheduleCloudSave();
+      calFlush();   // calendário/planner: grava já, em documento próprio
     }
 
     function createInitialDefaultBoard() {
@@ -3128,6 +3129,64 @@
       nm.title = currentUser.email || '';
     }
 
+    /* =========================================================================
+       CALENDÁRIO / PLANNER — PRIVADOS DE CADA USUÁRIO
+       Cada lousa tem o seu calendário, gravado em users/{uid}/calendar/{idDaLousa}.
+       Fica na conta de quem escreveu (nunca vai para quem compartilha a lousa),
+       é gravado na hora e sincroniza em tempo real entre aparelhos.
+       ========================================================================= */
+    const CAL = { ready: false, sig: {}, unsub: null, busy: {} };
+    const calOf = (b) => stable(b.calendarEvents || {});
+
+    async function calHydrate() {
+      CAL.ready = false; CAL.sig = {};
+      let docs = null;
+      try { docs = await FB.loadCalendars(); CAL.ready = true; }
+      catch (e) { console.error('Erro ao carregar calendário:', e); setSyncStatus('error', 'calendário'); }
+      if (!docs) return;   // sem leitura não grava nada (evita apagar dados da nuvem)
+      appData.boards.forEach(b => {
+        if (docs[b.id]) { b.calendarEvents = docs[b.id]; CAL.sig[b.id] = stable(docs[b.id]); }
+        else if (b.shared) { b.calendarEvents = {}; }   // lousa compartilhada: o calendário é só seu
+        // lousa pessoal sem documento ainda: usa o que já existia e será gravado por calFlush()
+      });
+    }
+
+    function calFlush() {
+      if (!CAL.ready || !window.FB || !currentUser) return;
+      appData.boards.forEach(b => {
+        const sg = calOf(b), known = CAL.sig[b.id];
+        if (sg === known || (known === undefined && sg === '{}')) return;
+        CAL.sig[b.id] = sg;
+        const events = b.calendarEvents || {};
+        FB.saveCalendar(b.id, events).then(() => { if (!cloudSaveFailed) setSyncStatus('saved'); })
+          .catch((err) => {
+            console.error('Erro ao salvar calendário:', err);
+            if (CAL.sig[b.id] === sg) CAL.sig[b.id] = known;   // tenta de novo no próximo salvamento
+            setSyncStatus('error', err && err.message);
+            setTimeout(calFlush, 8000);
+          });
+      });
+    }
+
+    function calStartWatch() {
+      if (CAL.unsub) { try { CAL.unsub(); } catch (e) {} CAL.unsub = null; }
+      if (!CAL.ready) return;
+      CAL.unsub = FB.watchCalendars((id, events) => {
+        const b = appData.boards.find(x => x.id === id);
+        if (!b) return;
+        const sg = stable(events || {});
+        CAL.sig[id] = sg;
+        if (sg === calOf(b)) return;
+        b.calendarEvents = events || {};
+        try { localStorage.setItem(localKey(), JSON.stringify(appData)); } catch (e) {}
+        const open = (m) => { const el = byId(m); return el && !el.classList.contains('hidden'); };
+        if (open('calendarModal')) renderCalendar();
+        if (open('plannerModal')) renderPlanner();
+        try { Object.keys(WG.draws).forEach(k => WG.draws[k]()); } catch (e) {}
+      });
+    }
+    function calStop() { if (CAL.unsub) { try { CAL.unsub(); } catch (e) {} CAL.unsub = null; } CAL.ready = false; }
+
     async function handleSignedIn(user) {
       currentUser = user;
       appReady = false;
@@ -3168,6 +3227,8 @@
         createInitialDefaultBoard();
       }
 
+      await calHydrate();   // calendário/planner pessoais (users/{uid}/calendar/{lousa})
+
       appReady = true;
       if (migrated) { try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch (e) {} }
       if (!cloud || chosen !== cloud) saveData();   // garante a versão atual na nuvem
@@ -3178,9 +3239,11 @@
       renderNotes();
       setSyncStatus('saved');
       setLoginState('hidden');
+      calStartWatch();
     }
 
     function handleSignedOut() {
+      calStop();
       currentUser = null;
       appReady = false;
       if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
@@ -6525,16 +6588,16 @@
     const shBoard = (sid) => sharedBoards().find(b => b.shared.sid === sid);
     const shMe = () => FB.me();
     function shContent(b) {
-      return { name: b.name, kind: b.kind || null, nextZIndex: b.nextZIndex || 5, notes: b.notes || [], calendarEvents: b.calendarEvents || {}, strokes: b.strokes || [], fin: b.fin || null };
+      return { name: b.name, kind: b.kind || null, nextZIndex: b.nextZIndex || 5, notes: b.notes || [], strokes: b.strokes || [], fin: b.fin || null };
     }
     function shNorm(c) {
-      return { name: c.name || 'Lousa', kind: c.kind || null, nextZIndex: c.nextZIndex || 5, notes: c.notes || [], calendarEvents: c.calendarEvents || {}, strokes: c.strokes || [], fin: c.fin || null };
+      return { name: c.name || 'Lousa', kind: c.kind || null, nextZIndex: c.nextZIndex || 5, notes: c.notes || [], strokes: c.strokes || [], fin: c.fin || null };
     }
     const shMap = (a) => { const o = {}; (a || []).forEach(x => { o[x.id] = stable(x); }); return o; };
     function shBase(c) {
       c = shNorm(c);
       return { notes: shMap(c.notes), strokes: shMap(c.strokes), rows: shMap(c.fin && c.fin.rows),
-        f: { name: stable(c.name), kind: stable(c.kind), nextZIndex: stable(c.nextZIndex), calendarEvents: stable(c.calendarEvents), fin: stable(c.fin) } };
+        f: { name: stable(c.name), kind: stable(c.kind), nextZIndex: stable(c.nextZIndex), fin: stable(c.fin) } };
     }
     /* mescla por item (3 vias: meu estado, o da nuvem e o último que eu conhecia) */
     function shMergeList(local, remote, base) {
@@ -6563,17 +6626,20 @@
       return out;
     }
     function shMerge(b, remote, base) {
+      const oldCal = remote && remote.calendarEvents;   // lousas criadas antes: o calendário era compartilhado
       remote = shNorm(remote);
       if (!base) {   // primeira leitura: a nuvem manda
+        // migração: a dona/o dono leva o calendário antigo para a própria conta
+        if (CAL.ready && CAL.sig[b.id] === undefined && b.shared && b.shared.owner === shMe().uid && oldCal && Object.keys(oldCal).length) { b.calendarEvents = oldCal; calFlush(); }
         const localDests = b.fin && b.fin.dests;
         b.name = remote.name; b.kind = remote.kind || undefined; b.nextZIndex = remote.nextZIndex; b.notes = remote.notes;
-        b.calendarEvents = remote.calendarEvents; b.strokes = remote.strokes; if (remote.fin) b.fin = remote.fin; else delete b.fin;
+        b.strokes = remote.strokes; if (remote.fin) b.fin = remote.fin; else delete b.fin;
         if (b.fin && Array.isArray(localDests)) { const dd = shMergeDests(localDests, b.fin.dests, null, b.fin.rows); if (dd) b.fin.dests = dd; }   // categorias que só eu tinha entram juntas
         return;
       }
       const c = shNorm(shContent(b));
       const pick = (k) => { const ls = stable(c[k]), rs = stable(remote[k]); return ls === rs ? c[k] : (ls === base.f[k] ? remote[k] : c[k]); };
-      b.name = pick('name'); b.calendarEvents = pick('calendarEvents');
+      b.name = pick('name');
       b.nextZIndex = Math.max(c.nextZIndex, remote.nextZIndex);
       b.notes = shMergeList(c.notes, remote.notes, base.notes);
       b.strokes = shMergeList(c.strokes, remote.strokes, base.strokes);
