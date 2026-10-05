@@ -1071,6 +1071,11 @@
               <button class="fsb" data-fin-type data-v="line" onclick="finDraftSet('type','line')"><i class="fa-solid fa-chart-line mr-1"></i>Linhas</button>
               <button class="fsb" data-fin-type data-v="pie" onclick="finDraftSet('type','pie')"><i class="fa-solid fa-chart-pie mr-1"></i>Pizza</button>
               <button class="fsb" data-fin-type data-v="donut" onclick="finDraftSet('type','donut')"><i class="fa-regular fa-circle-dot mr-1"></i>Rosca</button>
+              <button class="fsb" data-fin-type data-v="progress" onclick="finDraftSet('type','progress')"><i class="fa-solid fa-bars-progress mr-1"></i>Progresso</button>
+              <button class="fsb" data-fin-type data-v="thermo" onclick="finDraftSet('type','thermo')"><i class="fa-solid fa-temperature-half mr-1"></i>Termômetro</button>
+              <button class="fsb" data-fin-type data-v="treemap" onclick="finDraftSet('type','treemap')"><i class="fa-solid fa-table-cells-large mr-1"></i>Mapa de árvore</button>
+              <button class="fsb" data-fin-type data-v="radar" onclick="finDraftSet('type','radar')"><i class="fa-solid fa-bullseye mr-1"></i>Radar</button>
+              <button class="fsb" data-fin-type data-v="funnel" onclick="finDraftSet('type','funnel')"><i class="fa-solid fa-filter mr-1"></i>Funil</button>
             </div>
           </div>
           <div>
@@ -1093,6 +1098,34 @@
               <button class="fsb" data-fin-met data-v="pout" onclick="finDraftMetric('pout')">A pagar (pendente)</button>
             </div>
           </div>
+          <div data-for="bar">
+            <div class="fin-lbl">Orientação das barras</div>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="fsb" data-fin-orient data-v="v" onclick="finDraftSet('orient','v')"><i class="fa-solid fa-chart-column mr-1"></i>Em pé (vertical)</button>
+              <button class="fsb" data-fin-orient data-v="h" onclick="finDraftSet('orient','h')"><i class="fa-solid fa-chart-bar mr-1"></i>Deitado (horizontal)</button>
+            </div>
+          </div>
+          <div data-for="pie donut">
+            <div class="fin-lbl">Nomes e % das fatias</div>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="fsb" data-fin-lab data-v="legend" onclick="finDraftSet('labelMode','legend')">Legenda ao lado</button>
+              <button class="fsb" data-fin-lab data-v="callout" onclick="finDraftSet('labelMode','callout')">Risco: % + nome</button>
+              <button class="fsb" data-fin-lab data-v="calloutPct" onclick="finDraftSet('labelMode','calloutPct')">Risco: só %</button>
+              <button class="fsb" data-fin-lab data-v="calloutName" onclick="finDraftSet('labelMode','calloutName')">Risco: só nome</button>
+            </div>
+          </div>
+          <div data-for="donut">
+            <div class="fin-lbl">Texto no centro da rosca</div>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="fsb" data-fin-ctr data-v="full" onclick="finDraftSet('centerMode','full')">Nome + valor</button>
+              <button class="fsb" data-fin-ctr data-v="value" onclick="finDraftSet('centerMode','value')">Só o valor</button>
+              <button class="fsb" data-fin-ctr data-v="none" onclick="finDraftSet('centerMode','none')">Ocultar</button>
+            </div>
+          </div>
+          <div data-for="progress thermo">
+            <div class="fin-lbl">Meta em R$ <span class="normal-case font-normal opacity-70">(opcional — sem meta, o maior valor é 100%)</span></div>
+            <input id="finGoalIn" type="text" inputmode="decimal" placeholder="Ex.: 5.000,00" oninput="finDraftGoal(this.value)" class="fin-modal-in">
+          </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <div class="fin-lbl">Período</div>
@@ -1104,7 +1137,7 @@
             </div>
           </div>
           <div>
-            <div class="fin-lbl">Legendas <span class="normal-case font-normal opacity-70">(marcado = aparece)</span></div>
+            <div class="fin-lbl">Legendas <span id="finLegHint" class="normal-case font-normal opacity-70">(marcado = aparece)</span></div>
             <div class="flex flex-wrap gap-1.5">
               <button class="fsb" data-fin-show data-v="x" onclick="finDraftShow('x')">Eixo X</button>
               <button class="fsb" data-fin-show data-v="y" onclick="finDraftShow('y')">Eixo Y</button>
@@ -5453,6 +5486,184 @@
     /* caixa de referência invisível: o filtro de giz usa a caixa do desenho, e linhas retas (altura zero) sumiriam */
     function finBox(W, H) { return `<rect x="-12" y="-12" width="${W + 24}" height="${H + 24}" fill="none" stroke="none"/>`; }
 
+
+    /* ---------- novos gráficos: progresso, termômetro, mapa de árvore, funil, radar, barras deitadas ---------- */
+    const FIN_IDS = ['green', 'pink', 'blue', 'yellow', 'white'];
+    const FIN_ITEM_TYPES = ['pie', 'donut', 'progress', 'thermo', 'treemap', 'funnel'];
+    /* itens (grupo × valor) em ordem do maior para o menor; o que passar do limite vira "Demais" */
+    function finItems(metrics, groups, maxN) {
+      const multi = metrics.length > 1;
+      let items = [];
+      groups.forEach(g => metrics.forEach(k => {
+        const v = Math.abs(g[k]) / 100;
+        if (v > 0) items.push({ label: multi ? g.label + ' · ' + FIN_METRICS[k].label : g.label, v });
+      }));
+      items.sort((a, b) => b.v - a.v);
+      if (items.length > maxN) { const rest = items.slice(maxN - 1).reduce((s, i) => s + i.v, 0); items = items.slice(0, maxN - 1).concat([{ label: 'Demais', v: rest }]); }
+      return items;
+    }
+    function finSquarify(items, x, y, w, h) {
+      const total = items.reduce((s, i) => s + i.v, 0), area = w * h;
+      const nodes = items.map(i => ({ it: i, a: i.v / total * area }));
+      const out = []; let rx = x, ry = y, rw = w, rh = h, row = [], i = 0;
+      const sumA = r => r.reduce((a, n) => a + n.a, 0);
+      const worst = (r, side) => {
+        const s = sumA(r), mx = Math.max.apply(null, r.map(n => n.a)), mn = Math.min.apply(null, r.map(n => n.a));
+        return Math.max(side * side * mx / (s * s), s * s / (side * side * mn));
+      };
+      const lay = r => {
+        const s = sumA(r);
+        if (rw >= rh) { const cw = s / rh; let cy = ry; r.forEach(n => { const hh = n.a / cw; out.push({ it: n.it, x: rx, y: cy, w: cw, h: hh }); cy += hh; }); rx += cw; rw -= cw; }
+        else { const rhh = s / rw; let cx = rx; r.forEach(n => { const ww = n.a / rhh; out.push({ it: n.it, x: cx, y: ry, w: ww, h: rhh }); cx += ww; }); ry += rhh; rh -= rhh; }
+      };
+      while (i < nodes.length) {
+        const side = Math.min(rw, rh), n = nodes[i];
+        if (!row.length || worst(row.concat([n]), side) <= worst(row, side)) { row.push(n); i++; }
+        else { lay(row); row = []; }
+      }
+      if (row.length) lay(row);
+      return out;
+    }
+
+    function finProgressSvg(cfg, W, H, items) {
+      const fs = finFS, goal = +cfg.goal > 0 ? +cfg.goal : 0, base = goal || items[0].v;
+      const sum = items.reduce((s, i) => s + i.v, 0), n = items.length, padX = 8, pw = W - padX * 2, rh = (H - 8) / n;
+      const ts = Math.max(9, Math.min(15, rh * 0.38 / fs));
+      const bt = Math.max(5, Math.min(20, rh - ts * fs - 9));
+      let body = '', txt = '';
+      items.forEach((it, i) => {
+        const y0 = 4 + i * rh, c = finHex(FIN_IDS[i % 5]), op = i < 5 ? 0.85 : 0.5, by = y0 + ts * fs + 5;
+        const fw = Math.max(bt, pw * Math.min(1, it.v / base));
+        const pct = Math.round((goal ? it.v / goal : it.v / sum) * 100);
+        body += `<rect data-ink x="${padX}" y="${by.toFixed(1)}" width="${pw.toFixed(1)}" height="${bt.toFixed(1)}" rx="${(bt / 2).toFixed(1)}" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="1.6"/>` +
+          `<rect data-ink x="${padX}" y="${by.toFixed(1)}" width="${fw.toFixed(1)}" height="${bt.toFixed(1)}" rx="${(bt / 2).toFixed(1)}" fill="${c}" fill-opacity="${(op * 0.55).toFixed(2)}" stroke="${c}" stroke-width="2.2"/>`;
+        if (!cfg.hideX) txt += finSvgText(padX + 2, y0 + ts * fs, finTrunc(it.label, Math.max(4, Math.floor(pw * 0.6 / (ts * fs * 0.55)))), { size: ts });
+        if (!cfg.hideY) txt += finSvgText(W - padX - 2, y0 + ts * fs, 'R$ ' + finCompact(it.v) + ' · ' + pct + '%', { size: ts, anchor: 'end', fill: c });
+      });
+      return `<g filter="url(#chalkSoft)">${finBox(W, H)}${body}</g>` + txt;
+    }
+
+    function finThermoSvg(cfg, W, H, items) {
+      const fs = finFS, goal = +cfg.goal > 0 ? +cfg.goal : 0, base = goal || items[0].v, n = items.length, cw = W / n;
+      const showN = !cfg.hideX, showV = !cfg.hideY;
+      const topPad = showV ? 24 * fs : 8, botPad = showN ? 24 * fs : 6, availH = Math.max(60, H - topPad - botPad);
+      const tw = Math.max(14, Math.min(34, cw * 0.26, availH * 0.16)), r = tw * 0.95, rt = tw / 2;
+      const by = topPad + availH - r, yTop = topPad + 2, dy = Math.sqrt(Math.max(0, r * r - rt * rt)), yJoin = by - dy;
+      let body = '', txt = '';
+      items.forEach((it, i) => {
+        const cx = cw * (i + 0.5), c = finHex(FIN_IDS[i % 5]), op = i < 5 ? 0.85 : 0.5, xL = cx - rt, xR = cx + rt;
+        const f = Math.min(1, it.v / base), tubeTop = yTop + rt, yLvl = by - f * (by - tubeTop), iw = tw * 0.46;
+        body += `<path data-ink d="M ${xL.toFixed(1)} ${yJoin.toFixed(1)} L ${xL.toFixed(1)} ${tubeTop.toFixed(1)} A ${rt.toFixed(1)} ${rt.toFixed(1)} 0 0 1 ${xR.toFixed(1)} ${tubeTop.toFixed(1)} L ${xR.toFixed(1)} ${yJoin.toFixed(1)} A ${r.toFixed(1)} ${r.toFixed(1)} 0 1 1 ${xL.toFixed(1)} ${yJoin.toFixed(1)} Z" fill="none" stroke="currentColor" stroke-opacity=".75" stroke-width="2.2" stroke-linejoin="round"/>` +
+          `<circle data-ink cx="${cx.toFixed(1)}" cy="${by.toFixed(1)}" r="${(r * 0.66).toFixed(1)}" fill="${c}" fill-opacity="${(op * 0.55).toFixed(2)}" stroke="${c}" stroke-width="2"/>` +
+          `<rect data-ink x="${(cx - iw / 2).toFixed(1)}" y="${yLvl.toFixed(1)}" width="${iw.toFixed(1)}" height="${Math.max(1, by - yLvl).toFixed(1)}" fill="${c}" fill-opacity="${(op * 0.55).toFixed(2)}" stroke="${c}" stroke-width="2"/>`;
+        [0.25, 0.5, 0.75, 1].forEach(q => {
+          const ty = by - (by - tubeTop) * q;
+          body += `<line data-ink x1="${(xR + 3).toFixed(1)}" y1="${ty.toFixed(1)}" x2="${(xR + (q === 0.5 ? 10 : 6)).toFixed(1)}" y2="${ty.toFixed(1)}" stroke="currentColor" stroke-opacity=".5" stroke-width="1.5"/>`;
+        });
+        if (showV) txt += finSvgText(cx, topPad - 7, (cw < 90 ? '' : 'R$ ') + finCompact(it.v) + (goal && cw >= 110 ? ' · ' + Math.round(it.v / goal * 100) + '%' : ''), { anchor: 'middle', size: 13, fill: c });
+        if (showN) txt += finSvgText(cx, H - 6, finTrunc(it.label, Math.max(3, Math.floor(cw / (6.8 * fs)))), { anchor: 'middle', size: 13, opacity: .9 });
+      });
+      return `<g filter="url(#chalkSoft)">${finBox(W, H)}${body}</g>` + txt;
+    }
+
+    function finTreemapSvg(cfg, W, H, items) {
+      const fs = finFS, sum = items.reduce((s, i) => s + i.v, 0), tiles = finSquarify(items, 4, 4, W - 8, H - 8);
+      let body = '', txt = '';
+      tiles.forEach(t => {
+        const i = items.indexOf(t.it), c = finHex(FIN_IDS[i % 5]), op = i < 5 ? 0.85 : 0.5;
+        const x = t.x + 2, y = t.y + 2, w = Math.max(2, t.w - 4), h = Math.max(2, t.h - 4);
+        const pct = Math.round(t.it.v / sum * 100) + '%';
+        body += `<rect data-ink x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="5" fill="${c}" fill-opacity="${(op * 0.34).toFixed(2)}" stroke="${c}" stroke-width="2.2"/>`;
+        let ty = y + 6 + 13 * fs;
+        if (!cfg.hideX && w > 44 && h > 24) { txt += finSvgText(x + 7, ty, finTrunc(t.it.label, Math.max(3, Math.floor((w - 12) / (6.8 * fs)))), { size: 13 }); ty += 15 * fs; }
+        if (!cfg.hideY && w > 34 && ty < y + h - 2) txt += finSvgText(x + 7, ty, (w > 120 ? 'R$ ' + finCompact(t.it.v) + ' · ' : '') + pct, { size: 13, fill: c });
+      });
+      return `<g filter="url(#chalkSoft)">${finBox(W, H)}${body}</g>` + txt;
+    }
+
+    function finFunnelSvg(cfg, W, H, items) {
+      const fs = finFS, n = items.length, sum = items.reduce((s, i) => s + i.v, 0), max = items[0].v, gap = 3;
+      const sh = (H - 8) / n, fw = W - 16, cx = W / 2, minW = fw * 0.08;
+      const wOf = v => Math.max(minW, fw * v / max);
+      const ts = Math.max(9, Math.min(14, (sh - gap) * 0.5 / fs));
+      let body = '', txt = '';
+      items.forEach((it, i) => {
+        const y = 4 + i * sh, wt = wOf(it.v), wb = i < n - 1 ? wOf(items[i + 1].v) : wt * 0.72, yb = y + sh - gap;
+        const c = finHex(FIN_IDS[i % 5]), op = i < 5 ? 0.85 : 0.5;
+        body += `<polygon data-ink points="${(cx - wt / 2).toFixed(1)},${y.toFixed(1)} ${(cx + wt / 2).toFixed(1)},${y.toFixed(1)} ${(cx + wb / 2).toFixed(1)},${yb.toFixed(1)} ${(cx - wb / 2).toFixed(1)},${yb.toFixed(1)}" fill="${c}" fill-opacity="${(op * 0.34).toFixed(2)}" stroke="${c}" stroke-width="2.2" stroke-linejoin="round"/>`;
+        const aw = (wt + wb) / 2, pctS = Math.round(it.v / sum * 100) + '%', cands = [];
+        if (!cfg.hideX && !cfg.hideY) { cands.push(it.label + ' · R$ ' + finCompact(it.v) + ' · ' + pctS, it.label + ' · ' + pctS); }
+        else if (!cfg.hideY) cands.push('R$ ' + finCompact(it.v) + ' · ' + pctS, pctS);
+        if (!cfg.hideX) cands.push(it.label);
+        const chars = Math.max(4, Math.floor(aw * 0.92 / (ts * fs * 0.55)));
+        const pick = cands.find(t => t.length <= chars) || cands[cands.length - 1];
+        if (pick && aw > 50 && sh - gap > 14) txt += finSvgText(cx, y + (sh - gap) / 2 + ts * fs * 0.35, finTrunc(pick, chars), { anchor: 'middle', size: ts });
+      });
+      return `<g filter="url(#chalkSoft)">${finBox(W, H)}${body}</g>` + txt;
+    }
+
+    function finRadarSvg(cfg, W, H, metrics, groups, legendH) {
+      const fs = finFS, gs = groups.slice(0, 10), n = gs.length;
+      if (n < 3) return finSvgText(W / 2, H / 2 - 4, 'O radar precisa de 3 ou mais itens', { anchor: 'middle', size: 17, opacity: .8 }) +
+        finSvgText(W / 2, H / 2 + 20, 'troque o “agrupar por” (ex.: Mês ou Destino)', { anchor: 'middle', size: 14, opacity: .6 });
+      const mx = cfg.hideX ? 12 : Math.min(W * 0.22, 84 * fs), my = cfg.hideX ? 12 : 18 * fs, top = legendH + my;
+      const availH = H - top - my, R = Math.max(24, Math.min((W - 2 * mx) / 2, availH / 2)), cx = W / 2, cy = top + availH / 2;
+      let mxv = 0; gs.forEach(g => metrics.forEach(k => { mxv = Math.max(mxv, Math.abs(g[k]) / 100); }));
+      const nt = finNiceTicks(0, mxv || 1, 4), hi = nt.hi || 1;
+      const ang = i => -Math.PI / 2 + i * 2 * Math.PI / n;
+      const pt = (i, f) => [cx + Math.cos(ang(i)) * R * f, cy + Math.sin(ang(i)) * R * f];
+      let grid = '', body = '', txt = '';
+      nt.ticks.filter(t => t > 0).forEach(t => {
+        const f = t / hi, pts = gs.map((g, i) => pt(i, f).map(v => v.toFixed(1)).join(',')).join(' ');
+        grid += `<polygon points="${pts}" fill="none" stroke="currentColor" stroke-opacity="${f >= 0.999 ? .4 : .18}" stroke-width="1.2"${f >= 0.999 ? '' : ' stroke-dasharray="4 4"'}/>`;
+        if (!cfg.hideY) txt += finSvgText(cx + 4, cy - R * f - 2, finCompact(t), { size: 11, opacity: .7 });
+      });
+      gs.forEach((g, i) => {
+        const p = pt(i, 1);
+        grid += `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}" stroke="currentColor" stroke-opacity=".16" stroke-width="1"/>`;
+        if (!cfg.hideX) {
+          const co = Math.cos(ang(i)), si = Math.sin(ang(i)), lx = cx + co * (R + 10), ly = cy + si * (R + 10) + (si > 0.3 ? 9 : si < -0.3 ? -2 : 4);
+          txt += finSvgText(lx, ly, finTrunc(g.label, Math.max(4, Math.floor((mx - 10) / (6.6 * fs)))), { anchor: co > 0.3 ? 'start' : co < -0.3 ? 'end' : 'middle', size: 12, opacity: .9 });
+        }
+      });
+      metrics.forEach(k => {
+        const meta = FIN_METRICS[k], c = finHex(meta.color), pts = gs.map((g, i) => pt(i, Math.min(1, Math.abs(g[k]) / 100 / hi)));
+        body += `<polygon data-ink points="${pts.map(q => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ')}" fill="${c}" fill-opacity=".2" stroke="${c}" stroke-width="2.4" stroke-linejoin="round"${meta.dash ? ' stroke-dasharray="7 5"' : ''}/>`;
+        pts.forEach(q => { body += `<circle data-ink cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="3.4" fill="${c}" fill-opacity=".85"/>`; });
+      });
+      return `<g filter="url(#chalkSoft)">${finBox(W, H)}${grid}${body}</g>` + txt;
+    }
+
+    /* barras deitadas: nomes à esquerda, valores no eixo de baixo (Eixo X = nomes, Eixo Y = valores, igual ao modo em pé) */
+    function finBarsH(cfg, W, H, metrics, groups, legendH) {
+      const fs = finFS, n = groups.length, maxLen = Math.max.apply(null, groups.map(g => g.label.length));
+      const padL = cfg.hideX ? 8 : Math.round(Math.min(W * 0.32, Math.max(44, maxLen * 6.8 * fs + 12)));
+      const padR = cfg.hideY ? 10 : Math.round(46 * fs), padT = 10 + legendH, padB = cfg.hideY ? 8 : Math.round(24 * fs);
+      const pw = Math.max(40, W - padL - padR), ph = Math.max(40, H - padT - padB), band = ph / n;
+      const vals = [0]; groups.forEach(g => metrics.forEach(k => vals.push(g[k] / 100)));
+      const nt = finNiceTicks(Math.min.apply(null, vals), Math.max.apply(null, vals), Math.max(2, Math.min(5, Math.floor(pw / 70))));
+      const xOf = v => padL + (v - nt.lo) / (nt.hi - nt.lo) * pw;
+      let grid = '', lab = '', body = '';
+      nt.ticks.forEach(v => {
+        const x = xOf(v);
+        grid += `<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${(padT + ph).toFixed(1)}" stroke="currentColor" stroke-opacity="${v === 0 ? .55 : .16}" stroke-width="${v === 0 ? 1.8 : 1}"${v === 0 ? '' : ' stroke-dasharray="4 4"'}/>` +
+          (cfg.hideY ? '' : finSvgText(x, padT + ph + 16, finCompact(v), { anchor: 'middle', size: 12, opacity: .8 }));
+      });
+      const step = Math.max(1, Math.ceil(14 * fs / band)), bh = Math.min(30, (band * 0.76) / metrics.length);
+      groups.forEach((g, i) => {
+        const cy = padT + band * (i + 0.5);
+        if (i % step === 0) lab += finSvgText(padL - 7, cy + 4, finTrunc(g.label, Math.max(4, Math.floor((padL - 10) / (6.6 * fs)))), { anchor: 'end', size: 13, opacity: .9 });
+        const start = padT + band * i + (band - bh * metrics.length) / 2;
+        metrics.forEach((k, j) => {
+          const v = g[k] / 100; if (!v) return;
+          const meta = FIN_METRICS[k], c = finHex(meta.color), x0 = xOf(0), x1 = xOf(v), y = start + j * bh;
+          body += `<rect data-ink x="${Math.min(x0, x1).toFixed(1)}" y="${(y + 1).toFixed(1)}" width="${Math.max(2, Math.abs(x1 - x0)).toFixed(1)}" height="${Math.max(2, bh - 3).toFixed(1)}" rx="2" fill="${c}" fill-opacity="${meta.dash ? .12 : .32}" stroke="${c}" stroke-width="2.2"${meta.dash ? ' stroke-dasharray="5 3"' : ''}/>`;
+          if (!cfg.hideY && bh >= 13 && n * metrics.length <= 16) body += finSvgText(v >= 0 ? x1 + 5 : x1 - 5, y + bh / 2 + 4, finCompact(v), { anchor: v >= 0 ? 'start' : 'end', size: 12, fill: c });
+        });
+      });
+      return grid + (cfg.hideX ? '' : lab) + `<g filter="url(#chalkSoft)">${finBox(W, H)}${body}</g>`;
+    }
+
     function finChartSvg(cfg, W, H) {
       finFS = Math.max(0.6, Math.min(2, cfg.fontScale || 1));
       W = Math.max(120, Math.round(W)); H = Math.max(90, Math.round(H));
@@ -5464,11 +5675,11 @@
         return open + finSvgText(W / 2, H / 2 - 4, 'Sem dados ainda', { anchor: 'middle', size: 20, opacity: .75 }) +
           finSvgText(W / 2, H / 2 + 20, 'preencha a tabela e marque os lançamentos ✓', { anchor: 'middle', size: 14, opacity: .6 }) + '</svg>';
       }
-      const type = cfg.type === 'line' || cfg.type === 'pie' || cfg.type === 'donut' ? cfg.type : 'bar';
+      const type = ['line', 'pie', 'donut', 'progress', 'thermo', 'treemap', 'radar', 'funnel'].indexOf(cfg.type) >= 0 ? cfg.type : 'bar';
       let svg = open, legendH = 0;
 
       /* legenda */
-      const legendItems = (type === 'pie' || type === 'donut' || cfg.hideLegend) ? [] : metrics.map(k => ({ k, label: FIN_METRICS[k].label }));
+      const legendItems = (FIN_ITEM_TYPES.indexOf(type) >= 0 || cfg.hideLegend) ? [] : metrics.map(k => ({ k, label: FIN_METRICS[k].label }));
       let legendSvg = '';
       if (legendItems.length > 1) {
         let lx = 6, ly = 10; const rowsL = [];
@@ -5483,26 +5694,30 @@
         legendH = ly + 8;
       }
 
+      if (type === 'progress') return svg + finProgressSvg(cfg, W, H, finItems(metrics, groups, 12)) + '</svg>';
+      if (type === 'thermo') return svg + finThermoSvg(cfg, W, H, finItems(metrics, groups, 6)) + '</svg>';
+      if (type === 'treemap') return svg + finTreemapSvg(cfg, W, H, finItems(metrics, groups, 12)) + '</svg>';
+      if (type === 'funnel') return svg + finFunnelSvg(cfg, W, H, finItems(metrics, groups, 8)) + '</svg>';
+      if (type === 'radar') return svg + legendSvg + finRadarSvg(cfg, W, H, metrics, groups, legendH) + '</svg>';
+
       if (type === 'pie' || type === 'donut') {
         /* pizza (disco cheio) e rosca (anel): cada fatia é um grupo; com vários valores marcados, uma fatia por grupo × valor */
         const multi = metrics.length > 1, isDonut = type === 'donut';
-        let items = [];
-        groups.forEach(g => metrics.forEach(k => {
-          const v = Math.abs(g[k]) / 100;
-          if (v > 0) items.push({ label: multi ? g.label + ' · ' + FIN_METRICS[k].label : g.label, v });
-        }));
-        items.sort((a, b) => b.v - a.v);
-        if (items.length > 8) { const rest = items.slice(7).reduce((s, i) => s + i.v, 0); items = items.slice(0, 7).concat([{ label: 'Demais', v: rest }]); }
+        const items = finItems(metrics, groups, 8);
         const sum = items.reduce((s, i) => s + i.v, 0);
-        const lw = cfg.hideLegend ? 0 : Math.min(230, Math.max(110, W * 0.42));
-        const R = Math.max(30, Math.min(H / 2 - 12, (W - lw) / 2 - 8));
+        const lm = ['callout', 'calloutPct', 'calloutName'].indexOf(cfg.labelMode) >= 0 ? cfg.labelMode : 'legend';
+        const callout = lm !== 'legend', labelsOn = !cfg.hideLegend;
+        const useLegend = !callout && labelsOn;
+        const lw = useLegend ? Math.min(230, Math.max(110, W * 0.42)) : 0;
+        const mxC = callout && labelsOn ? Math.min(W * 0.3, 150 * finFS) : 0;
+        const R = Math.max(30, Math.min(H / 2 - 12, (W - lw - 2 * mxC) / 2 - 8));
         const cx = (W - lw) / 2 + 2, cy = H / 2;
-        const ids = ['green', 'pink', 'blue', 'yellow', 'white'];
-        const rr = R * 0.74, sw = R * 0.48;
+        const rr = R * 0.74, sw = R * 0.48, Ro = isDonut ? rr + sw / 2 : R * 0.97;
         let ang = -Math.PI / 2, arcs = '', leg = '', pieLabels = '';
+        const mids = [];
         const pt = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
         items.forEach((it, i) => {
-          const c = finHex(ids[i % 5]), op = i < 5 ? 0.85 : 0.5, frac = it.v / sum, a2 = ang + frac * Math.PI * 2;
+          const c = finHex(FIN_IDS[i % 5]), op = i < 5 ? 0.85 : 0.5, frac = it.v / sum, a2 = ang + frac * Math.PI * 2;
           const gap = items.length > 1 ? Math.min(0.03, frac * 0.3) : 0;
           if (isDonut) {
             if (frac > 0.9995) arcs += `<circle data-ink cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-opacity="${op}"/>`;
@@ -5517,25 +5732,64 @@
               const p1 = pt(ang + gap / 2, PR), p2 = pt(a2 - gap / 2, PR), large = (a2 - ang - gap) > Math.PI ? 1 : 0;
               arcs += `<path data-ink d="M ${cx.toFixed(1)} ${cy.toFixed(1)} L ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A ${PR} ${PR} 0 ${large} 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} Z" fill="${c}" fill-opacity="${op * 0.4}" stroke="${c}" stroke-width="2.4" stroke-linejoin="round"/>`;
             }
-            if (frac >= 0.06 && PR > 40) {
+            if (lm === 'legend' && frac >= 0.06 && PR > 40) {
               const mid = (ang + a2) / 2, tp = pt(mid, PR * 0.62);
               pieLabels += finSvgText(tp[0], tp[1] + 4, Math.round(frac * 100) + '%', { anchor: 'middle', size: 13 });
             }
           }
+          mids.push({ mid: frac > 0.9995 ? -Math.PI / 4 : (ang + a2) / 2, frac, label: it.label, c });
           ang = a2;
-          const rowH = 24 * Math.max(1, finFS), ly = cy - (items.length * rowH) / 2 + i * rowH + 12, lx = W - lw + 4;
-          leg += `<g data-ink><rect x="${lx}" y="${ly - 10}" width="13" height="13" rx="2" fill="${c}" fill-opacity="${op}"/>` +
-            finSvgText(lx + 19, ly + 1, finTrunc(it.label, Math.max(5, Math.floor((lw - 78 * finFS) / (7.2 * finFS)))), { size: 14 }) +
-            finSvgText(W - 2, ly + 1, Math.round(frac * 100) + '%', { size: 14, anchor: 'end' }) + '</g>';
+          if (useLegend) {
+            const rowH = 24 * Math.max(1, finFS), ly = cy - (items.length * rowH) / 2 + i * rowH + 12, lx = W - lw + 4;
+            leg += `<g data-ink><rect x="${lx}" y="${ly - 10}" width="13" height="13" rx="2" fill="${c}" fill-opacity="${op}"/>` +
+              finSvgText(lx + 19, ly + 1, finTrunc(it.label, Math.max(5, Math.floor((lw - 78 * finFS) / (7.2 * finFS)))), { size: 14 }) +
+              finSvgText(W - 2, ly + 1, Math.round(frac * 100) + '%', { size: 14, anchor: 'end' }) + '</g>';
+          }
         });
-        svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${arcs}</g>` + (cfg.hideLegend ? '' : leg) + pieLabels +
-          (isDonut ? finSvgText(cx, cy - 2, multi ? 'Total' : FIN_METRICS[metrics[0]].label, { anchor: 'middle', size: Math.max(12, Math.min(16, R / 4.5)) }) +
-            finSvgText(cx, cy + Math.max(14, R / 4), 'R$ ' + finCompact(sum), { anchor: 'middle', size: Math.max(12, Math.min(18, R / 4)) }) : '');
+
+        /* rótulos com risco: uma linha sai da fatia para fora, com "% nome", só "%" ou só o nome */
+        let co = '', coTxt = '';
+        if (callout && labelsOn) {
+          const lh = 15 * finFS, maxCh = Math.max(4, Math.floor((mxC - 22) / (7 * finFS))), side = { r: [], l: [] };
+          mids.forEach(m => {
+            const co_ = Math.cos(m.mid), p0 = pt(m.mid, Ro), q = pt(m.mid, Ro + 12);
+            side[co_ >= 0 ? 'r' : 'l'].push({ m, p0, q, y: q[1], right: co_ >= 0 });
+          });
+          ['r', 'l'].forEach(k => {
+            const arr = side[k].sort((a, b) => a.y - b.y);
+            arr.forEach((o, i) => { if (i && o.y - arr[i - 1].y < lh) o.y = arr[i - 1].y + lh; });
+            for (let i = arr.length - 1; i >= 0; i--) {
+              const lim = i === arr.length - 1 ? H - 6 : arr[i + 1].y - lh;
+              if (arr[i].y > lim) arr[i].y = lim;
+            }
+            arr.forEach(o => { o.y = Math.max(12, o.y); });
+            arr.forEach(o => {
+              const ex = o.q[0] + (o.right ? 16 : -16), pctS = Math.round(o.m.frac * 100) + '%';
+              const txt = lm === 'calloutPct' ? pctS : lm === 'calloutName' ? finTrunc(o.m.label, maxCh) : pctS + ' ' + finTrunc(o.m.label, maxCh);
+              co += `<polyline data-ink points="${o.p0[0].toFixed(1)},${o.p0[1].toFixed(1)} ${o.q[0].toFixed(1)},${o.q[1].toFixed(1)} ${ex.toFixed(1)},${o.y.toFixed(1)}" fill="none" stroke="${o.m.c}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+              coTxt += finSvgText(ex + (o.right ? 4 : -4), o.y + 4, txt, { anchor: o.right ? 'start' : 'end', size: 13 });
+            });
+          });
+        }
+
+        const cm = cfg.centerMode === 'value' || cfg.centerMode === 'none' ? cfg.centerMode : 'full';
+        let center = '';
+        const fitC = (t, mx) => Math.max(9, Math.min(mx, (R * 0.92) / (Math.max(3, t.length) * 0.52 * finFS)));
+        if (isDonut && cm === 'full') {
+          const t1 = multi ? 'Total' : FIN_METRICS[metrics[0]].label, t2 = 'R$ ' + finCompact(sum), f1 = fitC(t1, 16), f2 = fitC(t2, 18);
+          center = finSvgText(cx, cy - 2, t1, { anchor: 'middle', size: f1 }) +
+            finSvgText(cx, cy + Math.max(14, f2 * finFS * 0.95), t2, { anchor: 'middle', size: f2 });
+        } else if (isDonut && cm === 'value') {
+          const t2 = 'R$ ' + finCompact(sum), fz = fitC(t2, 24);
+          center = finSvgText(cx, cy + fz * finFS * 0.35, t2, { anchor: 'middle', size: fz });
+        }
+        svg += `<g filter="url(#chalkSoft)">${finBox(W, H)}${arcs}${co}</g>` + (useLegend ? leg : '') + pieLabels + coTxt + center;
         return svg + '</svg>';
       }
 
       /* barras / linhas */
       svg += legendSvg;
+      if (type === 'bar' && cfg.orient === 'h') return svg + finBarsH(cfg, W, H, metrics, groups, legendH) + '</svg>';
       const n = groups.length, padL = cfg.hideY ? 14 : Math.round(54 * finFS), padR = 12;
       const pw = W - padL - padR, band = pw / n;
       const maxLen = Math.max.apply(null, groups.map(g => g.label.length));
@@ -5602,12 +5856,15 @@
       if (!editId && !finIsFinance()) return;
       const n = editId ? findNote(editId) : null;
       finDraft = n && n.cfg
-        ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all', hideX: !!n.cfg.hideX, hideY: !!n.cfg.hideY, hideLegend: !!n.cfg.hideLegend, hideTitle: !!n.noTitle }
-        : { editId: null, title: '', type: 'bar', x: 'date', metrics: ['in', 'out'], period: 'all', hideX: false, hideY: false, hideLegend: false, hideTitle: false };
+        ? { editId, title: n.title == null ? '' : n.title, type: n.cfg.type, x: n.cfg.x, metrics: (n.cfg.metrics || []).slice(), period: n.cfg.period || 'all', hideX: !!n.cfg.hideX, hideY: !!n.cfg.hideY, hideLegend: !!n.cfg.hideLegend, hideTitle: !!n.noTitle,
+            orient: n.cfg.orient === 'h' ? 'h' : 'v', labelMode: n.cfg.labelMode || 'legend', centerMode: n.cfg.centerMode || 'full', goal: +n.cfg.goal > 0 ? +n.cfg.goal : 0 }
+        : { editId: null, title: '', type: 'bar', x: 'date', metrics: ['in', 'out'], period: 'all', hideX: false, hideY: false, hideLegend: false, hideTitle: false,
+            orient: 'v', labelMode: 'legend', centerMode: 'full', goal: 0 };
       const months = finMonthsList();
       if (finDraft.period !== 'all' && months.indexOf(finDraft.period) < 0) months.push(finDraft.period);
       byId('finPeriodSel').innerHTML = '<option value="all">Todo o período</option>' + months.map(m => `<option value="${m}">${finMonthLong(m)}</option>`).join('');
       byId('finChartTitleIn').value = finDraft.title;
+      byId('finGoalIn').value = finDraft.goal ? finFmtNum(finDraft.goal) : '';
       byId('finChartModalTitle').innerText = n ? 'Configurar gráfico' : 'Montar gráfico';
       byId('finChartOkBtn').innerText = n ? 'Aplicar' : 'Adicionar à lousa';
       byId('finChartModal').classList.remove('hidden');
@@ -5617,6 +5874,11 @@
     function finDraftSet(k, v) {
       if (!finDraft) return;
       finDraft[k] = v;
+      syncFinChartModal();
+    }
+    function finDraftGoal(txt) {
+      if (!finDraft) return;
+      finDraft.goal = finParseMoney(txt) || 0;
       syncFinChartModal();
     }
     function finDraftMetric(k) {
@@ -5637,11 +5899,20 @@
       const on = (sel, test) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', test(b.dataset.v)));
       on('#finChartModal [data-fin-type]', v => v === finDraft.type);
       on('#finChartModal [data-fin-x]', v => v === finDraft.x);
+      on('#finChartModal [data-fin-orient]', v => v === finDraft.orient);
+      on('#finChartModal [data-fin-lab]', v => v === finDraft.labelMode);
+      on('#finChartModal [data-fin-ctr]', v => v === finDraft.centerMode);
+      document.querySelectorAll('#finChartModal [data-for]').forEach(el => el.classList.toggle('hidden', el.dataset.for.split(' ').indexOf(finDraft.type) < 0));
+      const ITEM_T = ['progress', 'thermo', 'treemap', 'funnel'];
+      byId('finLegHint').innerText = ITEM_T.indexOf(finDraft.type) >= 0 || finDraft.type === 'radar'
+        ? '(Eixo X = nomes · Eixo Y = valores e %)' : '(marcado = aparece)';
       on('#finChartModal [data-fin-met]', v => finDraft.metrics.indexOf(v) >= 0);
       const showMap = { x: 'hideX', y: 'hideY', legend: 'hideLegend', title: 'hideTitle' };
       on('#finChartModal [data-fin-show]', v => !finDraft[showMap[v]]);
       byId('finPeriodSel').value = finDraft.period;
-      byId('finMetHint').innerText = (finDraft.type === 'pie' || finDraft.type === 'donut') ? 'Marque quantos quiser: cada valor vira fatias.' : 'Marque quantos quiser.';
+      byId('finMetHint').innerText = (finDraft.type === 'pie' || finDraft.type === 'donut') ? 'Marque quantos quiser: cada valor vira fatias.'
+        : ['progress', 'thermo', 'treemap', 'funnel'].indexOf(finDraft.type) >= 0 ? 'Marque quantos quiser: cada valor vira um item (do maior para o menor).'
+        : finDraft.type === 'radar' ? 'Marque quantos quiser: cada valor vira um polígono.' : 'Marque quantos quiser.';
       byId('finChartOkBtn').disabled = !finDraft.metrics.length;
       byId('finChartOkBtn').classList.toggle('opacity-40', !finDraft.metrics.length);
       const box = byId('finPreviewBox');
@@ -5649,7 +5920,8 @@
     }
     function confirmFinChart() {
       if (!finDraft || !finDraft.metrics.length) return;
-      const cfg = { type: finDraft.type, x: finDraft.x, metrics: finDraft.metrics.slice(), period: finDraft.period, hideX: !!finDraft.hideX, hideY: !!finDraft.hideY, hideLegend: !!finDraft.hideLegend };
+      const cfg = { type: finDraft.type, x: finDraft.x, metrics: finDraft.metrics.slice(), period: finDraft.period, hideX: !!finDraft.hideX, hideY: !!finDraft.hideY, hideLegend: !!finDraft.hideLegend,
+        orient: finDraft.orient === 'h' ? 'h' : 'v', labelMode: finDraft.labelMode || 'legend', centerMode: finDraft.centerMode || 'full', goal: +finDraft.goal > 0 ? +finDraft.goal : 0 };
       const title = byId('finChartTitleIn').value.trim();
       if (finDraft.editId) {
         const n = findNote(finDraft.editId);
