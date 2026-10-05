@@ -2959,6 +2959,7 @@
     let currentUser = null;
     let appReady = false;
     let saveTimer = null;
+    let cloudSaveFailed = false, cloudRetryTimer = null;
 
     const byId = (id) => document.getElementById(id);
     const localKey = () => LOCAL_PREFIX + (currentUser ? currentUser.uid : 'anon');
@@ -3011,8 +3012,10 @@
     }
 
     async function doLogout() {
-      try { if (saveTimer) await flushCloudSave(); } catch (e) {}
-      try { localStorage.removeItem(localKey()); } catch (e) {}
+      let cloudOk = true;
+      try { if (saveTimer) { await flushCloudSave(); } } catch (e) { cloudOk = false; }
+      if (cloudSaveFailed) cloudOk = false;
+      if (cloudOk) { try { localStorage.removeItem(localKey()); } catch (e) {} }   // se a nuvem não recebeu tudo, mantém a cópia local para não perder nada
       if (window.FB) {
         try { await FB.logout(); } catch (e) { console.error(e); }
       } else {
@@ -3052,16 +3055,21 @@
       setSyncStatus('saving');
       try {
         await FB.saveAppData(cloudView());
+        cloudSaveFailed = false; clearTimeout(cloudRetryTimer);
         setSyncStatus(saveTimer ? 'pending' : 'saved');
       } catch (err) {
         console.error('Erro ao salvar na nuvem:', err);
+        cloudSaveFailed = true;
         setSyncStatus('error', err && err.message);
+        clearTimeout(cloudRetryTimer); cloudRetryTimer = setTimeout(() => { if (!saveTimer) flushCloudSave(); }, 15000);   // tenta de novo sozinho
       }
     }
 
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && saveTimer) flushCloudSave();
+      if (document.visibilityState === 'hidden' && (saveTimer || cloudSaveFailed)) flushCloudSave();
     });
+    window.addEventListener('pagehide', () => { if (saveTimer || cloudSaveFailed) flushCloudSave(); });
+    window.addEventListener('online', () => { if (cloudSaveFailed) flushCloudSave(); });
 
     function updateUserChip() {
       const chip = byId('userChip');

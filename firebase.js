@@ -74,26 +74,46 @@ window.FB = {
   login: () => signInWithPopup(auth, provider),
   logout: () => signOut(auth),
 
-  // Lousas, notas, calendário e tema (JSON convertido em base64)
+  // Lousas, notas, calendário e tema (JSON convertido em base64).
+  // Se passar de ~900 KB, é gravado em pedaços (users/{uid}/chunks/{n}) — assim nunca deixa de salvar por tamanho.
   async loadAppData() {
     const snap = await getDoc(mainRef());
     if (!snap.exists()) return null;
     const d = snap.data();
-    if (!d.payload) return null;
-    return JSON.parse(fromBase64(d.payload));
+    if (d.payload) return JSON.parse(fromBase64(d.payload));
+    if (d.chunks > 0) {
+      const parts = await Promise.all(
+        Array.from({ length: d.chunks }, (_, i) => getDoc(doc(db, "users", uid(), "chunks", String(i))))
+      );
+      if (parts.some((p) => !p.exists())) throw new Error("Dados incompletos na nuvem (partes faltando).");
+      return JSON.parse(fromBase64(parts.map((p) => p.data().data).join("")));
+    }
+    return null;
   },
 
   async saveAppData(obj) {
     const payload = toBase64(JSON.stringify(obj));
-    if (payload.length > 950000) {
-      throw new Error("Lousa grande demais para salvar (limite de ~950 KB de texto).");
-    }
-    await setDoc(mainRef(), {
-      payload,
+    const base = {
       encoding: "base64-json",
       updatedAt: obj.updatedAt || Date.now(),
       email: auth.currentUser.email || null
-    });
+    };
+    const SIZE = 700000;
+    if (payload.length <= 900000) {
+      await setDoc(mainRef(), Object.assign(base, { payload, chunks: 0 }));
+    } else {
+      const n = Math.ceil(payload.length / SIZE);
+      for (let i = 0; i < n; i++) {
+        await setDoc(doc(db, "users", uid(), "chunks", String(i)), { data: payload.slice(i * SIZE, (i + 1) * SIZE), n });
+      }
+      // o documento principal só aponta para os pedaços depois que todos foram gravados
+      await setDoc(mainRef(), Object.assign(base, { chunks: n }));
+      // limpa pedaços antigos que sobraram
+      try {
+        const old = await getDocs(collection(db, "users", uid(), "chunks"));
+        await Promise.all(old.docs.filter((x) => Number(x.id) >= n).map((x) => deleteDoc(x.ref)));
+      } catch (e) { console.warn("Limpeza de pedaços:", e); }
+    }
   },
 
   // Imagens: cada uma num documento próprio, em base64 (data URL)
