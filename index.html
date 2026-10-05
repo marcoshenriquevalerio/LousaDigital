@@ -154,6 +154,9 @@
 
     /* Peça "travada" (sem 3 cliques): só move e marca o check; campos e botões só funcionam depois de ativar */
     .style-wrapper:not(.is-selected) { touch-action: none; cursor: grab; }
+    /* Texto livre no modo só-mover: a caixa não captura o clique; quem decide é o teste de acerto no texto (JS) */
+    .chalk-note.ck-text:not(.is-selected) { pointer-events: none; }
+    #boardCanvas { touch-action: none; }
     .chalk-note:not(.is-selected) input,
     .chalk-note:not(.is-selected) textarea,
     .chalk-note:not(.is-selected) select,
@@ -1469,9 +1472,9 @@
 
     function initDragAndDrop(element, noteId) {
       /* A peça inteira é a alça: dá para arrastar clicando em qualquer área vazia dela */
-      const onPointerDown = (e) => {
+      const onPointerDown = (e, force) => {
         if (e.type === 'pointerdown' && e.pointerType === 'mouse' && e.button !== 0) return;
-        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner') || e.target.closest('.bend-pt') || e.target.closest('.bend-mid') || e.target.closest('.edit-input')) {
+        if (!force && (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner') || e.target.closest('.bend-pt') || e.target.closest('.bend-mid') || e.target.closest('.edit-input'))) {
           return;
         }
 
@@ -1507,7 +1510,74 @@
 
       element.addEventListener('pointerdown', onPointerDown);
       element.addEventListener('touchstart', onPointerDown, { passive: true });
+      element._startDrag = (e) => onPointerDown(e, true);
     }
+
+    /* ---- Texto livre: só "pega" onde existe texto de verdade (modo mover) ---- */
+    const ckMirror = document.createElement('div');
+    function ckTextLineRects(ta) {
+      if (!ta.value) return null;
+      const cs = getComputedStyle(ta), r = ta.getBoundingClientRect();
+      const k = ta.offsetWidth ? r.width / ta.offsetWidth : 1;
+      const m = ckMirror;
+      if (!m.isConnected) document.body.appendChild(m);
+      m.style.cssText = 'position:fixed;left:-99999px;top:0;visibility:hidden;pointer-events:none;white-space:pre-wrap;overflow-wrap:break-word;word-wrap:break-word;box-sizing:border-box;'
+        + 'width:' + ta.offsetWidth + 'px;font:' + cs.font + ';letter-spacing:' + cs.letterSpacing + ';line-height:' + cs.lineHeight
+        + ';padding:' + cs.padding + ';border:' + cs.borderTopWidth + ' solid transparent;text-align:' + cs.textAlign + ';text-transform:' + cs.textTransform + ';tab-size:' + cs.tabSize;
+      m.textContent = ta.value;
+      const mr = m.getBoundingClientRect(), rg = document.createRange();
+      rg.selectNodeContents(m);
+      const out = [];
+      for (const q of rg.getClientRects()) {
+        if (q.width < 1 || q.height < 1) continue;
+        out.push({ l: r.left + (q.left - mr.left) * k, t: r.top + (q.top - mr.top) * k, r: r.left + (q.right - mr.left) * k, b: r.top + (q.bottom - mr.top) * k });
+      }
+      return out;
+    }
+    function ckTextHit(x, y) {
+      const PAD = 8;
+      let best = null, bz = -1;
+      document.querySelectorAll('#notesContainer .chalk-note.ck-text:not(.is-selected)').forEach(el => {
+        const er = el.getBoundingClientRect();
+        if (x < er.left || x > er.right || y < er.top || y > er.bottom) return;
+        const ta = el.querySelector('textarea');
+        if (!ta) return;
+        const rects = ckTextLineRects(ta);
+        let hit = !rects || !rects.length;   // texto vazio: a caixa toda
+        if (!hit) hit = rects.some(q => x >= q.l - PAD && x <= q.r + PAD && y >= q.t - PAD && y <= q.b + PAD);
+        if (!hit) return;
+        const z = parseInt(el.style.zIndex, 10) || 0;
+        if (z > bz) { bz = z; best = el; }
+      });
+      return best;
+    }
+    /* Resolve qual texto livre está de fato sob o ponteiro (respeitando a ordem de camadas) */
+    function ckResolveTextHit(e) {
+      const t = e.target;
+      if (!t || !t.closest || !t.closest('#boardCanvas')) return null;
+      if (t.closest('.eraser, .chalkstick, #boardQuote, button, input, textarea, select, .bend-pt, .bend-mid, .resize-handle, .resize-corner, .edit-input')) return null;
+      const hit = ckTextHit(e.clientX, e.clientY);
+      if (!hit) return null;
+      const nat = t.closest('.chalk-note');
+      if (nat && nat !== hit && (parseInt(nat.style.zIndex, 10) || 0) > (parseInt(hit.style.zIndex, 10) || 0)) return null;
+      return hit;
+    }
+    document.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const hit = ckResolveTextHit(e);
+      if (!hit) return;
+      e.__ckHit = hit;
+      if (hit._startDrag) hit._startDrag(e);
+    }, true);
+    let ckCurRaf = 0;
+    document.addEventListener('pointermove', (e) => {
+      if (activeDrag || e.pointerType !== 'mouse' || ckCurRaf) return;
+      ckCurRaf = requestAnimationFrame(() => {
+        ckCurRaf = 0;
+        const c = document.getElementById('notesContainer');
+        if (c) c.style.cursor = ckResolveTextHit(e) ? 'grab' : '';
+      });
+    });
 
     /* Ajusta as barras de controle quando a peça está perto de uma borda */
     function updateEdgeClasses(el) {
@@ -2455,7 +2525,7 @@
     document.addEventListener('pointerdown', (e) => {
       /* Marcar/desmarcar tarefa só dá o check: não muda a seleção da lista */
       if (e.target.closest && e.target.closest('.chalk-check')) return;
-      const n = e.target.closest && e.target.closest('.chalk-note');
+      const n = e.__ckHit || (e.target.closest && e.target.closest('.chalk-note'));
       if (!n) { tapState.id = null; tapState.n = 0; setSelectedNote(null); return; }
       if (n.id === selectedNoteId) { tapState.id = n.id; tapState.n = 0; return; }   // já ativa
       const now = Date.now();
@@ -2513,6 +2583,7 @@
         wrapper.style.top = `${note.y}px`;
         wrapper.style.width = `${note.width || 320}px`;
         wrapper.style.zIndex = noteZ(note);
+        if (note.type === 'chalktext') wrapper.classList.add('ck-text');
         if (isChalk && note.id === selectedNoteId) wrapper.classList.add('is-selected');
         if (note.type === 'shape') {
           wrapper.style.height = `${note.height || 80}px`;
