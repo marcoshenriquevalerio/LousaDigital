@@ -413,13 +413,11 @@
     /* ===== Camadas: menus e janelas sempre na frente de tudo da lousa ===== */
     #boardViewport { isolation: isolate; }
     #shapeMenu, #stickerMenu, #widgetMenu { z-index: 9990 !important; }
-    /* post-it reduzido: tudo (letras, cabeçalho, margens) encolhe junto com a largura */
-    .postit-paper { zoom: var(--u, 1); width: calc(100% / var(--u, 1)) !important; }
     /* post-it estilo folha de papel pautada: o texto assenta sobre as linhas */
     .paper-sheet { background-color: #fffef7 !important; background-image: linear-gradient(90deg, transparent 38px, rgba(220,38,38,.45) 38px 40px, transparent 40px); color: #1e293b; padding-left: 50px !important; border-color: #d6d3d1 !important; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
     .paper-sheet .postit-head { border-color: rgba(0,0,0,.12); margin-left: -34px; }
-    textarea.paper-ta { font-size: 22px !important; line-height: 32px !important; min-height: 128px !important; padding: 0 !important; color: #1e293b !important; overflow: hidden;
-      background-image: repeating-linear-gradient(to bottom, transparent 0 26px, rgba(37,99,235,.4) 26px 27px, transparent 27px 32px) !important; background-attachment: local; }
+    textarea.paper-ta { font-size: var(--fs, 22px) !important; line-height: var(--lh, 32px) !important; min-height: calc(var(--lh, 32px) * 4) !important; padding: 0 !important; color: #1e293b !important; overflow: hidden;
+      background-image: repeating-linear-gradient(to bottom, transparent 0 calc(var(--lh, 32px) - 6px), rgba(37,99,235,.4) calc(var(--lh, 32px) - 6px) calc(var(--lh, 32px) - 5px), transparent calc(var(--lh, 32px) - 5px) var(--lh, 32px)) !important; background-attachment: local; }
     /* widgets */
     .wg-card { container-type: inline-size; overflow: hidden; color: #f5f5f4; border: 2px dashed rgba(255,255,255,.35); border-radius: 12px; padding: 4px 8px 8px; background: rgba(0,0,0,.12); }
     .theme-marker .wg-card { color: #1e293b; border-color: rgba(15,23,42,.3); background: rgba(15,23,42,.05); }
@@ -1560,14 +1558,13 @@
       const isFn = !!(note && isFinType(note.type));
       const isWg = !!(note && note.type === 'widget');   // widgets: do minúsculo ao enorme
       const isPi = !!(note && note.type === 'text');   // post-it: pode diminuir (letras acompanham)
-      newWidth = Math.max(isWg ? 40 : isPi ? 50 : (isSt ? 40 : (isImg ? 80 : (isFn ? finMinSize(note)[0] : 200))), Math.min(newWidth, isWg ? 1600 : (isSt ? 500 : ((isImg || isFn) ? 1200 : 650))));
+      newWidth = Math.max(isWg ? 40 : isPi ? 30 : (isSt ? 40 : (isImg ? 80 : (isFn ? finMinSize(note)[0] : 200))), Math.min(newWidth, isWg ? 1600 : (isSt ? 500 : ((isImg || isFn) ? 1200 : 650))));
 
       activeResize.element.style.width = `${newWidth}px`;
       if (activeResize.direction === 'left' && note && typeof activeResize.startLeft === 'number') {   // puxando pela esquerda: a borda direita fica parada
         note.x = activeResize.startLeft + (activeResize.startWidth - newWidth);
         activeResize.element.style.left = note.x + 'px';
       }
-      if (isPi) { const pp = activeResize.element.querySelector('.postit-paper'); if (pp) pp.style.setProperty('--u', Math.min(1, newWidth / 300).toFixed(3)); }
 
       if (note) {
         note.width = newWidth;
@@ -2483,7 +2480,7 @@
           <div class="tape-effect w-24 h-5 absolute -top-2.5 left-1/2 transform -translate-x-1/2 z-30"></div>
 
           <!-- PAPEL DO POST-IT TOTALMENTE ESTÁTICO (SEM VENTO) -->
-          <div class="postit-paper ${note.paper ? 'paper-sheet' : colorObj.class} rounded-b-md rounded-tr-md p-4 pt-3 border flex flex-col w-full h-full relative" style="--u:${Math.min(1, (note.width || 300) / 300).toFixed(3)}">
+          <div class="postit-paper ${note.paper ? 'paper-sheet' : colorObj.class} rounded-b-md rounded-tr-md p-4 pt-3 border flex flex-col w-full h-full relative">
             
             <!-- Barra Superior / Header do Post-it -->
             <div class="postit-head drag-handle cursor-grab active:cursor-grabbing flex items-center justify-between pb-2 mb-2 border-b border-black/10 select-none">
@@ -2499,6 +2496,8 @@
 
               <!-- Mover & Excluir -->
               <div class="flex items-center gap-2">
+                <button onclick="changeNoteFont('${note.id}', -2)" class="text-black/50 hover:text-black text-[10px] font-bold p-0.5 transition" title="Diminuir as letras">A-</button>
+                <button onclick="changeNoteFont('${note.id}', 2)" class="text-black/50 hover:text-black text-xs font-bold p-0.5 transition" title="Aumentar as letras">A+</button>
                 <button onclick="togglePaper('${note.id}')" class="text-black/50 hover:text-black text-xs p-0.5 transition" title="${note.paper ? 'Voltar ao post-it' : 'Estilo folha de papel'}"><i class="fa-solid ${note.paper ? 'fa-note-sticky' : 'fa-file-lines'}"></i></button>
                 ${moveToolHtml(note.id, 'text-black/50 hover:text-black text-xs p-0.5 transition')}
                 <span class="text-xs opacity-40" title="Arraste para mover"><i class="fa-solid fa-grip-vertical"></i></span>
@@ -2512,7 +2511,7 @@
             <textarea id="input_${note.id}" 
                       oninput="onNoteTextInput('${note.id}', this)"
                       placeholder="Escreva aqui..." 
-                      class="${note.paper ? 'paper-ta ' : ''}w-full bg-transparent border-none resize-none focus:outline-none font-chalk text-xl leading-relaxed min-h-[110px] placeholder:text-black/30 text-inherit overflow-hidden">${note.content || ''}</textarea>
+                      class="${note.paper ? 'paper-ta ' : ''}w-full bg-transparent border-none resize-none focus:outline-none font-chalk text-xl leading-relaxed min-h-[110px] placeholder:text-black/30 text-inherit overflow-hidden" style="--fs:${note.fs || (note.paper ? 22 : 20)}px; --lh:${Math.round((note.fs || (note.paper ? 22 : 20)) * (note.paper ? 1.45 : 1.625))}px; font-size:var(--fs);">${note.content || ''}</textarea>
           </div>
 
           <!-- ALÇAS LATERAIS DE REDIMENSIONAMENTO (LARGURA HORIZONTAL) -->
@@ -2563,6 +2562,10 @@
       textarea.style.height = (textarea.scrollHeight) + 'px';
     }
 
+    window.changeNoteFont = function (id, d) {
+      const n = findNote(id); if (!n) return;
+      n.fs = Math.max(5, Math.min(80, (n.fs || (n.paper ? 22 : 20)) + d)); saveData(); renderNotes();
+    };
     window.togglePaper = function (id) { const n = findNote(id); if (!n) return; n.paper = !n.paper; saveData(); renderNotes(); };
     function changeNoteColor(id, colorId) {
       const board = getActiveBoard();
