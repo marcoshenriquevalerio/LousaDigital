@@ -6032,7 +6032,10 @@
         const c = b.firstChild, ui = b.lastChild, x = c.getContext('2d'), col = wgColor(n), sh = getActiveBoard().shared, me = (window.FB && FB.me && currentUser) ? FB.me().uid : '';
         const can = !!(sh && window.FB && FB.rtc && me), sid = sh && sh.sid, id = n.id;
         const net = WG.net[id] || null;
-        let py = 100, cy = 100, bx = 200, by = 120, vx = 4, vy = 2.5, ps = 0, cs = 0, up = 0, dn = 0;
+        let py = 100, cy = 100, bx = 200, by = 120, vx = 4, vy = 2.5, ps = 0, cs = 0, up = 0, dn = 0, wait = 1, msg = 'Toque ou Espaço para começar', over = 0;
+        const WIN = 5;   // primeiro a chegar a 5 vence; a cada ponto o jogo pausa até alguém tocar
+        const go = () => { if (!wait) return; if (over) { ps = 0; cs = 0; over = 0; } wait = 0; };
+        const press = () => { const N = WG.net[id]; if (N && N.st === 'on' && N.role === 'guest') N.go = 1; else go(); };
         const rs = () => { bx = 200; by = 120; vx = (Math.random() < .5 ? -1 : 1) * 4; vy = (Math.random() * 4 - 2); };
         const cfg = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
         const gather = (pc) => new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, 2500); pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }; });
@@ -6048,7 +6051,7 @@
         const wire = (N, dc) => {
           N.dc = dc; dc.onopen = () => { N.st = 'on'; N.ui && N.ui(); };
           dc.onclose = () => { N.st = 'off'; N.ui && N.ui(); };
-          dc.onmessage = (e) => { try { const m = JSON.parse(e.data); if (N.role === 'host') N.rpy = m.y; else N.s = m; } catch (er) {} };
+          dc.onmessage = (e) => { try { const m = JSON.parse(e.data); if (N.role === 'host') { N.rpy = m.y; if (m.go) N.hostGo && N.hostGo(); } else N.s = m; } catch (er) {} };
         };
         const mk = (role) => { const pc = new RTCPeerConnection(cfg), N = { pc, role, st: 'wait', ui: setUI, rpy: 100, s: null }; WG.net[id] = N; pc.onconnectionstatechange = () => { if (/failed|closed|disconnected/.test(pc.connectionState)) { N.st = 'off'; N.ui && N.ui(); } }; return N; };
         const goOnline = async () => {
@@ -6059,7 +6062,7 @@
               await N.pc.setRemoteDescription(JSON.parse(d.offer)); await N.pc.setLocalDescription(await N.pc.createAnswer()); await gather(N.pc);
               await FB.rtc.update(sid, id, { answer: JSON.stringify(N.pc.localDescription), state: 'joined', guest: me });
             } else {   // ninguém esperando: cria a sala e fica esperando
-              const N = mk('host'); wire(N, N.pc.createDataChannel('p', { ordered: false, maxRetransmits: 0 }));
+              const N = mk('host'); N.hostGo = go; wire(N, N.pc.createDataChannel('p', { ordered: false, maxRetransmits: 0 }));
               await N.pc.setLocalDescription(await N.pc.createOffer()); await gather(N.pc);
               await FB.rtc.set(sid, id, { host: me, offer: JSON.stringify(N.pc.localDescription), state: 'open', t: Date.now() });
               N.unsub = FB.rtc.watch(sid, id, (r) => { if (r && r.answer && !N.answered) { N.answered = true; N.pc.setRemoteDescription(JSON.parse(r.answer)).catch(() => {}); } });
@@ -6068,30 +6071,37 @@
           setUI();
         };
         ui.onclick = (e) => { const a = e.target.closest('[data-act]'); if (!a) return; if (a.dataset.act === 'online') goOnline(); else leave(); };
-        if (net) net.ui = setUI; setUI();
+        if (net) { net.ui = setUI; net.hostGo = go; } setUI();
         c.addEventListener('pointermove', (e) => { const r = c.getBoundingClientRect(); py = (e.clientY - r.top) / r.height * 240 - 20; });
-        c.addEventListener('pointerdown', () => b.focus());
-        b.addEventListener('keydown', (e) => { if (e.key === 'ArrowUp') { up = 1; e.preventDefault(); } if (e.key === 'ArrowDown') { dn = 1; e.preventDefault(); } });
+        c.addEventListener('pointerdown', () => { b.focus(); press(); });
+        b.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); press(); } if (e.key === 'ArrowUp') { up = 1; e.preventDefault(); } if (e.key === 'ArrowDown') { dn = 1; e.preventDefault(); } });
         b.addEventListener('keyup', (e) => { if (e.key === 'ArrowUp') up = 0; if (e.key === 'ArrowDown') dn = 0; });
-        const paint = (lp, rp, X, Y, a, z) => {
+        const paint = (lp, rp, X, Y, a, z, t) => {
           x.clearRect(0, 0, 400, 240); x.fillStyle = x.strokeStyle = col; x.lineWidth = 3; x.setLineDash([8, 8]); x.beginPath(); x.moveTo(200, 0); x.lineTo(200, 240); x.stroke(); x.setLineDash([]);
           x.fillRect(12, lp, 8, 40); x.fillRect(380, rp, 8, 40); x.beginPath(); x.arc(X, Y, 6, 0, 7); x.fill();
           x.font = '28px "Patrick Hand", cursive, sans-serif'; x.textAlign = 'center'; x.fillText(a, 160, 30); x.fillText(z, 240, 30);
+          if (t) { x.font = '20px "Patrick Hand", cursive, sans-serif'; x.fillText(t, 200, 150); }
         };
         return wgLoop(() => {
           py += (dn - up) * 6; py = Math.max(0, Math.min(200, py));
           const N = WG.net[id], on = N && N.st === 'on' && N.dc && N.dc.readyState === 'open';
           if (on && N.role === 'guest') {   // convidado: manda só a própria raquete e desenha o que o anfitrião envia (resposta local instantânea)
-            N.dc.send(JSON.stringify({ y: py })); const s = N.s || { hy: 100, bx: 200, by: 120, ps: 0, cs: 0 };
+            N.dc.send(JSON.stringify({ y: py, go: N.go ? 1 : 0 })); N.go = 0; const s = N.s || { hy: 100, bx: 200, by: 120, ps: 0, cs: 0 };
             if (s.snd && s.snd !== N.lastSnd) { N.lastSnd = s.snd; wgTone(n, s.snd, .05); }
-            paint(s.hy, py, s.bx, s.by, s.ps, s.cs); return;
+            paint(s.hy, py, s.bx, s.by, s.ps, s.cs, s.w); return;
           }
           if (on) cy = N.rpy; else cy += Math.max(-3.4, Math.min(3.4, by - 20 - cy));
           cy = Math.max(0, Math.min(200, cy)); let snd = 0;
+          if (wait) { if (on) N.dc.send(JSON.stringify({ hy: py, bx, by, ps, cs, w: msg })); paint(py, cy, bx, by, ps, cs, msg); return; }
           bx += vx; by += vy; if (by < 4 || by > 236) { vy = -vy; snd = 300; }
           if (vx < 0 && bx < 24 && bx > 10 && by > py - 4 && by < py + 44) { vx = -vx * 1.06; vy += (by - py - 20) / 6; snd = 520; }
           if (vx > 0 && bx > 376 && bx < 390 && by > cy - 4 && by < cy + 44) { vx = -vx * 1.04; vy += (by - cy - 20) / 8; snd = 420; }
-          if (bx < -10) { cs++; snd = 150; rs(); } if (bx > 410) { ps++; snd = 700; rs(); }
+          if (bx < -10 || bx > 410) {
+            if (bx < -10) { cs++; snd = 150; } else { ps++; snd = 700; }
+            rs(); wait = 1;
+            over = ps >= WIN || cs >= WIN;
+            msg = over ? (on ? (ps >= WIN ? 'Esquerda venceu!' : 'Direita venceu!') : (ps >= WIN ? 'Você venceu!' : 'O computador venceu!')) + ' Toque para jogar de novo' : 'Ponto! Toque ou Espaço para continuar';
+          }
           if (snd) wgTone(n, snd, .05);
           if (on) N.dc.send(JSON.stringify({ hy: py, bx, by, ps, cs, snd: snd ? snd + Math.random() : 0 }));
           paint(py, cy, bx, by, ps, cs);
