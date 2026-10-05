@@ -437,6 +437,7 @@
     .wg-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,.08); color: #f5f5f4; font-size: 11px; border: 1px solid rgba(255,255,255,.2); } .wg-tile:hover { background: rgba(255,255,255,.18); }
     .wg-prev { font-size: 22px; height: 30px; display: flex; align-items: center; color: #fcd34d; }
     .wg-mem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; } .wg-mem button { aspect-ratio: 1; font-size: 11cqw; border: 2px solid currentColor; border-radius: 8px; opacity: .9; } .wg-mem button.ok { opacity: .35; }
+    .wg-net { text-align: center; font-size: 5.2cqw; min-height: 1px; margin-top: 4px; }
     .wg-mini { font-size: 12px; margin-left: 6px; padding: 0 8px; border: 1px solid currentColor; border-radius: 6px; }
     #calendarModal, #plannerModal, #imageModal { z-index: 9995 !important; }
     #customDialogModal { z-index: 9999 !important; }
@@ -5884,7 +5885,7 @@
       memory:   { name: 'Jogo da memória',   icon: 'fa-clone',         w: 300, game: 1, styles: ['Animais', 'Frutas', 'Formas'] },
       ttt:      { name: 'Jogo da velha',     icon: 'fa-hashtag',       w: 260, game: 1, styles: ['Contra o computador', '2 jogadores'] }
     };
-    const WG = { clean: {}, cal: {}, draws: {} };
+    const WG = { clean: {}, cal: {}, draws: {}, net: {} };
     const wgInk = () => (isMarker() ? '#1e293b' : '#f5f5f4');
     const wgColor = (n) => { const p = getPalette(); return p[(n.ws || 0) % p.length].hex; };
     const wgRnd = (k) => Math.floor(Math.random() * k);
@@ -6027,23 +6028,73 @@
         init(); draw(); const iv = setInterval(step, 130); return () => clearInterval(iv);
       },
       pong(b, n) {
-        b.innerHTML = '<canvas width="400" height="240" class="edit-input" style="width:100%;display:block;touch-action:none"></canvas>';
-        const c = b.firstChild, x = c.getContext('2d'), col = wgColor(n);
+        b.innerHTML = '<canvas width="400" height="240" class="edit-input" style="width:100%;display:block;touch-action:none"></canvas><div class="wg-net font-chalk edit-input"></div>';
+        const c = b.firstChild, ui = b.lastChild, x = c.getContext('2d'), col = wgColor(n), sh = getActiveBoard().shared, me = (window.FB && FB.me && currentUser) ? FB.me().uid : '';
+        const can = !!(sh && window.FB && FB.rtc && me), sid = sh && sh.sid, id = n.id;
+        const net = WG.net[id] || null;
         let py = 100, cy = 100, bx = 200, by = 120, vx = 4, vy = 2.5, ps = 0, cs = 0, up = 0, dn = 0;
         const rs = () => { bx = 200; by = 120; vx = (Math.random() < .5 ? -1 : 1) * 4; vy = (Math.random() * 4 - 2); };
+        const cfg = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+        const gather = (pc) => new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, 2500); pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }; });
+        const setUI = () => {
+          const N = WG.net[id];
+          if (!can) { ui.innerHTML = ''; return; }
+          ui.innerHTML = !N ? '<button data-act="online" class="wg-mini">Jogar online com alguém da lousa</button>'
+            : N.st === 'on' ? `Online — você é a raquete da ${N.role === 'host' ? 'esquerda' : 'direita'} <button data-act="leave" class="wg-mini">Sair</button>`
+            : N.st === 'wait' ? 'Aguardando o outro jogador clicar em "Jogar online"… <button data-act="leave" class="wg-mini">Cancelar</button>'
+            : 'Conexão encerrada <button data-act="leave" class="wg-mini">Voltar</button>';
+        };
+        const leave = () => { const N = WG.net[id]; if (!N) return; try { N.unsub && N.unsub(); N.pc.close(); } catch (e) {} if (N.role === 'host' && N.st === 'wait') FB.rtc.del(sid, id).catch(() => {}); delete WG.net[id]; setUI(); };
+        const wire = (N, dc) => {
+          N.dc = dc; dc.onopen = () => { N.st = 'on'; N.ui && N.ui(); };
+          dc.onclose = () => { N.st = 'off'; N.ui && N.ui(); };
+          dc.onmessage = (e) => { try { const m = JSON.parse(e.data); if (N.role === 'host') N.rpy = m.y; else N.s = m; } catch (er) {} };
+        };
+        const mk = (role) => { const pc = new RTCPeerConnection(cfg), N = { pc, role, st: 'wait', ui: setUI, rpy: 100, s: null }; WG.net[id] = N; pc.onconnectionstatechange = () => { if (/failed|closed|disconnected/.test(pc.connectionState)) { N.st = 'off'; N.ui && N.ui(); } }; return N; };
+        const goOnline = async () => {
+          try {
+            const d = await FB.rtc.get(sid, id);
+            if (d && d.state === 'open' && d.host !== me && Date.now() - (d.t || 0) < 300000) {   // alguém já está esperando: entra como convidado
+              const N = mk('guest'); N.pc.ondatachannel = (e) => wire(N, e.channel);
+              await N.pc.setRemoteDescription(JSON.parse(d.offer)); await N.pc.setLocalDescription(await N.pc.createAnswer()); await gather(N.pc);
+              await FB.rtc.update(sid, id, { answer: JSON.stringify(N.pc.localDescription), state: 'joined', guest: me });
+            } else {   // ninguém esperando: cria a sala e fica esperando
+              const N = mk('host'); wire(N, N.pc.createDataChannel('p', { ordered: false, maxRetransmits: 0 }));
+              await N.pc.setLocalDescription(await N.pc.createOffer()); await gather(N.pc);
+              await FB.rtc.set(sid, id, { host: me, offer: JSON.stringify(N.pc.localDescription), state: 'open', t: Date.now() });
+              N.unsub = FB.rtc.watch(sid, id, (r) => { if (r && r.answer && !N.answered) { N.answered = true; N.pc.setRemoteDescription(JSON.parse(r.answer)).catch(() => {}); } });
+            }
+          } catch (e) { console.warn('Pong online:', e); leave(); ui.innerHTML = 'Não deu para conectar. <button data-act="online" class="wg-mini">Tentar de novo</button>'; return; }
+          setUI();
+        };
+        ui.onclick = (e) => { const a = e.target.closest('[data-act]'); if (!a) return; if (a.dataset.act === 'online') goOnline(); else leave(); };
+        if (net) net.ui = setUI; setUI();
         c.addEventListener('pointermove', (e) => { const r = c.getBoundingClientRect(); py = (e.clientY - r.top) / r.height * 240 - 20; });
         c.addEventListener('pointerdown', () => b.focus());
         b.addEventListener('keydown', (e) => { if (e.key === 'ArrowUp') { up = 1; e.preventDefault(); } if (e.key === 'ArrowDown') { dn = 1; e.preventDefault(); } });
         b.addEventListener('keyup', (e) => { if (e.key === 'ArrowUp') up = 0; if (e.key === 'ArrowDown') dn = 0; });
-        return wgLoop(() => {
-          py += (dn - up) * 6; py = Math.max(0, Math.min(200, py)); cy += Math.max(-3.4, Math.min(3.4, by - 20 - cy)); cy = Math.max(0, Math.min(200, cy));
-          bx += vx; by += vy; if (by < 4 || by > 236) { vy = -vy; wgTone(n, 300, .04); }
-          if (vx < 0 && bx < 24 && bx > 10 && by > py - 4 && by < py + 44) { vx = -vx * 1.06; vy += (by - py - 20) / 6; wgTone(n, 520, .05); }
-          if (vx > 0 && bx > 376 && bx < 390 && by > cy - 4 && by < cy + 44) { vx = -vx * 1.04; vy += (by - cy - 20) / 8; wgTone(n, 420, .05); }
-          if (bx < -10) { cs++; wgTone(n, 150, .2); rs(); } if (bx > 410) { ps++; wgTone(n, 700, .2); rs(); }
+        const paint = (lp, rp, X, Y, a, z) => {
           x.clearRect(0, 0, 400, 240); x.fillStyle = x.strokeStyle = col; x.lineWidth = 3; x.setLineDash([8, 8]); x.beginPath(); x.moveTo(200, 0); x.lineTo(200, 240); x.stroke(); x.setLineDash([]);
-          x.fillRect(12, py, 8, 40); x.fillRect(380, cy, 8, 40); x.beginPath(); x.arc(bx, by, 6, 0, 7); x.fill();
-          x.font = '28px "Patrick Hand", cursive, sans-serif'; x.textAlign = 'center'; x.fillText(ps, 160, 30); x.fillText(cs, 240, 30);
+          x.fillRect(12, lp, 8, 40); x.fillRect(380, rp, 8, 40); x.beginPath(); x.arc(X, Y, 6, 0, 7); x.fill();
+          x.font = '28px "Patrick Hand", cursive, sans-serif'; x.textAlign = 'center'; x.fillText(a, 160, 30); x.fillText(z, 240, 30);
+        };
+        return wgLoop(() => {
+          py += (dn - up) * 6; py = Math.max(0, Math.min(200, py));
+          const N = WG.net[id], on = N && N.st === 'on' && N.dc && N.dc.readyState === 'open';
+          if (on && N.role === 'guest') {   // convidado: manda só a própria raquete e desenha o que o anfitrião envia (resposta local instantânea)
+            N.dc.send(JSON.stringify({ y: py })); const s = N.s || { hy: 100, bx: 200, by: 120, ps: 0, cs: 0 };
+            if (s.snd && s.snd !== N.lastSnd) { N.lastSnd = s.snd; wgTone(n, s.snd, .05); }
+            paint(s.hy, py, s.bx, s.by, s.ps, s.cs); return;
+          }
+          if (on) cy = N.rpy; else cy += Math.max(-3.4, Math.min(3.4, by - 20 - cy));
+          cy = Math.max(0, Math.min(200, cy)); let snd = 0;
+          bx += vx; by += vy; if (by < 4 || by > 236) { vy = -vy; snd = 300; }
+          if (vx < 0 && bx < 24 && bx > 10 && by > py - 4 && by < py + 44) { vx = -vx * 1.06; vy += (by - py - 20) / 6; snd = 520; }
+          if (vx > 0 && bx > 376 && bx < 390 && by > cy - 4 && by < cy + 44) { vx = -vx * 1.04; vy += (by - cy - 20) / 8; snd = 420; }
+          if (bx < -10) { cs++; snd = 150; rs(); } if (bx > 410) { ps++; snd = 700; rs(); }
+          if (snd) wgTone(n, snd, .05);
+          if (on) N.dc.send(JSON.stringify({ hy: py, bx, by, ps, cs, snd: snd ? snd + Math.random() : 0 }));
+          paint(py, cy, bx, by, ps, cs);
         });
       },
       breakout(b, n) {
@@ -6162,6 +6213,7 @@
     function wgCleanup() {
       Object.keys(WGA.music).forEach(k => { clearInterval(WGA.music[k]); delete WGA.music[k]; }); Object.keys(WG.clean).forEach(k => { try { WG.clean[k](); } catch (e) {} delete WG.clean[k]; }); }
     function wgMount() {
+      Object.keys(WG.net).forEach(k => { if (!getActiveBoard().notes.some(n => n.id === k)) { try { WG.net[k].pc.close(); WG.net[k].unsub && WG.net[k].unsub(); } catch (e) {} delete WG.net[k]; } });
       getActiveBoard().notes.forEach(n => { if (n.type !== 'widget') return; const b = byId('wgb_' + n.id), f = WG_MOUNT[n.wk]; if (b && f) { WG.clean[n.id] = f(b, n); if (n.snd && WG_KINDS[n.wk].game) wgMusic(n, true); } });
     }
     (function () {

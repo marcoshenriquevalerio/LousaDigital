@@ -254,6 +254,15 @@ Object.assign(window.FB, {
     return () => { u1(); u2(); };
   },
 
+  // Sinalização do jogo em tempo real (Pong online): só troca os dados de conexão uma vez; o jogo em si vai direto entre os navegadores (WebRTC)
+  rtc: {
+    get: async (sid, id) => { const s = await getDoc(doc(db, "shared", sid, "rtc", id)); return s.exists() ? s.data() : null; },
+    set: (sid, id, d) => setDoc(doc(db, "shared", sid, "rtc", id), d),
+    update: (sid, id, d) => updateDoc(doc(db, "shared", sid, "rtc", id), d),
+    del: (sid, id) => deleteDoc(doc(db, "shared", sid, "rtc", id)),
+    watch: (sid, id, cb) => onSnapshot(doc(db, "shared", sid, "rtc", id), (s) => cb(s.exists() ? s.data() : null), () => cb(null))
+  },
+
   // Imagens da lousa compartilhada
   async saveSharedImage(sid, id, dataUrl) { await setDoc(sharedImgRef(sid, id), { data: dataUrl, createdAt: Date.now() }); },
   async loadSharedImage(sid, id) {

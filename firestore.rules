@@ -30,6 +30,12 @@ service cloud.firestore {
 
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
 
+      // sinalização do Pong online (só participantes da lousa)
+      match /rtc/{rid} {
+        allow read, write: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/shared/$(sid)).data.members;
+      }
+
       match /images/{imgId} {
         allow read, write: if request.auth != null
           && request.auth.uid in get(/databases/$(database)/documents/shared/$(sid)).data.members;
