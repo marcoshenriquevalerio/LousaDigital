@@ -72,7 +72,7 @@ const imageRef = (id) => doc(db, "users", uid(), "images", id);
 /* ---------- API usada pelo index.html ---------- */
 window.FB = {
   login: () => signInWithPopup(auth, provider),
-  logout: () => signOut(auth),
+  logout: () => { FB._profile = null; return signOut(auth); },
 
   // Lousas, notas, calendário e tema (JSON convertido em base64).
   // Se passar de ~900 KB, é gravado em pedaços (users/{uid}/chunks/{n}) — assim nunca deixa de salvar por tamanho.
@@ -237,14 +237,35 @@ Object.assign(window.FB, {
   // Convites
   async sendInvite(inv) {
     const m = FB.me();
-    await addDoc(collection(db, "invites"), {
-      fromUid: m.uid, fromEmail: m.email, fromName: m.name,
+    let p = { username: "", photo: "" };
+    try { p = FB._profile || await FB.loadProfile(); } catch (e) {}
+    const base = {
+      fromUid: m.uid, fromEmail: m.email, fromName: p.username || m.name,
       toEmail: lc(inv.toEmail), sid: inv.sid, boardName: inv.boardName || "Lousa", kind: inv.kind || "board",
       status: "pending", createdAt: Date.now(), updatedAt: Date.now()
-    });
+    };
+    try {
+      await addDoc(collection(db, "invites"), Object.assign({ fromPhoto: p.photo || "" }, base));
+    } catch (e) {
+      // se as regras do Firestore não aceitarem o campo extra, envia o convite sem a foto
+      await addDoc(collection(db, "invites"), base);
+    }
   },
   async setInviteStatus(id, status) {
-    await updateDoc(doc(db, "invites", id), { status, updatedAt: Date.now() });
+    const upd = { status, updatedAt: Date.now() };
+    if (status === "accepted" || status === "rejected") {
+      try {
+        const p = FB._profile || await FB.loadProfile();
+        upd.toUsername = p.username || "";
+        upd.toPhoto = p.photo || "";
+      } catch (e) {}
+    }
+    try {
+      await updateDoc(doc(db, "invites", id), upd);
+    } catch (e) {
+      if (upd.toUsername === undefined) throw e;
+      await updateDoc(doc(db, "invites", id), { status, updatedAt: upd.updatedAt }); // sem perfil, mas nunca bloqueia o aceite
+    }
   },
   watchInvites(onIncoming, onOutgoing) {
     const m = FB.me();
@@ -317,6 +338,28 @@ Object.assign(window.FB, {
         cb(ch.doc.id, ev);
       });
     }, (e) => console.warn("calendar watch:", e));
+  }
+});
+
+/* =====================================================================
+   PERFIL — nome de usuário + foto (JPEG pequeno em base64)
+   users/{uid}/profile/me -> { username, photo, updatedAt }
+   (coberto pela regra users/{uid}/{document=**}; os outros usuários veem o perfil
+   por dentro dos convites, então nenhuma regra nova é necessária)
+   ===================================================================== */
+Object.assign(window.FB, {
+  _profile: null,
+  async loadProfile() {
+    const snap = await getDoc(doc(db, "users", uid(), "profile", "me"));
+    const d = snap.exists() ? snap.data() : {};
+    FB._profile = { username: d.username || "", photo: d.photo || "" };
+    return FB._profile;
+  },
+  async saveProfile(p) {
+    const clean = { username: String(p.username || "").trim().slice(0, 24), photo: p.photo || "" };
+    await setDoc(doc(db, "users", uid(), "profile", "me"), Object.assign({ updatedAt: Date.now() }, clean));
+    FB._profile = clean;
+    return clean;
   }
 });
 

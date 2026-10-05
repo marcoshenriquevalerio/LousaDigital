@@ -712,8 +712,9 @@
       <div class="nav-pill"><button id="bellBtn" onclick="toggleNotif(event)" class="nav-btn" title="Notificações"><i class="fa-solid fa-bell text-xs"></i><span id="bellBadge" class="hidden">0</span></button></div>
       <div id="userChip" class="hidden nav-pill">
         <span id="syncStatus" class="px-1 text-sm text-emerald-400" title="Salvo na nuvem"><i class="fa-solid fa-cloud"></i></span>
-        <img id="userPhoto" class="w-7 h-7 rounded-full border border-amber-400/40 hidden" alt="" referrerpolicy="no-referrer">
+        <img id="userPhoto" onclick="openProfile()" class="w-7 h-7 rounded-full object-cover cursor-pointer border border-amber-400/40 hidden" alt="" referrerpolicy="no-referrer">
         <span id="userName" class="nav-name text-xs font-semibold max-w-[140px] truncate hidden"></span>
+        <button onclick="openProfile()" class="nav-btn" title="Meu perfil"><i class="fa-solid fa-user-pen text-xs"></i></button>
         <button onclick="doLogout()" class="nav-btn nav-del" title="Sair da conta"><i class="fa-solid fa-right-from-bracket text-xs"></i></button>
       </div>
     </div>
@@ -1131,6 +1132,41 @@
         <div class="fin-lbl mt-4">Participantes</div>
         <div id="shareList"></div>
         <p id="shareNote" class="text-[11px] text-stone-400 mt-2 leading-snug"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERFIL: foto (com corte/zoom) + nome de usuário -->
+  <div id="profileModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden" style="z-index:10050" onclick="if(event.target===this) closeOv('profileModal')">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-sm max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-2xl text-amber-300 font-bold truncate"><i class="fa-solid fa-user-pen mr-2"></i>Meu perfil</h3>
+        <button onclick="closeOv('profileModal')" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5">
+        <div class="fin-lbl">Foto de perfil</div>
+        <div class="flex justify-center mb-2">
+          <canvas id="pfCanvas" width="260" height="260" style="width:100%;max-width:260px;aspect-ratio:1/1;border-radius:12px;touch-action:none;cursor:grab;background:#1c1917"></canvas>
+        </div>
+        <div class="flex items-center gap-2 mb-2 text-stone-300 text-xs">
+          <i class="fa-solid fa-magnifying-glass-minus"></i>
+          <input id="pfZoom" type="range" min="0" max="100" value="0" class="flex-1" oninput="pfZoomChange()">
+          <i class="fa-solid fa-magnifying-glass-plus"></i>
+        </div>
+        <p class="text-[11px] text-stone-400 mb-2 text-center leading-snug">Arraste a foto para posicionar e use o zoom para ajustar o corte.</p>
+        <div class="flex gap-2 mb-4">
+          <button onclick="byId('pfFile').click()" class="flex-1 px-3 py-2 bg-stone-700 hover:bg-stone-600 text-stone-100 rounded-lg text-sm transition"><i class="fa-solid fa-image mr-1"></i>Escolher foto</button>
+          <button onclick="pfRemove()" class="px-3 py-2 bg-stone-700 hover:bg-stone-600 text-stone-300 rounded-lg text-sm transition" title="Remover foto"><i class="fa-solid fa-trash"></i></button>
+          <input id="pfFile" type="file" accept="image/*" class="hidden" onchange="pfPick(this)">
+        </div>
+        <div class="fin-lbl">Nome de usuário</div>
+        <input id="pfName" type="text" maxlength="24" placeholder="Como você quer aparecer" class="fin-modal-in" onkeydown="if(event.key==='Enter') pfSave()">
+        <p class="text-[11px] text-stone-400 mt-1">Aparece nas notificações de compartilhamento (2 a 24 caracteres).</p>
+        <p id="pfMsg" class="text-xs mt-2 text-red-300"></p>
+        <div class="flex justify-end gap-2 mt-4">
+          <button onclick="closeOv('profileModal')" class="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-stone-200 rounded-lg text-sm transition">Cancelar</button>
+          <button id="pfSaveBtn" onclick="pfSave()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-lg text-sm transition">Salvar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3122,10 +3158,12 @@
       if (!chip || !currentUser) return;
       chip.classList.remove('hidden');
       const ph = byId('userPhoto');
-      if (currentUser.photo) { ph.src = currentUser.photo; ph.classList.remove('hidden'); }
+      const mp = window.MYPROF || {};
+      const pic = mp.photo || currentUser.photo;
+      if (pic) { ph.src = pic; ph.classList.remove('hidden'); }
       else ph.classList.add('hidden');
       const nm = byId('userName');
-      nm.innerText = currentUser.name || currentUser.email || '';
+      nm.innerText = mp.username || currentUser.name || currentUser.email || '';
       nm.title = currentUser.email || '';
     }
 
@@ -6896,12 +6934,12 @@
       const items = shNotifItems();
       byId('notifList').innerHTML = items.length ? items.map(x => {
         const i = x.i;
-        if (x.kind === 'invite') return `<div class="nt-row"><div class="text-sm"><b>${html(i.fromName || i.fromEmail)}</b> quer usar a lousa <b>“${html(i.boardName)}”</b> junto com você.<br><small class="opacity-70">${html(i.fromEmail)} · ${i.kind === 'finance' ? 'lousa de finanças' : 'lousa'}</small></div>
+        if (x.kind === 'invite') return `<div class="nt-row"><div class="flex items-center gap-2">${ntAvatar(i.fromPhoto, i.fromName || i.fromEmail, 38)}<div class="text-sm flex-1"><b>${html(i.fromName || i.fromEmail)}</b> quer usar a lousa <b>“${html(i.boardName)}”</b> junto com você.<br><small class="opacity-70">${html(i.fromEmail)} · ${i.kind === 'finance' ? 'lousa de finanças' : 'lousa'}</small></div></div>
           <div class="flex gap-2 mt-2"><button class="sh-btn ok" onclick="shAccept('${i.id}')"><i class="fa-solid fa-check mr-1"></i>Aceitar</button><button class="sh-btn danger" onclick="shReject('${i.id}')"><i class="fa-solid fa-xmark mr-1"></i>Recusar</button></div></div>`;
         const txt = x.kind === 'out'
-          ? (i.status === 'accepted' ? `<b>${html(i.toEmail)}</b> aceitou compartilhar “${html(i.boardName)}”.` : i.status === 'rejected' ? `<b>${html(i.toEmail)}</b> recusou compartilhar “${html(i.boardName)}”.` : `Ligação com <b>${html(i.toEmail)}</b> em “${html(i.boardName)}” foi cancelada.`)
-          : `A ligação de “${html(i.boardName)}” com <b>${html(i.fromEmail)}</b> foi cancelada.`;
-        return `<div class="nt-row flex items-start gap-2"><div class="text-sm flex-1">${txt}</div><button class="sh-btn" onclick="shDismiss('${i.id}')" title="Dispensar"><i class="fa-solid fa-xmark"></i></button></div>`;
+          ? (i.status === 'accepted' ? `<b>${html(i.toUsername || i.toEmail)}</b> aceitou compartilhar “${html(i.boardName)}”.` : i.status === 'rejected' ? `<b>${html(i.toUsername || i.toEmail)}</b> recusou compartilhar “${html(i.boardName)}”.` : `Ligação com <b>${html(i.toUsername || i.toEmail)}</b> em “${html(i.boardName)}” foi cancelada.`)
+          : `A ligação de “${html(i.boardName)}” com <b>${html(i.fromName || i.fromEmail)}</b> foi cancelada.`;
+        return `<div class="nt-row flex items-center gap-2">${x.kind === 'out' ? ntAvatar(i.toPhoto, i.toUsername || i.toEmail, 32) : ntAvatar(i.fromPhoto, i.fromName || i.fromEmail, 32)}<div class="text-sm flex-1">${txt}</div><button class="sh-btn" onclick="shDismiss('${i.id}')" title="Dispensar"><i class="fa-solid fa-xmark"></i></button></div>`;
       }).join('') : '<p class="text-sm text-amber-100/70 p-2">Nenhuma notificação.</p>';
     }
     function shDismiss(id) { const d = shDismissed(); d.push(id); try { localStorage.setItem(dismissKey(), JSON.stringify(d.slice(-200))); } catch (e) {} updateBell(); renderNotif(); }
@@ -6949,7 +6987,7 @@
       Object.keys(SH.unsubs).forEach(shUnwatch);
       if (SH.unInv) { SH.unInv(); SH.unInv = null; }
       SH.inc = []; SH.out = []; updateBell();
-      ['shareModal', 'finLinkModal', 'pieceLinkModal'].forEach(closeOv); closeNotif();
+      ['shareModal', 'finLinkModal', 'pieceLinkModal', 'profileModal'].forEach(closeOv); closeNotif();
     }
 
     (function () {
@@ -6977,6 +7015,140 @@
   </script>
 
   <!-- Firebase (login Google + banco de dados) -->
+  <script>
+    /* =========================================================================
+       PERFIL — foto (com corte e zoom) + nome de usuário
+       ========================================================================= */
+    window.MYPROF = { username: '', photo: '' };
+    const PF = { img: null, s: 1, min: 1, ox: 0, oy: 0, dirty: false, removed: false, drag: null };
+    const PF_V = 260, PF_D = 220, PF_OUT = 192;   // tela, diâmetro do corte, tamanho final da foto
+
+    // avatar redondo (foto ou inicial do nome) usado nas notificações
+    function ntAvatar(photo, name, size) {
+      size = size || 34;
+      const st = `width:${size}px;height:${size}px;min-width:${size}px`;
+      if (photo && String(photo).indexOf('data:image/') === 0)
+        return `<img src="${html(photo)}" alt="" class="rounded-full object-cover border border-amber-400/40" style="${st}">`;
+      const ch = html(String(name || '?').trim().charAt(0).toUpperCase() || '?');
+      return `<span class="rounded-full bg-amber-700/60 text-amber-100 font-bold inline-flex items-center justify-center" style="${st};font-size:${Math.round(size * 0.45)}px">${ch}</span>`;
+    }
+
+    async function loadMyProfile() {
+      try {
+        const p = await FB.loadProfile();
+        window.MYPROF = { username: p.username || '', photo: p.photo || '' };
+      } catch (e) { console.warn('perfil:', e); }
+      if (typeof updateUserChip === 'function') updateUserChip();
+    }
+
+    function pfClamp() {
+      if (!PF.img) return;
+      const w = PF.img.width * PF.s, h = PF.img.height * PF.s;
+      const mx = Math.max(0, (w - PF_D) / 2), my = Math.max(0, (h - PF_D) / 2);
+      PF.ox = Math.min(mx, Math.max(-mx, PF.ox));
+      PF.oy = Math.min(my, Math.max(-my, PF.oy));
+    }
+
+    function pfDraw() {
+      const c = byId('pfCanvas'); if (!c) return;
+      const x = c.getContext('2d'), cx = PF_V / 2, cy = PF_V / 2;
+      x.clearRect(0, 0, PF_V, PF_V);
+      x.fillStyle = '#1c1917'; x.fillRect(0, 0, PF_V, PF_V);
+      if (PF.img) {
+        const w = PF.img.width * PF.s, h = PF.img.height * PF.s;
+        x.drawImage(PF.img, cx + PF.ox - w / 2, cy + PF.oy - h / 2, w, h);
+      } else {
+        x.fillStyle = '#a8a29e'; x.font = '14px sans-serif'; x.textAlign = 'center';
+        x.fillText('Escolha uma foto', cx, cy + 5);
+      }
+      x.save();
+      x.fillStyle = 'rgba(0,0,0,.6)';
+      x.beginPath(); x.rect(0, 0, PF_V, PF_V); x.arc(cx, cy, PF_D / 2, 0, Math.PI * 2, true); x.fill('evenodd');
+      x.restore();
+      x.strokeStyle = 'rgba(251,191,36,.9)'; x.lineWidth = 2;
+      x.beginPath(); x.arc(cx, cy, PF_D / 2, 0, Math.PI * 2); x.stroke();
+    }
+
+    function pfSetImage(im, dirty) {
+      PF.img = im; PF.min = PF_D / Math.min(im.width, im.height); PF.s = PF.min; PF.ox = PF.oy = 0;
+      PF.dirty = !!dirty; PF.removed = false; byId('pfZoom').value = 0; pfDraw();
+    }
+
+    function openProfile() {
+      PF.img = null; PF.dirty = false; PF.removed = false; PF.ox = PF.oy = 0;
+      byId('pfName').value = (window.MYPROF && MYPROF.username) || '';
+      byId('pfMsg').textContent = ''; byId('pfZoom').value = 0; byId('pfFile').value = '';
+      pfDraw();
+      if (MYPROF.photo) { const im = new Image(); im.onload = () => pfSetImage(im, false); im.src = MYPROF.photo; }
+      openOv('profileModal');
+    }
+
+    function pfPick(inp) {
+      const file = inp.files && inp.files[0]; if (!file) return;
+      const url = URL.createObjectURL(file), im = new Image();
+      im.onload = () => { URL.revokeObjectURL(url); pfSetImage(im, true); };
+      im.onerror = () => { URL.revokeObjectURL(url); byId('pfMsg').textContent = 'Não consegui abrir essa imagem.'; };
+      im.src = url;
+    }
+
+    function pfRemove() { PF.img = null; PF.removed = true; PF.dirty = false; byId('pfZoom').value = 0; pfDraw(); }
+
+    function pfZoomChange() {
+      if (!PF.img) return;
+      PF.s = PF.min * (1 + (+byId('pfZoom').value) / 100 * 3);
+      PF.dirty = true; pfClamp(); pfDraw();
+    }
+
+    (function () {
+      const c = byId('pfCanvas'); if (!c) return;
+      c.addEventListener('pointerdown', (e) => { if (!PF.img) return; c.setPointerCapture(e.pointerId); PF.drag = { x: e.clientX, y: e.clientY }; c.style.cursor = 'grabbing'; });
+      c.addEventListener('pointermove', (e) => {
+        if (!PF.drag) return;
+        const k = c.width / c.getBoundingClientRect().width;
+        PF.ox += (e.clientX - PF.drag.x) * k; PF.oy += (e.clientY - PF.drag.y) * k;
+        PF.drag = { x: e.clientX, y: e.clientY }; PF.dirty = true; pfClamp(); pfDraw();
+      });
+      const end = () => { PF.drag = null; c.style.cursor = 'grab'; };
+      c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+      c.addEventListener('wheel', (e) => {
+        if (!PF.img) return; e.preventDefault();
+        const z = byId('pfZoom'); z.value = Math.max(0, Math.min(100, +z.value - e.deltaY * 0.1)); pfZoomChange();
+      }, { passive: false });
+    })();
+
+    function pfExport() {
+      const o = document.createElement('canvas'); o.width = o.height = PF_OUT;
+      const x = o.getContext('2d'), cx = PF_V / 2, cy = PF_V / 2;
+      const w = PF.img.width * PF.s, h = PF.img.height * PF.s;
+      const imgL = cx + PF.ox - w / 2, imgT = cy + PF.oy - h / 2;
+      x.fillStyle = '#fff'; x.fillRect(0, 0, PF_OUT, PF_OUT);
+      x.drawImage(PF.img, (cx - PF_D / 2 - imgL) / PF.s, (cy - PF_D / 2 - imgT) / PF.s, PF_D / PF.s, PF_D / PF.s, 0, 0, PF_OUT, PF_OUT);
+      return o.toDataURL('image/jpeg', 0.85);
+    }
+
+    async function pfSave() {
+      const msg = byId('pfMsg'), btn = byId('pfSaveBtn');
+      const name = byId('pfName').value.trim().replace(/\s+/g, ' ');
+      if (name && (name.length < 2 || name.length > 24)) { msg.textContent = 'O nome de usuário deve ter de 2 a 24 caracteres.'; return; }
+      let photo = MYPROF.photo || '';
+      if (PF.removed) photo = '';
+      else if (PF.img && PF.dirty) photo = pfExport();
+      btn.disabled = true; msg.textContent = '';
+      try {
+        const p = await FB.saveProfile({ username: name, photo });
+        window.MYPROF = { username: p.username, photo: p.photo };
+        updateUserChip(); closeOv('profileModal');
+      } catch (e) { console.error(e); msg.textContent = 'Não foi possível salvar o perfil. Tente de novo.'; }
+      btn.disabled = false;
+    }
+
+    (function () {
+      const hi = window.handleSignedIn, ho = window.handleSignedOut;
+      if (hi) window.handleSignedIn = function () { const r = hi.apply(this, arguments); loadMyProfile(); return r; };
+      if (ho) window.handleSignedOut = function () { window.MYPROF = { username: '', photo: '' }; return ho.apply(this, arguments); };
+    })();
+  </script>
+
   <script type="module" src="firebase.js"></script>
 </body>
 </html>
