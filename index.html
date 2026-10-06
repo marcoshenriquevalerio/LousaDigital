@@ -145,6 +145,8 @@
     .shape-controls-bg { background: rgba(0, 0, 0, 0.5); }
     .chalk-note.is-selected .shape-controls { opacity: 1; pointer-events: auto; }
     /* painel de estilo (espessura / opacidade / animação) das setas e formas */
+    .shape-style-pop.ssm { position: static; width: auto; padding: 0; background: transparent; border: 0; box-shadow: none; font-size: 13px; }
+    #ssmPreview { height: 170px; border-radius: 12px; border: 2px solid #5b3a1e; background: radial-gradient(ellipse at center, #2f5d46 0%, #1f4130 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 8px; }
     .shape-style-pop { position: absolute; top: calc(100% + 6px); right: 0; width: 226px; padding: 10px 12px 12px; border-radius: 12px; background: #1c1917; border: 1px solid #57534e; color: #fde68a; box-shadow: 0 8px 24px rgba(0,0,0,.5); font-size: 12px; z-index: 40; cursor: default; text-align: left; }
     .shape-style-pop.hidden { display: none; }
     .shape-style-pop .sp-row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 2px; font-weight: 600; }
@@ -1209,6 +1211,24 @@
   </div>
 
   <!-- COMPARTILHAR LOUSA -->
+  <!-- ESTILO DE SETAS E FORMAS (pop-up central) -->
+  <div id="shapeStyleModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden" style="z-index:10060" onclick="if(event.target===this) closeShapeStyle()">
+    <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-sm max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
+        <h3 class="font-chalk text-2xl text-amber-300 font-bold truncate"><i class="fa-solid fa-sliders mr-2"></i>Estilo da seta/forma</h3>
+        <button onclick="closeShapeStyle()" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5">
+        <div id="ssmPreview" title="Pré-visualização"></div>
+        <div id="ssmBody" class="shape-style-pop ssm"></div>
+      </div>
+      <div class="flex gap-2 px-5 py-3 border-t border-stone-600">
+        <button onclick="resetShapeStyle()" class="px-3 py-2 rounded-lg text-sm text-stone-300 border border-stone-600 hover:bg-stone-700 transition">Voltar ao padrão</button>
+        <button onclick="closeShapeStyle()" class="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-lg text-sm font-bold transition">Pronto</button>
+      </div>
+    </div>
+  </div>
+
   <div id="shareModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden" style="z-index:10050" onclick="if(event.target===this) closeOv('shareModal')">
     <div class="bg-stone-800 border-2 border-amber-800 rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="flex items-center justify-between px-5 py-3 border-b border-stone-600">
@@ -2407,7 +2427,7 @@
           ${dupToolHtml(note.id, 'chalk-rot transition')}
           ${moveToolHtml(note.id, 'chalk-rot transition')}
           ${note.shape === 'bend' ? `<button onclick="cycleBendHead('${note.id}')" class="chalk-rot transition" title="Pontas: ${note.head === 'both' ? 'nas duas pontas' : note.head === 'none' ? 'sem ponta' : 'só no fim'} (clique para mudar)"><i class="fa-solid ${note.head === 'both' ? 'fa-left-right' : note.head === 'none' ? 'fa-minus' : 'fa-arrow-right-long'} text-[11px]"></i></button>` : ''}
-          <button onclick="toggleShapeStyle('${note.id}')" class="chalk-rot transition ${(note.sw || note.op || (note.anim && note.anim.length)) ? 'text-amber-300' : ''}" title="Espessura, opacidade e animação">
+          <button onclick="openShapeStyle('${note.id}')" class="chalk-rot transition ${(note.sw || note.op || (note.anim && note.anim.length)) ? 'text-amber-300' : ''}" title="Espessura, opacidade e animação">
             <i class="fa-solid fa-sliders text-[11px]"></i>
           </button>
           <button onclick="toggleShapeDash('${note.id}')" class="chalk-rot transition ${note.dash ? 'text-amber-300' : ''}" title="${note.dash ? 'Traço contínuo' : 'Traço tracejado'}">
@@ -2419,7 +2439,6 @@
           <button onclick="deleteNote('${note.id}')" class="chalk-del transition" title="Excluir">
             <i class="fa-solid fa-xmark text-xs"></i>
           </button>
-          ${shapeStylePanelHtml(note)}
         </div>
 
         ${resizeHandlesHtml()}
@@ -2461,57 +2480,60 @@
       renderNotes();
     }
 
-    /* ----- painel de estilo da forma/seta: espessura, opacidade e animações ----- */
-    let shapeStyleOpen = null, shapeStyleSaveT = null;
+    /* ----- pop-up de estilo da forma/seta (centro da tela, com pré-visualização) ----- */
+    let shapeStyleId = null, shapeStyleSaveT = null;
     const SHAPE_ANIMS = [['blink', 'Pisca'], ['draw', 'Rabisca e volta'], ['pulse', 'Pulsa'], ['wiggle', 'Balança'], ['float', 'Flutua']];
-    function shapeStylePanelHtml(note) {
+    function shapeStylePreview(note) {
+      const box = byId('ssmPreview'); if (!box) return;
+      const w = Math.round(note.width || 160), h = Math.round(note.height || 80), rot = note.rotation || 0;
+      box.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="overflow:visible;max-width:92%;max-height:150px;color:${getChalkHex(note)};transform:rotate(${rot}deg);filter:drop-shadow(0 0 2px rgba(255,255,255,0.3))">${shapeInnerHtml(note)}</svg>`;
+    }
+    function shapeStyleBody(note) {
       const sw = note.sw ? +note.sw : 3.6, op = note.op ? +note.op : 100, an = Array.isArray(note.anim) ? note.anim : [];
-      const open = shapeStyleOpen === note.id && selectedNoteId === note.id;
-      return `<div class="shape-style-pop ${open ? '' : 'hidden'}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">
-        <div class="sp-row"><span>Espessura</span><b data-sv="sw">${(+sw.toFixed(1))}</b></div>
-        <input type="range" min="1" max="14" step="0.5" value="${sw}" oninput="setShapeStyle('${note.id}','sw',this.value)">
+      return `<div class="sp-row"><span>Espessura</span><b data-sv="sw">${+sw.toFixed(1)}</b></div>
+        <input type="range" min="1" max="14" step="0.5" value="${sw}" oninput="setShapeStyle('sw',this.value)">
         <div class="sp-row"><span>Opacidade</span><b data-sv="op">${Math.round(op)}%</b></div>
-        <input type="range" min="10" max="100" step="5" value="${op}" oninput="setShapeStyle('${note.id}','op',this.value)">
-        <div class="sp-row"><span>Animação</span></div>
-        <div class="sp-chips">${SHAPE_ANIMS.map(a => `<button type="button" data-an="${a[0]}" class="sp-chip ${an.indexOf(a[0]) >= 0 ? 'on' : ''}" onclick="toggleShapeAnim('${note.id}','${a[0]}')">${a[1]}</button>`).join('')}</div>
-        <button type="button" class="sp-reset" onclick="resetShapeStyle('${note.id}')">Voltar ao padrão</button>
-      </div>`;
+        <input type="range" min="10" max="100" step="5" value="${op}" oninput="setShapeStyle('op',this.value)">
+        <div class="sp-row"><span>Animação <small style="opacity:.6;font-weight:400">(pode escolher várias)</small></span></div>
+        <div class="sp-chips">${SHAPE_ANIMS.map(a => `<button type="button" data-an="${a[0]}" class="sp-chip ${an.indexOf(a[0]) >= 0 ? 'on' : ''}" onclick="toggleShapeAnim('${a[0]}')">${a[1]}</button>`).join('')}</div>`;
     }
-    function toggleShapeStyle(id) {
-      shapeStyleOpen = shapeStyleOpen === id ? null : id;
-      const w = byId(id), pop = w && w.querySelector('.shape-style-pop');
-      if (pop) pop.classList.toggle('hidden', shapeStyleOpen !== id);
-    }
-    function shapeStyleRefresh(id, note) {
-      const w = byId(id); if (!w) return;
-      updateShapeSvg(w, note);
-      const pop = w.querySelector('.shape-style-pop');
-      if (pop) {
-        const an = Array.isArray(note.anim) ? note.anim : [];
-        pop.querySelectorAll('.sp-chip').forEach(c => c.classList.toggle('on', an.indexOf(c.dataset.an) >= 0));
-        const a = pop.querySelector('[data-sv="sw"]'), b = pop.querySelector('[data-sv="op"]');
-        if (a) a.textContent = +(+(note.sw || 3.6)).toFixed(1);
-        if (b) b.textContent = Math.round(note.op || 100) + '%';
-      }
-    }
-    function setShapeStyle(id, key, val) {
+    function openShapeStyle(id) {
       const note = findNote(id); if (!note) return;
+      shapeStyleId = id;
+      byId('ssmBody').innerHTML = shapeStyleBody(note);
+      shapeStylePreview(note);
+      openOv('shapeStyleModal');
+    }
+    function closeShapeStyle() { closeOv('shapeStyleModal'); shapeStyleId = null; }
+    function shapeStyleRefresh(note) {
+      const w = byId(note.id); if (w) updateShapeSvg(w, note);
+      shapeStylePreview(note);
+      const body = byId('ssmBody'); if (!body) return;
+      const an = Array.isArray(note.anim) ? note.anim : [];
+      body.querySelectorAll('.sp-chip').forEach(c => c.classList.toggle('on', an.indexOf(c.dataset.an) >= 0));
+      const x = body.querySelector('[data-sv="sw"]'), y = body.querySelector('[data-sv="op"]');
+      if (x) x.textContent = +(+(note.sw || 3.6)).toFixed(1);
+      if (y) y.textContent = Math.round(note.op || 100) + '%';
+    }
+    function setShapeStyle(key, val) {
+      const note = findNote(shapeStyleId); if (!note) return;
       if (key === 'sw') note.sw = Math.max(1, Math.min(14, +val || 3.6));
       else note.op = Math.max(10, Math.min(100, +val || 100));
-      shapeStyleRefresh(id, note);
+      shapeStyleRefresh(note);
       clearTimeout(shapeStyleSaveT); shapeStyleSaveT = setTimeout(() => saveData(), 250);
     }
-    function toggleShapeAnim(id, a) {
-      const note = findNote(id); if (!note) return;
+    function toggleShapeAnim(a) {
+      const note = findNote(shapeStyleId); if (!note) return;
       const an = Array.isArray(note.anim) ? note.anim.slice() : [], i = an.indexOf(a);
       if (i >= 0) an.splice(i, 1); else an.push(a);
       note.anim = an;
-      shapeStyleRefresh(id, note); saveData();
+      shapeStyleRefresh(note); saveData();
     }
-    function resetShapeStyle(id) {
-      const note = findNote(id); if (!note) return;
+    function resetShapeStyle() {
+      const note = findNote(shapeStyleId); if (!note) return;
       delete note.sw; delete note.op; delete note.anim;
-      saveData(); renderNotes();
+      byId('ssmBody').innerHTML = shapeStyleBody(note);
+      shapeStyleRefresh(note); saveData(); renderNotes();
     }
 
     function toggleShapeDash(id) {
