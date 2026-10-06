@@ -145,6 +145,39 @@
     .shape-controls-bg { background: rgba(0, 0, 0, 0.5); }
     .chalk-note.is-selected .shape-controls { opacity: 1; pointer-events: auto; }
 
+    /* ----- painel de efeitos das setas/formas ----- */
+    .shape-fx { display: none; position: absolute; top: 40px; right: 4px; z-index: 40; width: 232px; padding: 10px 12px; border-radius: 12px; background: #1c1917; border: 1px solid #57534e; color: #e7e5e4; box-shadow: 0 10px 28px rgba(0,0,0,.55); font-size: 12px; cursor: default; }
+    .chalk-note.is-selected .shape-fx.open { display: block; }
+    .shape-fx label { display: flex; justify-content: space-between; margin: 6px 0 2px; color: #d6d3d1; }
+    .shape-fx label b { color: #fcd34d; font-weight: 700; }
+    .shape-fx input[type=range] { width: 100%; accent-color: #f59e0b; height: 18px; }
+    .fx-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .fx-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; border: 1px solid #57534e; background: #292524; color: #e7e5e4; font-size: 11px; transition: .15s; }
+    .fx-chip:hover { background: #44403c; }
+    .fx-chip.on { background: #b45309; border-color: #fbbf24; color: #fff; }
+    .fx-reset { margin-top: 8px; width: 100%; padding: 4px; border-radius: 8px; background: #292524; border: 1px solid #57534e; color: #d6d3d1; font-size: 11px; }
+    .fx-reset:hover { background: #44403c; }
+    .theme-marker .shape-fx { background: #fff; color: #0f172a; border-color: #cbd5e1; }
+    .theme-marker .shape-fx label { color: #334155; } .theme-marker .shape-fx label b { color: #b45309; }
+    .theme-marker .fx-chip, .theme-marker .fx-reset { background: #f1f5f9; border-color: #cbd5e1; color: #0f172a; }
+    .theme-marker .fx-chip.on { background: #f59e0b; border-color: #b45309; color: #fff; }
+    .fxg { transform-box: fill-box; transform-origin: center; }
+    .fx-blink { animation: fxBlink 1.1s ease-in-out infinite; }
+    .fx-pulse { animation: fxPulse 1.4s ease-in-out infinite; }
+    .fx-wiggle { animation: fxWiggle .9s ease-in-out infinite; }
+    .fx-draw { stroke-dasharray: 100 200 !important; animation: fxDraw 3.4s ease-in-out infinite; }
+    @keyframes fxBlink { 0%, 100% { opacity: 1; } 50% { opacity: .12; } }
+    @keyframes fxPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+    @keyframes fxWiggle { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+    @keyframes fxDraw { 0% { stroke-dashoffset: 101; } 38%, 62% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 101; } }
+    @media (prefers-reduced-motion: reduce) { .fx-blink, .fx-pulse, .fx-wiggle, .fx-draw { animation: none; } }
+    /* fotos de quem usa a lousa */
+    .sh-avs { display: inline-flex; align-items: center; }
+    .sh-avs > * { margin-left: -6px; border: 2px solid #dc2626; border-radius: 999px; box-sizing: content-box; }
+    .sh-avs > *:first-child { margin-left: 0; }
+    @keyframes bellRing { 0%,100% { transform: rotate(0); } 15% { transform: rotate(18deg); } 30% { transform: rotate(-16deg); } 45% { transform: rotate(12deg); } 60% { transform: rotate(-8deg); } 75% { transform: rotate(4deg); } }
+    #bellBtn.ringing i { animation: bellRing .8s ease-in-out 2; transform-origin: 50% 0; }
+
     /* Fora de seleção: só a escrita fica visível */
     .chalk-note:not(.is-selected) .resize-handle,
     .chalk-note:not(.is-selected) .resize-corner { opacity: 0 !important; }
@@ -2155,7 +2188,7 @@
     function shapeMarkup(kind, w, h, note) {
       const p = 8;
       let d = '';
-      const k = shapeK(w, h);
+      const k = shapeHeadK(note);   // pontas acompanham a espessura escolhida, não o tamanho da forma
       const head = (x, y, ang, sz) => `<path d="${arrowHeadPath(x, y, ang, sz * k)}"/>`;
 
       switch (kind) {
@@ -2308,21 +2341,77 @@
       return d;
     }
 
+    /* ----- espessura / opacidade / animações (por peça) ----- */
+    let fxOpenId = null;
+    const FX_SW_DEFAULT = 3.6;
+    const fxSw = (n) => { const v = +(n && n.sw); return v >= 1 && v <= 16 ? v : FX_SW_DEFAULT; };
+    const fxOp = (n) => { const v = +(n && n.op); return v >= 0.1 && v <= 1 ? v : 1; };
+    const fxAnim = (n) => Array.isArray(n && n.anim) ? n.anim : [];
+    function shapeHeadK(n) { return Math.max(0.8, Math.min(2, fxSw(n) / FX_SW_DEFAULT)); }
+
     function shapeInnerHtml(note) {
       const w = Math.round(note.width || 160);
       const h = Math.round(note.height || 80);
-      const d = shapeMarkup(note.shape, w, h, note);
-      const k = shapeK(w, h);
-      const dash = note.dash ? ` stroke-dasharray="${(11 * k).toFixed(1)} ${(9 * k).toFixed(1)}"` : '';
+      const d0 = shapeMarkup(note.shape, w, h, note);
+      const sw = fxSw(note), op = fxOp(note), an = fxAnim(note), dk = sw / FX_SW_DEFAULT;
+      const draw = an.includes('draw');
+      const d = draw ? d0.replace(/<(path|rect|ellipse|polygon)\b/g, '<$1 pathLength="100"') : d0;
+      const dash = note.dash && !draw ? ` stroke-dasharray="${(11 * dk).toFixed(1)} ${(9 * dk).toFixed(1)}"` : '';
+      const dc = draw ? ' class="fx-draw"' : '';
 
-      /* Traço principal + traço fantasma levemente deslocado (efeito de giz passado duas vezes) */
+      /* Traço principal + traço fantasma levemente deslocado (efeito de giz passado duas vezes).
+         A espessura NÃO depende do tamanho da forma: só do valor escolhido (padrão 3.6). */
       return `
-        <g filter="url(#chalkShape)">
+        <g class="fxg${an.includes('pulse') ? ' fx-pulse' : ''}"><g class="fxg${an.includes('wiggle') ? ' fx-wiggle' : ''}"><g class="${an.includes('blink') ? 'fx-blink' : ''}">
+        <g filter="url(#chalkShape)" opacity="${op}">
           <rect width="${w}" height="${h}" fill="none" stroke="none"/>
-          <g fill="none" stroke="currentColor" stroke-width="${(3.6 * k).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"${dash}>${d}</g>
-          <g fill="none" stroke="currentColor" stroke-width="${(1.6 * k).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" transform="translate(${(1.4 * k).toFixed(2)} ${(-1.1 * k).toFixed(2)})"${dash}>${d}</g>
+          <g data-main fill="none" stroke="currentColor" stroke-width="${sw.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"${dash}${dc}>${d}</g>
+          <g fill="none" stroke="currentColor" stroke-width="${(sw * 0.44).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" transform="translate(${(1.4 * dk).toFixed(2)} ${(-1.1 * dk).toFixed(2)})"${dash}${dc}>${d}</g>
         </g>
+        </g></g></g>
       `;
+    }
+
+    function shapeFxHtml(note) {
+      if (fxOpenId && fxOpenId !== selectedNoteId) fxOpenId = null;
+      const sw = fxSw(note), op = Math.round(fxOp(note) * 100), an = fxAnim(note), id = note.id;
+      const chip = (k, t, ic) => `<button type="button" data-anim="${k}" onclick="toggleShapeAnim('${id}','${k}')" class="fx-chip ${an.includes(k) ? 'on' : ''}"><i class="fa-solid ${ic}"></i>${t}</button>`;
+      return `<div class="shape-fx ${fxOpenId === id ? 'open' : ''}" onpointerdown="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">
+        <label>Espessura <b class="fx-v-sw">${sw}</b></label>
+        <input type="range" min="1" max="14" step="0.5" value="${sw}" oninput="shapeFxLive('${id}','sw',this.value)" onchange="shapeFxCommit()">
+        <label>Opacidade <b class="fx-v-op">${op}%</b></label>
+        <input type="range" min="10" max="100" step="5" value="${op}" oninput="shapeFxLive('${id}','op',this.value/100)" onchange="shapeFxCommit()">
+        <label>Animações</label>
+        <div class="fx-chips">${chip('blink', 'Pisca', 'fa-bolt')}${chip('draw', 'Rabisca e volta', 'fa-pen')}${chip('pulse', 'Pulsa', 'fa-expand')}${chip('wiggle', 'Balança', 'fa-rotate')}</div>
+        <button type="button" class="fx-reset" onclick="resetShapeFx('${id}')">Restaurar padrão</button>
+      </div>`;
+    }
+    function toggleShapeFx(id) {
+      fxOpenId = fxOpenId === id ? null : id;
+      const el = document.getElementById(id), p = el && el.querySelector('.shape-fx');
+      if (p) p.classList.toggle('open', fxOpenId === id);
+    }
+    function shapeFxLive(id, key, val) {   // ao arrastar o controle: só atualiza a tela
+      const n = findNote(id), el = document.getElementById(id); if (!n || !el) return;
+      n[key] = +val;
+      updateShapeSvg(el, n);
+      const v = el.querySelector(key === 'sw' ? '.fx-v-sw' : '.fx-v-op');
+      if (v) v.textContent = key === 'sw' ? fxSw(n) : Math.round(fxOp(n) * 100) + '%';
+    }
+    function shapeFxCommit() { saveData(); }
+    function toggleShapeAnim(id, k) {
+      const n = findNote(id), el = document.getElementById(id); if (!n || !el) return;
+      const a = fxAnim(n).slice(), i = a.indexOf(k);
+      if (i >= 0) a.splice(i, 1); else a.push(k);
+      n.anim = a;
+      updateShapeSvg(el, n);
+      el.querySelectorAll('.fx-chip').forEach(b => b.classList.toggle('on', a.includes(b.dataset.anim)));
+      saveData();
+    }
+    function resetShapeFx(id) {
+      const n = findNote(id), el = document.getElementById(id); if (!n || !el) return;
+      delete n.sw; delete n.op; delete n.anim;
+      renderNotes(); saveData();
     }
 
     /* Menu de formas: ícones desenhados com as próprias formas */
@@ -2373,6 +2462,9 @@
           ${dupToolHtml(note.id, 'chalk-rot transition')}
           ${moveToolHtml(note.id, 'chalk-rot transition')}
           ${note.shape === 'bend' ? `<button onclick="cycleBendHead('${note.id}')" class="chalk-rot transition" title="Pontas: ${note.head === 'both' ? 'nas duas pontas' : note.head === 'none' ? 'sem ponta' : 'só no fim'} (clique para mudar)"><i class="fa-solid ${note.head === 'both' ? 'fa-left-right' : note.head === 'none' ? 'fa-minus' : 'fa-arrow-right-long'} text-[11px]"></i></button>` : ''}
+          <button onclick="toggleShapeFx('${note.id}')" class="chalk-rot transition ${(note.sw || note.op || fxAnim(note).length) ? 'text-amber-300' : ''}" title="Espessura, opacidade e animações">
+            <i class="fa-solid fa-sliders text-[11px]"></i>
+          </button>
           <button onclick="toggleShapeDash('${note.id}')" class="chalk-rot transition ${note.dash ? 'text-amber-300' : ''}" title="${note.dash ? 'Traço contínuo' : 'Traço tracejado'}">
             <i class="fa-solid fa-ellipsis text-[11px]"></i>
           </button>
@@ -2384,6 +2476,7 @@
           </button>
         </div>
 
+        ${shapeFxHtml(note)}
         ${resizeHandlesHtml()}
         <div class="resize-corner absolute -right-1 -bottom-1 w-6 h-6 z-20 cursor-nwse-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-white/70 transition" title="Redimensionar">
           <span style="font-size:13px; line-height:1;">◢</span>
@@ -4493,7 +4586,7 @@
       const rect = (rx, ry, rw, rh) => x.fillRect(rx, ry, rw, rh);
 
       if (note.type === 'shape') {
-        target.querySelectorAll('g[stroke-width="3.6"] > *').forEach(g => {
+        target.querySelectorAll('g[data-main] > *').forEach(g => {
           if (typeof g.getTotalLength !== 'function') return;
           const L = g.getTotalLength();
           for (let t = 0; t <= L; t += 3) {
@@ -7483,13 +7576,23 @@
 
     /* ----- janela de compartilhar ----- */
     function openShareModal() { renderShareModal(); openOv('shareModal'); setTimeout(() => { const i = byId('shareEmail'); if (i) i.focus(); }, 60); }
+    function shProfile(email) {   // nome + foto: o meu perfil, ou o que veio nos convites
+      const me = shMe();
+      if (me && email === me.email) return { name: (window.MYPROF && MYPROF.username) || (currentUser && currentUser.name) || '', photo: (window.MYPROF && MYPROF.photo) || '' };
+      let r = { name: '', photo: '' };
+      const take = (n, ph) => { if (ph && !r.photo) r.photo = ph; if (n && !r.name) r.name = n; };
+      SH.inc.forEach(i => { if (i.fromEmail === email) take(i.fromName, i.fromPhoto); });
+      SH.out.forEach(i => { if (i.toEmail === email) take(i.toUsername, i.toPhoto); });
+      return r;
+    }
+    function shDisplayName(email) { const p = shProfile(email); return p.name || String(email || '').split('@')[0]; }
     function renderShareModal(keepMsg) {
       const b = getActiveBoard(), sid = b.shared && b.shared.sid, info = sid && SH.info[sid], me = shMe();
       byId('shareTitle').textContent = (sid ? 'Lousa compartilhada “' : 'Compartilhar “') + b.name + '”';
       if (!keepMsg) byId('shareMsg').textContent = '';
       let h = '';
       const iAmOwner = !sid || b.shared.owner === me.uid;
-      if (!sid) h += `<div class="sh-row"><i class="fa-solid fa-user"></i><span class="flex-1">${html(me.email)}<br><small>só você, por enquanto</small></span></div>`;
+      if (!sid) h += `<div class="sh-row">${ntAvatar(shProfile(me.email).photo, shDisplayName(me.email), 36)}<span class="flex-1"><b>${html(shDisplayName(me.email))}</b> (você)<br><small>${html(me.email)} · só você, por enquanto</small></span></div>`;
       else if (info) {
         const order = info.memberEmails.map((em, i) => i).sort((a, b) => (info.members[b] === info.ownerUid) - (info.members[a] === info.ownerUid));
         order.forEach(i => {
@@ -7497,11 +7600,12 @@
           const isOwner = info.members[i] === info.ownerUid, isMe = em === me.email;
           const btn = isMe && !iAmOwner ? `<button class="sh-btn danger" onclick="confirmLeaveOrStop('${sid}')">Sair</button>`
             : (iAmOwner && !isMe ? `<button class="sh-btn danger" onclick="confirmRemoveMember('${sid}','${html(em)}')">Cancelar ligação</button>` : '');
-          h += `<div class="sh-row"><i class="fa-solid ${isOwner ? 'fa-crown' : 'fa-user'}"></i><span class="flex-1">${html(em)}${isMe ? ' (você)' : ''}<br><small>${isOwner ? 'criou esta lousa' : 'usando a lousa'}</small></span>${btn}</div>`;
+          const pr = shProfile(em);
+          h += `<div class="sh-row">${ntAvatar(pr.photo, shDisplayName(em), 36)}<span class="flex-1"><b>${html(shDisplayName(em))}</b>${isMe ? ' (você)' : ''}${isOwner ? ' <i class="fa-solid fa-crown" style="color:#fbbf24;font-size:11px" title="criou esta lousa"></i>' : ''}<br><small>${html(em)} · ${isOwner ? 'criou esta lousa' : 'usando a lousa'}</small></span>${btn}</div>`;
         });
       } else h += '<p class="text-xs text-stone-400">Carregando participantes...</p>';
       const pend = sid ? SH.out.filter(i => i.sid === sid && i.status === 'pending') : [];
-      pend.forEach(i => { h += `<div class="sh-row"><i class="fa-regular fa-clock"></i><span class="flex-1">${html(i.toEmail)}<br><small>aguardando resposta</small></span><button class="sh-btn" onclick="shCancelInvite('${i.id}')">Cancelar pedido</button></div>`; });
+      pend.forEach(i => { h += `<div class="sh-row">${ntAvatar(i.toPhoto, i.toUsername || i.toEmail, 36)}<span class="flex-1"><b>${html(i.toUsername || String(i.toEmail).split('@')[0])}</b><br><small>${html(i.toEmail)} · aguardando resposta</small></span><button class="sh-btn" onclick="shCancelInvite('${i.id}')">Cancelar pedido</button></div>`; });
       byId('shareList').innerHTML = h;
       byId('shareNote').textContent = sid && !iAmOwner ? 'Você pode sair quando quiser; só quem é dona(o) convida novas pessoas.' : 'Todos que aceitarem editam esta mesma lousa ao vivo. Qualquer lado pode cancelar quando quiser.';
       byId('shareInviteBox').classList.toggle('hidden', !iAmOwner);
@@ -7567,9 +7671,37 @@
       SH.on = true; shWrapImages();
       sharedBoards().forEach(b => shWatch(b.shared.sid));
       if (SH.unInv) SH.unInv();
-      SH.unInv = FB.watchInvites((l) => { SH.inc = l; shInvChanged(); }, (l) => { SH.out = l; shInvChanged(); });
+      NT.seen = null; NT.got = 0;
+      SH.unInv = FB.watchInvites((l) => { SH.inc = l; ntFirst(); shInvChanged(); }, (l) => { SH.out = l; ntFirst(); shInvChanged(); });
     }
+    /* som + sininho quando chega notificação nova */
+    const NT = { ctx: null, seen: null };
+    function ntUnlock() { try { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; NT.ctx = NT.ctx || new AC(); if (NT.ctx.state === 'suspended') NT.ctx.resume(); } catch (e) {} }
+    ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, ntUnlock, { passive: true }));
+    function ntSound() {
+      try {
+        ntUnlock(); const c = NT.ctx; if (!c || c.state !== 'running') return;
+        [[880, 0], [1318.5, 0.16]].forEach(([f, t]) => {
+          const o = c.createOscillator(), g = c.createGain(), t0 = c.currentTime + t;
+          o.type = 'sine'; o.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.45);
+          o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + 0.5);
+        });
+      } catch (e) {}
+      const b = byId('bellBtn'); if (b) { b.classList.remove('ringing'); void b.offsetWidth; b.classList.add('ringing'); setTimeout(() => b.classList.remove('ringing'), 1800); }
+      try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}
+    }
+    function ntCheckNew() {
+      const keys = shNotifItems().map(x => x.kind + ':' + x.i.id);
+      if (NT.seen === null) { NT.seen = new Set(keys); return; }   // primeira carga: não toca
+      const fresh = keys.filter(k => !NT.seen.has(k));
+      keys.forEach(k => NT.seen.add(k));
+      if (fresh.length) ntSound();
+    }
+    function ntFirst() { if (NT.got < 2) { NT.got++; if (NT.got < 2) NT.hold = true; else NT.hold = false; } }
     function shInvChanged() {
+      if (NT.hold) { updateBell(); return; }
+      ntCheckNew();
       updateBell();
       if (!byId('notifPanel').classList.contains('hidden')) renderNotif();
       if (!byId('shareModal').classList.contains('hidden')) renderShareModal(true);
@@ -7578,7 +7710,7 @@
       SH.on = false;
       Object.keys(SH.unsubs).forEach(shUnwatch);
       if (SH.unInv) { SH.unInv(); SH.unInv = null; }
-      SH.inc = []; SH.out = []; updateBell();
+      SH.inc = []; SH.out = []; NT.seen = null; updateBell();
       ['shareModal', 'finLinkModal', 'pieceLinkModal', 'profileModal'].forEach(closeOv); closeNotif();
     }
 
@@ -7602,7 +7734,12 @@
         if (sb) {
           sb.classList.toggle('hidden', !b.shared);
           const inf = b.shared && SH.info[b.shared.sid];
-          const tx = byId('sharedBadgeText'); if (tx) tx.textContent = inf && inf.members ? 'Compartilhada · ' + inf.members.length : 'Compartilhada';
+          const tx = byId('sharedBadgeText');
+          if (tx) {
+            const em = (inf && inf.memberEmails) || [];
+            const avs = em.slice(0, 3).map(e => ntAvatar(shProfile(e).photo, shDisplayName(e), 18)).join('');
+            tx.innerHTML = (avs ? `<span class="sh-avs" style="margin-right:6px">${avs}</span>` : '') + (inf && inf.members ? 'Compartilhada · ' + inf.members.length : 'Compartilhada');
+          }
         }
         const fb = byId('btnNewFin'); if (fb) fb.style.display = '';
       };
