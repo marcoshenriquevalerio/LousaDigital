@@ -156,6 +156,7 @@ function unpackShared(d) {
     members: d.members || [],
     memberEmails: d.memberEmails || [],
     invitedEmails: d.invitedEmails || [],
+    memberProfiles: d.memberProfiles || {},
     content: d.payload ? JSON.parse(fromBase64(d.payload)) : {}
   };
 }
@@ -203,6 +204,14 @@ Object.assign(window.FB, {
       (snap) => cb(snap.exists() ? unpackShared(snap.data()) : null),
       (err) => cb(null, err)
     );
+  },
+
+  // Nome + foto do participante, visíveis para os outros da lousa (a foto vai em shared/{sid}/images/profile_{uid}, já coberto pelas regras)
+  async publishMemberProfile(sid, p) {
+    const m = FB.me();
+    if (p.photo) await setDoc(sharedImgRef(sid, "profile_" + m.uid), { data: p.photo, createdAt: Date.now(), profile: true });
+    else { try { await deleteDoc(sharedImgRef(sid, "profile_" + m.uid)); } catch (e) {} }
+    await updateDoc(sharedRef(sid), { ["memberProfiles." + m.uid]: { name: String(p.name || "").slice(0, 24), ph: p.photo ? (p.ph || "1") : "", v: Date.now() } });
   },
 
   async addInvited(sid, email) { await updateDoc(sharedRef(sid), { invitedEmails: arrayUnion(lc(email)) }); },
