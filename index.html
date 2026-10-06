@@ -649,6 +649,10 @@
     .theme-marker #chalkHold i { background: rgba(15,23,42,.75); }
     .fin-lock { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #a8a29e; }
     .nav-btn.is-shared { background: #059669; color: #fff; border-color: #10b981; }
+    /* indicação vermelha de lousa compartilhada (no cabeçalho) */
+    .shared-badge { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 5px 11px; border-radius: 999px; background: #dc2626; color: #fff; border: 1px solid #f87171; font-size: 12px; font-weight: 700; line-height: 1; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 8px rgba(220,38,38,.45); transition: background .15s ease, transform .15s ease; }
+    .shared-badge:hover { background: #ef4444; transform: translateY(-1px); }
+    .shared-badge.hidden { display: none; }
     #bellBtn { position: relative; }
     #bellBadge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
     #moreBtn { position: relative; }
@@ -728,6 +732,8 @@
     </div>
 
     <div class="tb-spacer"></div>
+
+    <button id="btnSharedInfo" onclick="openShareModal()" class="shared-badge hidden" title="Lousa compartilhada — ver quem está usando e quem criou"><i class="fa-solid fa-user-group"></i><span id="sharedBadgeText">Compartilhada</span></button>
 
     <div id="moreGroup" class="tb-group">
       <div class="nav-pill">
@@ -1678,7 +1684,7 @@
 
     /* REDIMENSIONAMENTO LATERIAL (LARGURA DO POST-IT) */
     function initHorizontalResize(element, noteId) {
-      const handles = element.querySelectorAll('.resize-handle');
+      const handles = element.querySelectorAll('.resize-handle:not(.ck-vh)');
       
       handles.forEach(handle => {
         const onResizeDown = (e) => {
@@ -1910,6 +1916,53 @@
       `;
     }
 
+    /* alças extras da lista de tarefas: embaixo e nos dois cantos de baixo */
+    function checklistVHandlesHtml() {
+      return `
+        <div data-dir="b" class="resize-handle ck-vh absolute left-4 right-4 bottom-0 h-2.5 cursor-ns-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-black/30 hover:bg-black/5 rounded-b"></div>
+        <div data-dir="bl" class="resize-handle ck-vh absolute -left-1 -bottom-1 w-6 h-6 z-20 cursor-nesw-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-white/70 transition" title="Redimensionar"><span style="font-size:13px;line-height:1">◣</span></div>
+        <div data-dir="br" class="resize-handle ck-vh absolute -right-1 -bottom-1 w-6 h-6 z-20 cursor-nwse-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-white/70 transition" title="Redimensionar"><span style="font-size:13px;line-height:1">◢</span></div>
+      `;
+    }
+
+    function initChecklistVResize(element, noteId) {
+      element.querySelectorAll('.ck-vh').forEach(handle => {
+        const down = (e) => {
+          e.stopPropagation(); e.preventDefault();
+          const note = getActiveBoard().notes.find(n => n.id === noteId); if (!note) return;
+          const p0 = getClientXY(e);
+          const startW = element.offsetWidth, startH = element.offsetHeight, startX = note.x, dir = handle.dataset.dir;
+          const move = (ev) => {
+            if (ev.preventDefault && ev.cancelable) ev.preventDefault();
+            const p = getClientXY(ev);
+            const dx = (p.x - p0.x) / boardScale, dy = (p.y - p0.y) / boardScale;
+            const newH = Math.max(120, Math.min(startH + dy, 1600));
+            note.height = newH;
+            element.style.height = newH + 'px';
+            const frame = element.querySelector('.chalk-frame'), layer = element.querySelector('.erase-layer'), items = element.querySelector('.chalk-items');
+            if (frame) { frame.style.height = '100%'; frame.style.display = 'flex'; frame.style.flexDirection = 'column'; }
+            if (layer) { layer.style.flex = '1'; layer.style.minHeight = '0'; layer.style.display = 'flex'; layer.style.flexDirection = 'column'; }
+            if (items) { items.style.flex = '1'; items.style.minHeight = '0'; items.style.maxHeight = 'none'; }
+            if (dir === 'br' || dir === 'bl') {
+              const newW = Math.max(200, Math.min(dir === 'br' ? startW + dx : startW - dx, 650));
+              note.width = newW; element.style.width = newW + 'px';
+              if (dir === 'bl') { note.x = startX + (startW - newW); element.style.left = note.x + 'px'; }
+            }
+          };
+          const up = () => {
+            document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up);
+            document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up);
+            try { layoutStage(); } catch (err) {}
+            saveData();
+          };
+          document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+          document.addEventListener('touchmove', move, { passive: false }); document.addEventListener('touchend', up);
+        };
+        handle.addEventListener('pointerdown', down);
+        handle.addEventListener('touchstart', down, { passive: false });
+      });
+    }
+
     function resizeHandlesHtml() {
       return `
         <div data-dir="left" class="resize-handle absolute top-0 left-0 w-2.5 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center text-black/30 hover:bg-black/5 rounded-l"></div>
@@ -1924,10 +1977,10 @@
       const items = note.items || [];
       const ls = note.listSize || 24, cb = Math.round(ls * 1.25);
       return `
-        <div class="chalk-frame rounded-lg p-3" style="color:${getChalkHex(note)}">
+        <div class="chalk-frame rounded-lg p-3" style="color:${getChalkHex(note)};${note.height ? 'height:100%;display:flex;flex-direction:column;' : ''}">
           ${chalkBarHtml(note, `<button onclick="changeListSize('${note.id}', -2)" class="chalk-btn text-[11px] font-bold px-1 rounded transition" title="Diminuir letra">A-</button><button onclick="changeListSize('${note.id}', 2)" class="chalk-btn text-[13px] font-bold px-1 rounded transition" title="Aumentar letra">A+</button>`)}
 
-          <div class="erase-layer" style="${maskCss(note)}">
+          <div class="erase-layer" style="${note.height ? 'flex:1;min-height:0;display:flex;flex-direction:column;' : ''}${maskCss(note)}">
           <input type="text"
                  value="${escapeHtml(note.title || '')}"
                  onchange="updateChecklistTitle('${note.id}', this.value)"
@@ -1936,7 +1989,7 @@
                  style="color:inherit; font-size:${Math.round(ls * 1.25)}px">
           <div class="chalk-line mb-2"></div>
 
-          <div class="chalk-items space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+          <div class="chalk-items space-y-1.5 max-h-[300px] overflow-y-auto pr-1" ${note.height ? 'style="flex:1;min-height:0;max-height:none"' : ''}>
             ${items.map((item, idx) => {
               const anim = !!(lastToggled && lastToggled.id === note.id && lastToggled.idx === idx && item.done);
               return `
@@ -1974,6 +2027,7 @@
           </div>
         </div>
         ${resizeHandlesHtml()}
+        ${checklistVHandlesHtml()}
       `;
     }
 
@@ -2095,10 +2149,14 @@
     }
 
     /* Traços de uma forma, dentro de uma caixa w x h */
+    /* fator de escala: quanto maior a forma esticada, mais grossos o traço e as pontas (nunca abaixo de 1) */
+    function shapeK(w, h) { return Math.min(2.6, Math.max(1, Math.max(w, h) / 220)); }
+
     function shapeMarkup(kind, w, h, note) {
       const p = 8;
       let d = '';
-      const head = (x, y, ang, sz) => `<path d="${arrowHeadPath(x, y, ang, sz)}"/>`;
+      const k = shapeK(w, h);
+      const head = (x, y, ang, sz) => `<path d="${arrowHeadPath(x, y, ang, sz * k)}"/>`;
 
       switch (kind) {
         case 'line': {
@@ -2254,14 +2312,15 @@
       const w = Math.round(note.width || 160);
       const h = Math.round(note.height || 80);
       const d = shapeMarkup(note.shape, w, h, note);
-      const dash = note.dash ? ' stroke-dasharray="11 9"' : '';
+      const k = shapeK(w, h);
+      const dash = note.dash ? ` stroke-dasharray="${(11 * k).toFixed(1)} ${(9 * k).toFixed(1)}"` : '';
 
       /* Traço principal + traço fantasma levemente deslocado (efeito de giz passado duas vezes) */
       return `
         <g filter="url(#chalkShape)">
           <rect width="${w}" height="${h}" fill="none" stroke="none"/>
-          <g fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"${dash}>${d}</g>
-          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" transform="translate(1.4 -1.1)"${dash}>${d}</g>
+          <g fill="none" stroke="currentColor" stroke-width="${(3.6 * k).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"${dash}>${d}</g>
+          <g fill="none" stroke="currentColor" stroke-width="${(1.6 * k).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" transform="translate(${(1.4 * k).toFixed(2)} ${(-1.1 * k).toFixed(2)})"${dash}>${d}</g>
         </g>
       `;
     }
@@ -2630,6 +2689,7 @@
         if (note.type === 'shape') {
           wrapper.style.height = `${note.height || 80}px`;
         }
+        if (note.type === 'checklist' && note.height) wrapper.style.height = `${note.height}px`;
         if (isFinType(note.type)) {
           wrapper.style.height = `${note.height || 320}px`;
         }
@@ -2706,6 +2766,7 @@
 
         initDragAndDrop(wrapper, note.id);
         initHorizontalResize(wrapper, note.id);
+        if (note.type === 'checklist') initChecklistVResize(wrapper, note.id);
         if (note.erase) syncRestoreUI(note, wrapper);
         if (note.type === 'shape' || isFinType(note.type)) initCornerResize(wrapper, note.id);
         if (note.type === 'shape' && note.shape === 'bend') initBendHandles(wrapper, note.id);
@@ -7424,17 +7485,19 @@
     function openShareModal() { renderShareModal(); openOv('shareModal'); setTimeout(() => { const i = byId('shareEmail'); if (i) i.focus(); }, 60); }
     function renderShareModal(keepMsg) {
       const b = getActiveBoard(), sid = b.shared && b.shared.sid, info = sid && SH.info[sid], me = shMe();
-      byId('shareTitle').textContent = 'Compartilhar “' + b.name + '”';
+      byId('shareTitle').textContent = (sid ? 'Lousa compartilhada “' : 'Compartilhar “') + b.name + '”';
       if (!keepMsg) byId('shareMsg').textContent = '';
       let h = '';
       const iAmOwner = !sid || b.shared.owner === me.uid;
       if (!sid) h += `<div class="sh-row"><i class="fa-solid fa-user"></i><span class="flex-1">${html(me.email)}<br><small>só você, por enquanto</small></span></div>`;
       else if (info) {
-        info.memberEmails.forEach((em, i) => {
+        const order = info.memberEmails.map((em, i) => i).sort((a, b) => (info.members[b] === info.ownerUid) - (info.members[a] === info.ownerUid));
+        order.forEach(i => {
+          const em = info.memberEmails[i];
           const isOwner = info.members[i] === info.ownerUid, isMe = em === me.email;
           const btn = isMe && !iAmOwner ? `<button class="sh-btn danger" onclick="confirmLeaveOrStop('${sid}')">Sair</button>`
             : (iAmOwner && !isMe ? `<button class="sh-btn danger" onclick="confirmRemoveMember('${sid}','${html(em)}')">Cancelar ligação</button>` : '');
-          h += `<div class="sh-row"><i class="fa-solid ${isOwner ? 'fa-crown' : 'fa-user'}"></i><span class="flex-1">${html(em)}${isMe ? ' (você)' : ''}<br><small>${isOwner ? 'dona(o) da lousa' : 'participante'}</small></span>${btn}</div>`;
+          h += `<div class="sh-row"><i class="fa-solid ${isOwner ? 'fa-crown' : 'fa-user'}"></i><span class="flex-1">${html(em)}${isMe ? ' (você)' : ''}<br><small>${isOwner ? 'criou esta lousa' : 'usando a lousa'}</small></span>${btn}</div>`;
         });
       } else h += '<p class="text-xs text-stone-400">Carregando participantes...</p>';
       const pend = sid ? SH.out.filter(i => i.sid === sid && i.status === 'pending') : [];
@@ -7535,6 +7598,12 @@
         ub.apply(this, arguments);
         const b = getActiveBoard(), btn = byId('btnShareBoard');
         if (btn) { btn.classList.toggle('is-shared', !!b.shared); btn.title = b.shared ? 'Lousa compartilhada — gerenciar' : 'Compartilhar esta lousa'; }
+        const sb = byId('btnSharedInfo');
+        if (sb) {
+          sb.classList.toggle('hidden', !b.shared);
+          const inf = b.shared && SH.info[b.shared.sid];
+          const tx = byId('sharedBadgeText'); if (tx) tx.textContent = inf && inf.members ? 'Compartilhada · ' + inf.members.length : 'Compartilhada';
+        }
         const fb = byId('btnNewFin'); if (fb) fb.style.display = '';
       };
       window.relayoutAll = function () { ra.apply(this, arguments); try { renderChalk(); } catch (e) {} };
