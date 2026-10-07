@@ -412,6 +412,15 @@
     .theme-marker #showHeaderBtn { background: rgba(255,255,255,.92); color: #0f172a; border-color: #94a3b8; }
     .theme-marker #moreGroup { background: rgba(255,255,255,.98); border-color: #94a3b8; }
 
+    @media (min-width: 900px) {   /* cabeçalho sempre em UMA linha: tudo encolhe um pouco em vez de quebrar */
+      #topbar { flex-wrap: nowrap; gap: 6px; padding-left: 8px; padding-right: 8px; }
+      #topbar .tb-group { flex-wrap: nowrap; gap: 4px; }
+      #topbar .tb { width: 33px; height: 33px; font-size: 14px; }
+      #topbar .nav-pill { gap: 3px; padding: 3px 5px; }
+      #topbar .nav-btn { width: 26px; height: 26px; }
+      #topbar .shared-badge { padding: 5px 9px; }
+      #topbar .brand-text h1 { max-width: 90px; }
+    }
     @media (max-width: 899px) {
       body { padding-bottom: var(--bar-h); }
       #topbar { position: fixed; left: 0; right: 0; bottom: 0; top: auto; flex-wrap: nowrap; padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px)); border-radius: 20px 20px 0 0; border-bottom-width: 0; }
@@ -805,13 +814,12 @@
       <div class="nav-pill">
         <button id="btnPrevBoard" onclick="navigateBoard(-1)" class="nav-btn" title="Lousa anterior"><i class="fa-solid fa-chevron-left text-xs"></i></button>
         <div class="flex flex-col items-center px-1 min-w-[64px]">
-          <span id="widgetBoardName" onclick="renameCurrentBoard()" class="nav-name font-chalk font-bold whitespace-nowrap cursor-pointer" title="Clique para renomear">Lousa 1</span>
+          <span id="widgetBoardName" onclick="renameCurrentBoard()" class="nav-name font-chalk font-bold whitespace-nowrap cursor-pointer" title="Clique para renomear a lousa">Lousa 1</span>
           <span id="widgetBoardCount" class="nav-count text-[10px] font-semibold leading-none">1 de 1</span>
         </div>
         <button id="btnNextBoard" onclick="navigateBoard(1)" class="nav-btn" title="Próxima lousa"><i class="fa-solid fa-chevron-right text-xs"></i></button>
         <button onclick="createNewBoard()" class="nav-btn nav-add" title="Nova lousa"><i class="fa-solid fa-plus text-xs"></i></button>
         <button id="btnNewFin" onclick="createFinanceBoard()" class="nav-btn nav-add" title="Nova lousa de finanças"><i class="fa-solid fa-sack-dollar text-xs"></i></button>
-        <button id="btnRenameBoard" onclick="renameCurrentBoard()" class="nav-btn" title="Renomear esta lousa"><i class="fa-solid fa-pen text-xs"></i></button>
         <button id="btnShareBoard" onclick="openShareModal()" class="nav-btn" title="Compartilhar esta lousa"><i class="fa-solid fa-user-plus text-xs"></i></button>
         <button id="btnDeleteBoard" onclick="confirmDeleteCurrentBoard()" class="nav-btn nav-del" title="Excluir esta lousa"><i class="fa-solid fa-trash-can text-xs"></i></button>
       </div>
@@ -8354,7 +8362,10 @@
         byId('btnPrevBoard').disabled = p <= 0;
         byId('btnNextBoard').disabled = p >= l.length - 1;
         paint();
+        const tx = byId('sharedBadgeText');   // em telas mais estreitas o selo mostra só o ícone + número, para não quebrar o cabeçalho
+        if (tx && window.innerWidth < 1500 && /\d/.test(tx.textContent)) tx.textContent = tx.textContent.replace(/^Compartilhada\s*·?\s*/, '');
       };
+      window.addEventListener('resize', () => { try { updateBoardWidgetControls(); } catch (e) {} });
       const uf = window.updateFinDock;
       window.updateFinDock = function () { const r = uf.apply(this, arguments); paint(); return r; };
 
