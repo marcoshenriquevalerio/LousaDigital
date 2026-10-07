@@ -590,7 +590,14 @@
     .theme-marker .fin-dock-btn { color: #0f172a; background: #fff; border-color: #cbd5e1; }
     .theme-marker .fin-dock-btn:hover { background: #e2e8f0; }
     @media (max-width: 520px) { .fin-dock-label { display: none; } .fin-dock-btn { padding: 6px 10px; font-size: 15px; } }
-    .fin-toggle-btn.is-on { box-shadow: 0 0 0 2px #fbbf24, 0 1px 4px rgba(0,0,0,.35); }
+    .fin-toggle-btn.is-on, .nav-filter-btn.is-on { box-shadow: 0 0 0 2px #fbbf24, 0 1px 4px rgba(0,0,0,.35); }
+    .lk-wrap { margin-bottom: 8px; }
+    .lk-wrap > .lk-row { margin-bottom: 0; }
+    .lk-ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; margin-top: -2px; background: rgba(0,0,0,.28); border: 1px solid #44403c; border-top: 0; border-radius: 0 0 12px 12px; }
+    .lk-ops .lk-op { width: 36px; height: 32px; border-radius: 8px; font-size: 18px; font-weight: 800; line-height: 1; color: #e7e5e4; background: #292524; border: 1px solid #57534e; cursor: pointer; }
+    .lk-ops .lk-op:hover { background: #44403c; }
+    .lk-ops .lk-op.sel { background: #fbbf24; color: #1c1917; border-color: #fbbf24; }
+    .lk-ops .lk-formula { flex-basis: 100%; font-size: 11px; color: #a8a29e; }
 
     .fin-frame { height: 100%; display: flex; flex-direction: column; }
     .fin-layer { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -785,7 +792,8 @@
       <button onclick="openCalendarModal()" class="tb bg-sky-100 hover:bg-sky-200 text-sky-700 border border-sky-300 " title="Calendário"><i class="fa-solid fa-calendar-days"></i><span class="tb-label"></span></button>
       <button onclick="openPlannerModal()" class="tb bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300 desk-only" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label"></span></button>
       <button onclick="toggleWidgetMenu(event)" class="tb bg-teal-100 hover:bg-teal-200 text-teal-700 border border-teal-300 " title="Widgets (relógio, calendário, jogos)"><i class="fa-solid fa-puzzle-piece"></i><span class="tb-label"></span></button>
-      <button onclick="openFinanceBoard()" class="tb fin-toggle-btn bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 desk-only" title="Finanças (clique de novo para voltar à lousa anterior)"><i class="fa-solid fa-sack-dollar"></i><span class="tb-label"></span></button>
+      <button onclick="openFinanceBoard()" class="tb fin-toggle-btn bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 desk-only" title="Finanças: ligado = navega só nas lousas de finanças; desligado = lousas normais"><i class="fa-solid fa-sack-dollar"></i><span class="tb-label"></span></button>
+      <button onclick="toggleSharedBoards()" data-f="shared" class="tb nav-filter-btn bg-sky-100 hover:bg-sky-200 text-sky-800 border border-sky-300 desk-only" title="Compartilhadas: ligado = navega só nas lousas compartilhadas; desligado = lousas normais"><i class="fa-solid fa-user-group"></i><span class="tb-label"></span></button>
       <button id="moreBtn" onclick="toggleMore(event)" class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Mais opções"><i class="fa-solid fa-ellipsis"></i><span id="moreDot" class="hidden"></span></button>
     </div>
 
@@ -797,17 +805,19 @@
       <div class="nav-pill">
         <button id="btnPrevBoard" onclick="navigateBoard(-1)" class="nav-btn" title="Lousa anterior"><i class="fa-solid fa-chevron-left text-xs"></i></button>
         <div class="flex flex-col items-center px-1 min-w-[64px]">
-          <span id="widgetBoardName" class="nav-name font-chalk font-bold whitespace-nowrap">Lousa 1</span>
+          <span id="widgetBoardName" onclick="renameCurrentBoard()" class="nav-name font-chalk font-bold whitespace-nowrap cursor-pointer" title="Clique para renomear">Lousa 1</span>
           <span id="widgetBoardCount" class="nav-count text-[10px] font-semibold leading-none">1 de 1</span>
         </div>
         <button id="btnNextBoard" onclick="navigateBoard(1)" class="nav-btn" title="Próxima lousa"><i class="fa-solid fa-chevron-right text-xs"></i></button>
         <button onclick="createNewBoard()" class="nav-btn nav-add" title="Nova lousa"><i class="fa-solid fa-plus text-xs"></i></button>
         <button id="btnNewFin" onclick="createFinanceBoard()" class="nav-btn nav-add" title="Nova lousa de finanças"><i class="fa-solid fa-sack-dollar text-xs"></i></button>
+        <button id="btnRenameBoard" onclick="renameCurrentBoard()" class="nav-btn" title="Renomear esta lousa"><i class="fa-solid fa-pen text-xs"></i></button>
         <button id="btnShareBoard" onclick="openShareModal()" class="nav-btn" title="Compartilhar esta lousa"><i class="fa-solid fa-user-plus text-xs"></i></button>
         <button id="btnDeleteBoard" onclick="confirmDeleteCurrentBoard()" class="nav-btn nav-del" title="Excluir esta lousa"><i class="fa-solid fa-trash-can text-xs"></i></button>
       </div>
       <button onclick="openPlannerModal()" data-close class="tb mob-only bg-purple-100 text-purple-700 border border-purple-300" title="Planner 7 dias"><i class="fa-solid fa-calendar-week"></i><span class="tb-label">Planner</span></button>
       <button onclick="openFinanceBoard()" data-close class="tb fin-toggle-btn mob-only bg-emerald-100 text-emerald-800 border border-emerald-300" title="Finanças"><i class="fa-solid fa-sack-dollar"></i><span class="tb-label">Finanças</span></button>
+      <button onclick="toggleSharedBoards()" data-close data-f="shared" class="tb nav-filter-btn mob-only bg-sky-100 text-sky-800 border border-sky-300" title="Compartilhadas"><i class="fa-solid fa-user-group"></i><span class="tb-label">Compartilhadas</span></button>
       <button onclick="toggleTheme()" id="themeBtn" data-close class="tb bg-stone-100 hover:bg-white text-stone-700 border border-stone-300" title="Alternar estilo"><i id="themeBtnIcon" class="fa-solid fa-pen-fancy text-stone-700"></i><span id="themeBtnLabel" class="tb-label">Modo Canetão</span></button>
       <button onclick="toggleFullscreen()" id="fullscreenBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Tela cheia"><i class="fa-solid fa-expand"></i><span class="tb-label">Tela cheia</span></button>
       <button onclick="toggleQuoteEdit()" id="quoteBtn" data-close class="tb bg-stone-800 hover:bg-stone-700 text-amber-200 border border-stone-600" title="Ajustes: frase e apagador"><i class="fa-solid fa-gear"></i><span class="tb-label">Ajustes</span></button>
@@ -1352,9 +1362,9 @@
         <button onclick="closeOv('pieceLinkModal')" class="text-stone-400 hover:text-white p-1" title="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
       <div class="flex-1 overflow-y-auto p-5">
-        <div class="fin-lbl">Somar junto com</div>
+        <div class="fin-lbl">Combinar com</div>
         <div id="pieceLinkBody"></div>
-        <p class="text-[11px] text-stone-400 mt-2 leading-snug">Este item passa a incluir os lançamentos da lousa de cada item ligado (usando o período e as opções deste item). Só este card/gráfico muda; a lousa continua separada.</p>
+        <p class="text-[11px] text-stone-400 mt-2 leading-snug">Escolha a operação de cada ligação: + soma, − subtrai, × multiplica, ÷ divide. A conta é sempre <b>este item</b> (operação) <b>item ligado</b>, usando o período e as opções deste item. Só este card/gráfico muda; o item ligado e a lousa continuam separados.</p>
       </div>
     </div>
   </div>
@@ -5274,6 +5284,25 @@
       return t;
     }
 
+    /* ---------- ligação com operação (+ − × ÷) entre cards/gráficos ---------- */
+    const FIN_OPS = { add: { sym: '+', name: 'Somar' }, sub: { sym: '−', name: 'Subtrair' }, mul: { sym: '×', name: 'Multiplicar' }, div: { sym: '÷', name: 'Dividir' } };
+    function finApply(op, a, b) {   // valores em centavos
+      if (op === 'sub') return a - b;
+      if (op === 'mul') return Math.round(a * b / 100);
+      if (op === 'div') return b ? Math.round(a * 100 / b) : 0;
+      return a + b;
+    }
+    function finRowsOfBoard(b, period) {
+      let rows = finData(b).rows.filter(r => !finIsBlank(r));
+      if (period && period !== 'all') rows = rows.filter(r => (r.date || '').slice(0, 7) === period);
+      return rows;
+    }
+    function finKeyVal(rows, key) {   // valor (centavos) de um card, a partir dos lançamentos
+      if (String(key).indexOf('d:') === 0) { const k = key.slice(2), t = finTotals(rows.filter(r => finNorm(r.dest) === k)); return t.in - t.out; }
+      const t = finTotals(rows);
+      return key === 'bal' ? t.in - t.out : (t[key] || 0);
+    }
+
     function finDestGroups(rows) {
       const map = {};
       rows.forEach(r => {
@@ -5289,8 +5318,8 @@
     }
 
     /* agrupamento do gráfico */
-    function finGroups(cfg) {
-      const rows = finRowsFor(cfg.period), map = {};
+    function finGroupMap(rows, cfg) {
+      const map = {};
       rows.forEach(r => {
         let key, label, sort;
         if (cfg.x === 'date') { key = r.date || '—'; label = finDM(r.date); sort = key; }
@@ -5300,6 +5329,18 @@
         const g = map[key] || (map[key] = { key, label, sort, in: 0, out: 0, pin: 0, pout: 0 });
         const c = Math.round((r.value || 0) * 100);
         if (r.cat === 'in') { if (r.done) g.in += c; else g.pin += c; } else { if (r.done) g.out += c; else g.pout += c; }
+      });
+      return map;
+    }
+    function finGroups(cfg) {
+      const map = finGroupMap(finRowsFor(cfg.period), cfg);
+      finTerms(finCtxNote).forEach(tm => {   // ligações com operação: combina ponto a ponto do eixo
+        const m2 = finGroupMap(finRowsOfBoard(tm.board, cfg.period), cfg);
+        Object.keys(m2).forEach(k => { if (!map[k]) map[k] = Object.assign({}, m2[k], { in: 0, out: 0, pin: 0, pout: 0 }); });
+        Object.keys(map).forEach(k => {
+          const o = m2[k] || { in: 0, out: 0, pin: 0, pout: 0 };
+          ['in', 'out', 'pin', 'pout'].forEach(f => { map[k][f] = finApply(tm.op, map[k][f], o[f]); });
+        });
       });
       let arr = Object.keys(map).map(k => map[k]);
       if (cfg.x === 'dest') arr.sort((a, b) => (b.in + b.out + b.pin + b.pout) - (a.in + a.out + a.pin + a.pout));
@@ -5435,6 +5476,20 @@
         const pend = [g.t.pout ? 'a pagar ' + finBRL(g.t.pout / 100) : '', g.t.pin ? 'a receber ' + finBRL(g.t.pin / 100) : ''].filter(Boolean).join(' · ');
         return { key: g.key, emoji: finEmoji(g.label), title: g.label, val, color, sub: plural(g.n, 'lançamento', 'lançamentos'), pend };
       });
+      const terms = finTerms(note);
+      if (terms.length) {   // este card combinado com os itens ligados, cada um com a sua operação
+        const comb = (key) => {
+          let v = finKeyVal(rows, key);
+          terms.forEach(tm => {
+            const kk = (tm.piece.type === 'fincards' && tm.piece.only) ? tm.piece.only : key;   // card ligado: usa o valor que ele mostra
+            v = finApply(tm.op, v, finKeyVal(finRowsOfBoard(tm.board, note.period), kk));
+          });
+          return v;
+        };
+        const txt = terms.map(tm => FIN_OPS[tm.op].sym + ' ' + pieceLabel(tm.piece)).join('  ');
+        summary.forEach(c => { const v = comb(c.key); c.val = finBRL(v / 100); if (c.key === 'bal') c.color = v < 0 ? 'pink' : 'blue'; c.sub = txt; });
+        dests.forEach(c => { const v = comb(c.key); c.val = (v < 0 ? '− ' : '+ ') + finBRL(Math.abs(v) / 100); c.color = v < 0 ? 'pink' : (v > 0 ? 'green' : 'yellow'); c.sub = txt; c.pend = ''; });
+      }
       return { summary, dests, hasRows: rows.length > 0 };
     }
     function finCardHtml(c) {
@@ -6523,13 +6578,23 @@
       const L = appData.finLinks || (appData.finLinks = {});
       if (!L.boards) L.boards = {};
       if (!L.pieces) L.pieces = {};
+      if (!L.ops) L.ops = {};
       return L;
+    }
+    /* itens ligados a uma peça (cards/gráficos), cada um com a operação escolhida */
+    function finTerms(note) {
+      if (!note) return [];
+      const L = finLinks(), ops = L.ops[note.id] || {}, out = [];
+      (L.pieces[note.id] || []).forEach(pid => {
+        const p = findPieceAnywhere(pid), src = p && finSrcOf(p);
+        if (p && src) out.push({ piece: p, board: src, op: ops[pid] || 'add' });
+      });
+      return out;
     }
     function finLinkedBoards(board, note) {
       const L = finLinks(), out = [];
       const add = (b) => { if (b && b.kind === 'finance' && b !== board && out.indexOf(b) < 0) out.push(b); };
       (L.boards[board.id] || []).forEach(id => add(appData.boards.find(b => b.id === id)));
-      if (note) (L.pieces[note.id] || []).forEach(pid => { const p = findPieceAnywhere(pid); if (p) add(finSrcOf(p)); });
       return out;
     }
     function finEffRows() {
@@ -6660,20 +6725,27 @@
       appData.boards.forEach(b => (b.notes || []).forEach(n => {
         if (n.id === me.id || (n.type !== 'fincards' && n.type !== 'finchart')) return;
         const src = finSrcOf(n); if (!src || src === mySrc) return;
-        const on = mine.indexOf(n.id) >= 0;
-        rows.push(`<button class="lk-row ${on ? 'on' : ''}" onclick="togglePieceLink('${n.id}')">
+        const on = mine.indexOf(n.id) >= 0, op = (finLinks().ops[me.id] || {})[n.id] || 'add';
+        const ops = on ? `<div class="lk-ops">${Object.keys(FIN_OPS).map(k => `<button class="lk-op ${k === op ? 'sel' : ''}" title="${FIN_OPS[k].name}" onclick="setPieceOp('${n.id}','${k}')">${FIN_OPS[k].sym}</button>`).join('')}
+          <span class="lk-formula">Conta: <b>${html(pieceLabel(me))}</b> ${FIN_OPS[op].sym} <b>${html(pieceLabel(n))}</b></span></div>` : '';
+        rows.push(`<div class="lk-wrap"><button class="lk-row ${on ? 'on' : ''}" onclick="togglePieceLink('${n.id}')">
           <i class="fa-solid ${on ? 'fa-link' : 'fa-link-slash'}"></i>
           <span class="flex-1 text-left"><b>${html(pieceLabel(n))}</b><br><small>dados da lousa “${html(src.name)}”${b !== src ? ' · peça em “' + html(b.name) + '”' : ''}</small></span>
-          <span class="lk-state">${on ? 'Somando junto' : 'Separado'}</span></button>`);
+          <span class="lk-state">${on ? FIN_OPS[op].name : 'Separado'}</span></button>${ops}</div>`);
       }));
       byId('pieceLinkBody').innerHTML = rows.length ? rows.join('') :
         '<p class="text-sm text-stone-300">Não há cards ou gráficos de <b>outras</b> lousas de finanças para ligar. Crie-os lá e volte aqui.</p>';
     }
     function togglePieceLink(pid) {
       const L = finLinks(), a = pieceLinkId;
-      const A = L.pieces[a] || (L.pieces[a] = []), B = L.pieces[pid] || (L.pieces[pid] = []);
-      if (A.indexOf(pid) >= 0) { L.pieces[a] = A.filter(x => x !== pid); L.pieces[pid] = B.filter(x => x !== a); }
-      else { A.push(pid); if (B.indexOf(a) < 0) B.push(a); }
+      const A = L.pieces[a] || (L.pieces[a] = []);   // a ligação vale só para este item (o outro não muda)
+      if (A.indexOf(pid) >= 0) { L.pieces[a] = A.filter(x => x !== pid); if (L.ops[a]) delete L.ops[a][pid]; }
+      else A.push(pid);
+      saveData(); renderPieceLinks(); renderNotes();
+    }
+    function setPieceOp(pid, op) {
+      const L = finLinks(), a = pieceLinkId; if (!FIN_OPS[op]) return;
+      (L.ops[a] || (L.ops[a] = {}))[pid] = op;
       saveData(); renderPieceLinks(); renderNotes();
     }
 
@@ -8227,5 +8299,78 @@
   </script>
 
   <script type="module" src="firebase.js"></script>
+
+  <script>
+    /* =========================================================================
+       v7: navegação filtrada (Finanças / Compartilhadas) + renomear lousas
+       ========================================================================= */
+    (function () {
+      let navFilter = '';          // '' = lousas normais · 'finance' · 'shared'
+      const navLast = {};          // última lousa visitada em cada modo
+      const match = (b, f) => f === 'finance' ? b.kind === 'finance' : f === 'shared' ? !!b.shared : (b.kind !== 'finance' && !b.shared);
+      const list = (f) => appData.boards.map((b, i) => i).filter(i => match(appData.boards[i], f));
+      function sync() {            // se a lousa ativa mudou por outro caminho (convite, exclusão...), acompanha o modo
+        const a = getActiveBoard();
+        if (!match(a, navFilter)) navFilter = a.kind === 'finance' ? 'finance' : (a.shared ? 'shared' : '');
+      }
+      function paint() {
+        document.querySelectorAll('.fin-toggle-btn').forEach(b => b.classList.toggle('is-on', navFilter === 'finance'));
+        document.querySelectorAll('.nav-filter-btn').forEach(b => b.classList.toggle('is-on', navFilter === 'shared'));
+      }
+      function setFilter(f) {
+        sync();
+        navLast[navFilter] = appData.activeBoardIndex;
+        if (f === navFilter) f = '';
+        const l = list(f);
+        const target = (navLast[f] !== undefined && l.indexOf(navLast[f]) >= 0) ? navLast[f] : l[0];
+        if (target === undefined) {
+          if (f === 'finance') { createFinanceBoard(); return; }
+          if (f === 'shared') {
+            showCustomDialog({ title: 'Lousas compartilhadas', message: 'Você ainda não tem lousas compartilhadas. Abra uma lousa e use o botão de adicionar pessoa para compartilhá-la.' });
+            return;
+          }
+          createNewBoard(); return;
+        }
+        navFilter = f; appData.activeBoardIndex = target; selectedNoteId = null;
+        saveData(); renderNotes();
+      }
+      window.openFinanceBoard = () => setFilter('finance');
+      window.toggleSharedBoards = () => setFilter('shared');
+
+      window.navigateBoard = function (delta) {
+        sync();
+        const l = list(navFilter), n = l[l.indexOf(appData.activeBoardIndex) + delta];
+        if (n === undefined) return;
+        appData.activeBoardIndex = n; selectedNoteId = null;
+        saveData(); renderNotes();
+      };
+
+      const ub = window.updateBoardWidgetControls;
+      window.updateBoardWidgetControls = function () {
+        ub.apply(this, arguments);
+        sync();
+        const l = list(navFilter), p = l.indexOf(appData.activeBoardIndex);
+        byId('widgetBoardCount').innerText = (p + 1) + ' de ' + l.length;
+        byId('btnPrevBoard').disabled = p <= 0;
+        byId('btnNextBoard').disabled = p >= l.length - 1;
+        paint();
+      };
+      const uf = window.updateFinDock;
+      window.updateFinDock = function () { const r = uf.apply(this, arguments); paint(); return r; };
+
+      window.renameCurrentBoard = function () {
+        const b = getActiveBoard();
+        showCustomDialog({
+          title: 'Renomear lousa', message: 'Digite o novo nome desta lousa:', hasInput: true, inputValue: b.name || '',
+          onConfirm: (v) => {
+            const nm = String(v || '').trim().slice(0, 30);
+            if (!nm) return;
+            b.name = nm; saveData(); renderNotes();
+          }
+        });
+        setTimeout(() => { const i = byId('dialogInput'); if (i) { i.focus(); i.select(); } }, 50);
+      };
+    })();
+  </script>
 </body>
 </html>
