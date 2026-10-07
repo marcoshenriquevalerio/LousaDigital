@@ -6899,7 +6899,7 @@
       breakout: { name: 'Quebra-tijolos',    icon: 'fa-border-all',    w: 340, game: 1, styles: ['Branco', 'Amarelo', 'Rosa', 'Azul', 'Verde'] },
       flappy:   { name: 'Passarinho',        icon: 'fa-feather',       w: 300, game: 1, styles: ['Branco', 'Amarelo', 'Rosa', 'Azul', 'Verde'] },
       memory:   { name: 'Jogo da memória',   icon: 'fa-clone',         w: 300, game: 1, styles: ['Animais', 'Frutas', 'Formas'] },
-      pool:     { name: 'Sinuca (8 bolas)', icon: 'fa-circle-dot',    w: 540, game: 1, nomusic: 1, styles: ['Contra o computador', '2 jogadores'] },
+      pool:     { name: 'Sinuca', icon: 'fa-circle-dot',    w: 540, game: 1, nomusic: 1, styles: ['8 bolas · vs computador', '8 bolas · 2 jogadores', 'Bola 9 · vs computador', 'Bola 9 · 2 jogadores', 'Treino livre'] },
       ttt:      { name: 'Jogo da velha',     icon: 'fa-hashtag',       w: 260, game: 1, styles: ['Contra o computador', '2 jogadores'] },
       timer:    { name: 'Temporizador',      icon: 'fa-hourglass-half', w: 300, styles: ['Ampulheta', 'Digital', 'Anel', 'Barra'] }
     };
@@ -7217,16 +7217,26 @@
       },
       pool(b, n) {
         const W = 810, H = 505, X0 = 45, Y0 = 45, X1 = 765, Y1 = 405, R = 9, SC = 2, FS = 6;
-        const cpuMode = (n.ws || 0) === 0, names = cpuMode ? ['Você', 'Computador'] : ['Jogador 1', 'Jogador 2'];
-        b.innerHTML = '<canvas width="' + (W * SC) + '" height="' + (H * SC) + '" class="edit-input" style="width:100%;display:block;touch-action:none;border-radius:10px;cursor:crosshair"></canvas>' +
+        const WS = n.ws || 0, kind = WS < 2 ? '8' : WS < 4 ? '9' : 'free', cpuMode = WS === 0 || WS === 2;
+        const names = kind === 'free' ? ['Você', 'Você'] : cpuMode ? ['Você', 'Computador'] : ['Jogador 1', 'Jogador 2'];
+        b.innerHTML = '<div style="position:relative"><canvas width="' + (W * SC) + '" height="' + (H * SC) + '" class="edit-input" style="width:100%;display:block;touch-action:none;border-radius:10px;cursor:crosshair"></canvas>' +
+          '<div class="pl-panel edit-input" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto;max-width:94%;border:0;background:rgba(18,12,8,.95);color:#fff;border-radius:14px;padding:12px 14px;font-size:max(13px,2.8cqw);box-shadow:0 8px 28px rgba(0,0,0,.65);z-index:5;text-align:left"><div style="display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:10px"><b style="font-size:1.15em">⚙ Configurações</b><button class="pl-x" title="Fechar" style="border:0;background:transparent;color:#fff;font-size:1.2em;cursor:pointer;padding:0 4px">✕</button></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Legendas e dicas<br><small style="opacity:.65">mensagens abaixo da mesa</small></span><button class="pl-sw" role="switch" aria-checked="true" title="Ligar/desligar as legendas" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
+          '<div style="opacity:.7;margin-bottom:5px"><small>Modo de jogo</small></div><div class="pl-modes" style="display:flex;flex-direction:column;gap:5px"></div></div></div>' +
           '<div class="pl-st font-chalk edit-input" style="text-align:center;font-size:3.6cqw;min-height:1.4em;margin-top:4px"></div>' +
-          '<div class="edit-input" style="display:flex;align-items:center;gap:8px;margin-top:2px;font-size:3.2cqw"><button class="wg-mini pl-go font-chalk" style="flex:1;min-width:0;margin:0;padding:7px 4px;touch-action:none;user-select:none;-webkit-user-select:none" title="Segure para aumentar a força e solte para tacar">Segure para dar força · solte para tacar</button><button class="wg-mini pl-new">Novo jogo</button></div>';
+          '<div class="edit-input" style="display:flex;align-items:center;gap:8px;margin-top:2px;font-size:3.2cqw"><button class="wg-mini pl-go font-chalk" style="flex:1;min-width:0;margin:0;padding:7px 4px;touch-action:none;user-select:none;-webkit-user-select:none" title="Segure para aumentar a força e solte para tacar">Segure para dar força · solte para tacar</button><button class="wg-mini pl-cfg" title="Configurações" style="margin-left:0"><i class="fa-solid fa-gear"></i></button><button class="wg-mini pl-new">Novo jogo</button></div>';
         const cv = b.querySelector('canvas'), ctx = cv.getContext('2d'), stEl = b.querySelector('.pl-st'), pw = { value: 55 }, goBtn = b.querySelector('.pl-go'), newBtn = b.querySelector('.pl-new');
         const POOL = WG.pool || (WG.pool = {});
         const COLORS = [[245, 243, 235], [245, 196, 0], [23, 67, 179], [215, 38, 30], [91, 42, 134], [242, 112, 26], [15, 123, 60], [122, 20, 36], [20, 20, 20]];
-        const POCKETS = [{ x: X0 - 2, y: Y0 - 2, r: 17.5, c: 1 }, { x: 405, y: Y0 - 4, r: 16, c: 0 }, { x: X1 + 2, y: Y0 - 2, r: 17.5, c: 1 }, { x: X0 - 2, y: Y1 + 2, r: 17.5, c: 1 }, { x: 405, y: Y1 + 4, r: 16, c: 0 }, { x: X1 + 2, y: Y1 + 2, r: 17.5, c: 1 }];
+        // x,y = centro do buraco desenhado; vr = raio visual; r = raio de captura (a bola cai quando o centro dela entra aqui)
+        const POCKETS = [{ x: X0 - 5, y: Y0 - 5.5, r: 22, vr: 20, c: 1 }, { x: 405, y: Y0 - 7.5, r: 20, vr: 18.5, c: 0 }, { x: X1 + 5, y: Y0 - 5.5, r: 22, vr: 20, c: 1 }, { x: X0 - 5, y: Y1 + 5.5, r: 22, vr: 20, c: 1 }, { x: 405, y: Y1 + 7.5, r: 20, vr: 18.5, c: 0 }, { x: X1 + 5, y: Y1 + 5.5, r: 22, vr: 20, c: 1 }];
         const clamp = (v, a, c) => Math.max(a, Math.min(c, v));
         const rnd = Math.random;
+        // atrito: perda proporcional (desliza e vai perdendo velocidade aos poucos) + rolamento constante bem pequeno
+        const FK = .012, FC = .02;
+        const vOf = (pw) => 2 + 40 * Math.pow(clamp(pw, 0, 100) / 100, 1.8);   // curva: quanto mais cheia a barra, muito mais intensa a tacada
+        const travel = (v) => (v - (FC / FK) * Math.log(1 + FK * v / FC)) / FK;
+        const powerFor = (D) => { let v = 2; while (v < 42 && travel(v) < D) v += .25; v += 1.2; return clamp(Math.pow(Math.max(0, v - 2) / 40, 1 / 1.8) * 100, 24, 100); };
 
         /* ---------- matrizes de rotação (as bolas rolam de verdade: número e faixa giram) ---------- */
         const rot = (ux, uy, uz, th) => { const c = Math.cos(th), s = Math.sin(th), t = 1 - c; return [t * ux * ux + c, t * ux * uy - s * uz, t * ux * uz + s * uy, t * ux * uy + s * uz, t * uy * uy + c, t * uy * uz - s * ux, t * ux * uz - s * uy, t * uy * uz + s * ux, t * uz * uz + c]; };
@@ -7238,8 +7248,13 @@
           bl.img = bl.cx.createImageData(sp.width, sp.height); return bl;
         }
         function newGame() {
-          const S = { charging: false, ct: 0, balls: [], turn: 0, g: [null, null], ang: 0, power: 55, mode: 'aim', note: '', inHand: false, potted: [], shot: null, over: -1, brk: true, anim: 0, pull: 0, ghost: null, cpu: null, lastT: 0 };
+          const S = { kind, shots: 0, charging: false, ct: 0, balls: [], turn: 0, g: [null, null], ang: 0, power: 55, mode: 'aim', note: '', inHand: false, potted: [], shot: null, over: -1, brk: true, anim: 0, pull: 0, ghost: null, cpu: null, lastT: 0 };
           S.balls.push(mkBall(0, X0 + 180, 225));
+          if (kind === '9') {   // losango da bola 9: 1 na ponta, 9 no centro, o resto sorteado
+            const cols = [1, 2, 3, 2, 1], order = [2, 3, 4, 5, 6, 7, 8].sort(() => rnd() - .5); let k = 0;
+            cols.forEach((cnt, ci) => { for (let j = 0; j < cnt; j++) { const num = ci === 0 ? 1 : (ci === 2 && j === 1) ? 9 : order[k++]; S.balls.push(mkBall(num, 585 + ci * (R * 1.732 + .15), 225 + (j - (cnt - 1) / 2) * (R * 2 + .2))); } });
+            return S;
+          }
           const slots = []; for (let i = 0; i < 5; i++) for (let j = 0; j <= i; j++) slots.push([i, j]);
           const nums = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15].sort(() => rnd() - .5);
           const put = {}; put['2,1'] = 8;
@@ -7251,7 +7266,7 @@
           slots.forEach(s => { const x = 585 + s[0] * (R * 1.732 + .15), y = 225 + (s[1] - s[0] / 2) * (R * 2 + .2); S.balls.push(mkBall(put[s[0] + ',' + s[1]], x, y)); });
           return S;
         }
-        let S = POOL[n.id] || (POOL[n.id] = newGame());
+        let S = POOL[n.id]; if (!S || S.kind !== kind) S = POOL[n.id] = newGame();
         const balls = () => S.balls, cue = () => S.balls[0];
         const human = () => !(cpuMode && S.turn === 1);
 
@@ -7307,7 +7322,7 @@
           for (let j = 1; j < 4; j++) { dia(14, Y0 + 360 * j / 4); dia(W - 14, Y0 + 360 * j / 4); }
           // caçapas: couro, aro de latão e buraco fundo
           POCKETS.forEach(p => {
-            const vr = p.r + 2.5, cx = p.x + (p.c ? (p.x < 405 ? -3 : 3) : 0), cy = p.y + (p.y < 225 ? -3.5 : 3.5);
+            const vr = p.vr, cx = p.x, cy = p.y;
             g.beginPath(); g.arc(cx, cy, vr + 5.5, 0, 7); g.fillStyle = '#2a1608'; g.fill();
             g.beginPath(); g.arc(cx, cy, vr + 5.5, 0, 7); g.strokeStyle = '#b8903f'; g.lineWidth = 1.6; g.stroke();
             const hg = g.createRadialGradient(cx, cy, 2, cx, cy, vr); hg.addColorStop(0, '#000'); hg.addColorStop(.7, '#060606'); hg.addColorStop(1, '#1d1d1d');
@@ -7390,11 +7405,12 @@
               if (d2 < 4 * R * R && d2 > 0.0001) {
                 const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, ov = (2 * R - d) / 2; a.x -= nx * ov; a.y -= ny * ov; c.x += nx * ov; c.y += ny * ov;
                 const rel = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
-                if (rel > 0) { const p = rel * .98; a.vx -= p * nx; a.vy -= p * ny; c.vx += p * nx; c.vy += p * ny; if (rel > .25) { sound.ball(rel); if (S.shot) { S.shot.contact = true; if (S.shot.first === null && (a.n === 0 || c.n === 0)) S.shot.first = a.n === 0 ? c.n : a.n; } } }
+                if (rel > 0) { const p = rel * .98; a.vx -= p * nx; a.vy -= p * ny; c.vx += p * nx; c.vy += p * ny; if (rel > .25) sound.ball(rel); if (S.shot) { S.shot.contact = true; if (S.shot.first === null && (a.n === 0 || c.n === 0)) S.shot.first = a.n === 0 ? c.n : a.n; } }
               } } }
             bs.forEach(bl => {
               if (bl.in) return;
               for (const p of POCKETS) { if (Math.hypot(bl.x - p.x, bl.y - p.y) < p.r) { bl.in = true; bl.vx = bl.vy = 0; sound.pocket(); if (S.shot) { if (bl.n === 0) S.shot.cue = true; else S.shot.pot.push(bl.n); } return; } }
+              if (POCKETS.some(p => Math.hypot(bl.x - p.x, bl.y - p.y) < p.r + R + 2)) return;   // boca da caçapa: sem tabela, a bola entra
               let hitV = 0;
               if (bl.x < X0 + R) { bl.x = X0 + R; hitV = Math.abs(bl.vx); bl.vx = Math.abs(bl.vx) * .76; bl.vy *= .985; }
               else if (bl.x > X1 - R) { bl.x = X1 - R; hitV = Math.abs(bl.vx); bl.vx = -Math.abs(bl.vx) * .76; bl.vy *= .985; }
@@ -7406,7 +7422,7 @@
           bs.forEach(bl => {
             if (bl.in) return; const sp = Math.hypot(bl.vx, bl.vy);
             if (sp > 0) {
-              const ns = sp * .9994 - .14; if (ns < .1) { bl.vx = bl.vy = 0; } else { const k = ns / sp; bl.vx *= k; bl.vy *= k; any = true;
+              const ns = sp * (1 - FK) - FC; if (ns < .035) { bl.vx = bl.vy = 0; } else { const k = ns / sp; bl.vx *= k; bl.vy *= k; any = true;
                 const dx = bl.vx, dy = bl.vy, dl = Math.hypot(dx, dy); if (dl > 0) { bl.m = mul(rot(-dy / dl, dx / dl, 0, dl / R), bl.m); bl.dirty = true; } }
             }
           });
@@ -7417,14 +7433,16 @@
         const grpOf = (num) => num === 8 ? '8' : (num < 8 ? 'solid' : 'stripe');
         const gName = (g) => g === 'solid' ? 'lisas' : 'listradas';
         const remaining = (g) => balls().filter(bl => !bl.in && bl.n > 0 && bl.n !== 8 && grpOf(bl.n) === g);
-        function targets(p) { const g = S.g[p]; if (!g) return balls().filter(bl => !bl.in && bl.n > 0 && bl.n !== 8); const r = remaining(g); return r.length ? r : balls().filter(bl => !bl.in && bl.n === 8); }
-        function placeOk(x, y) { if (x < X0 + R || x > X1 - R || y < Y0 + R || y > Y1 - R) return false; return !balls().some(bl => bl.n !== 0 && !bl.in && Math.hypot(bl.x - x, bl.y - y) < 2 * R + .5); }
-        function respot8() { const e = balls().find(bl => bl.n === 8); e.in = false; e.vx = e.vy = 0; let x = 585, y = 225; while (!placeOk(x, y) && x < X1 - R) x += 2; e.x = x; e.y = y; e.dirty = true; }
+        function lowest() { let m = 99; balls().forEach(bl => { if (!bl.in && bl.n > 0 && bl.n < m) m = bl.n; }); return m; }
+        function targets(p) { if (kind === '9') { const l = lowest(); return balls().filter(bl => !bl.in && bl.n === l); } if (kind === 'free') return balls().filter(bl => !bl.in && bl.n > 0); const g = S.g[p]; if (!g) return balls().filter(bl => !bl.in && bl.n > 0 && bl.n !== 8); const r = remaining(g); return r.length ? r : balls().filter(bl => !bl.in && bl.n === 8); }
+        function placeOk(x, y) { if (x < X0 + R || x > X1 - R || y < Y0 + R || y > Y1 - R) return false; if (POCKETS.some(p => Math.hypot(x - p.x, y - p.y) < p.r + R + 2)) return false; return !balls().some(bl => bl.n !== 0 && !bl.in && Math.hypot(bl.x - x, bl.y - y) < 2 * R + .5); }
+        function respot8(num) { const e = balls().find(bl => bl.n === (num || 8)); e.in = false; e.vx = e.vy = 0; let x = 585, y = 225; while (!(placeOk(x, y) && (cue().in || Math.hypot(cue().x - x, cue().y - y) > 2 * R + .5)) && x < X1 - R) x += 2; e.x = x; e.y = y; e.dirty = true; }
         function startShot() {
-          const g = S.g[S.turn]; S.shot = { first: null, rail: false, contact: false, cue: false, pot: [], cleared: !!g && remaining(g).length === 0 };
-          const bl = cue(); const v = 2 + S.power / 100 * 26; bl.vx = Math.cos(S.sAng) * v; bl.vy = Math.sin(S.sAng) * v; sound.cue(S.power / 100); S.mode = 'rolling';
+          const g = S.g[S.turn]; S.shot = { first: null, rail: false, contact: false, cue: false, pot: [], low: lowest(), cleared: kind === '8' && !!g && remaining(g).length === 0 };
+          const bl = cue(); const v = vOf(S.power); bl.vx = Math.cos(S.sAng) * v; bl.vy = Math.sin(S.sAng) * v; sound.cue(S.power / 100); S.mode = 'rolling';
         }
         function resolve() {
+          if (kind === '9') return resolve9(); if (kind === 'free') return resolveFree();
           const sh = S.shot, p = S.turn, me = names[p], other = names[1 - p]; let foul = '', over = -1, msg = '';
           if (sh.cue) foul = 'a branca caiu na caçapa';
           else if (sh.first === null) foul = 'não encostou em nenhuma bola';
@@ -7448,11 +7466,35 @@
             else if (!keep) { S.turn = 1 - p; if (!msg) msg = ''; }
             else if (!msg) msg = me + ' joga de novo.';
           } else { S.over = over; }
+          settle(over, msg);
+        }
+        function settle(over, msg) {
           S.brk = false; S.shot = null; S.note = msg; S.cpu = null;
           if (over >= 0) { S.mode = 'over'; return; }
           if (S.inHand) { S.mode = 'place'; if (!human()) cpuPlace(); else S.ghost = { x: 225, y: 225 }; }
           else S.mode = 'aim';
           if (S.mode === 'aim' && human()) { const t = targets(S.turn)[0]; if (t) S.ang = Math.atan2(t.y - cue().y, t.x - cue().x); }
+        }
+        function resolve9() {
+          const sh = S.shot, p = S.turn, me = names[p], other = names[1 - p]; let foul = '', over = -1, msg = '';
+          if (sh.cue) foul = 'a branca caiu na caçapa';
+          else if (sh.first === null) foul = 'não encostou em nenhuma bola';
+          else if (sh.first !== sh.low) foul = 'devia bater primeiro na bola ' + sh.low;
+          if (!foul && !sh.pot.length && !sh.rail) foul = 'nenhuma bola tocou a tabela';
+          sh.pot.forEach(v => { if (!(v === 9 && foul)) S.potted.push(balls().find(x => x.n === v)); });
+          if (sh.pot.indexOf(9) >= 0) { if (foul) respot8(9); else { over = p; msg = me + ' encaçapou a bola 9!'; } }
+          if (over >= 0) S.over = over;
+          else if (foul) { msg = 'Falta de ' + me + ': ' + foul + '. Bola na mão para ' + other + '.'; S.turn = 1 - p; S.inHand = true; const c = cue(); c.in = true; c.vx = c.vy = 0; }
+          else if (sh.pot.length) msg = me + ' joga de novo.';
+          else S.turn = 1 - p;
+          settle(over, msg);
+        }
+        function resolveFree() {
+          const sh = S.shot; let over = -1, msg = ''; S.shots++;
+          sh.pot.forEach(v => S.potted.push(balls().find(x => x.n === v)));
+          if (sh.cue) { msg = 'A branca caiu — posicione de novo.'; S.inHand = true; const c = cue(); c.vx = c.vy = 0; }
+          if (!balls().some(bl => bl.n > 0 && !bl.in)) { over = 0; S.over = 0; msg = 'Você limpou a mesa em ' + S.shots + ' tacadas!'; }
+          settle(over, msg);
         }
 
         /* ---------- computador ---------- */
@@ -7473,11 +7515,11 @@
             const cut = (cdx * ux + cdy * uy) / cl; if (cut < .25) return;
             if (blocked(cx, cy, gx, gy, [0, t.n]) || blocked(t.x, t.y, tx, ty, [0, t.n])) return;
             const score = Math.pow(cut, 1.4) * ca / (1 + (cl + dl) / 520);
-            if (!best || score > best.score) best = { ang: Math.atan2(cdy, cdx), power: clamp(((Math.sqrt(2 * .14 * (cl + dl * 1.6)) + 1.6) - 2) / 26 * 100, 24, 100), score };
+            if (!best || score > best.score) best = { ang: Math.atan2(cdy, cdx), power: powerFor(cl + dl * 1.6), score };
           }));
           if (!best) {
             let tg = null, bd = 1e9; ts.forEach(t => { const d = Math.hypot(t.x - cx, t.y - cy) + (blocked(cx, cy, t.x, t.y, [0, t.n]) ? 400 : 0); if (d < bd) { bd = d; tg = t; } });
-            best = tg ? { ang: Math.atan2(tg.y - cy, tg.x - cx), power: 38, score: 0 } : { ang: 0, power: 40, score: 0 };
+            best = tg ? { ang: Math.atan2(tg.y - cy, tg.x - cx), power: 46, score: 0 } : { ang: 0, power: 40, score: 0 };
           }
           best.ang += (rnd() + rnd() - 1) * .018; best.power = clamp(best.power + (rnd() - .5) * 8, 20, 100);
           return best;
@@ -7520,7 +7562,7 @@
               if (r.ball) { const nx = r.ball.x - gx, ny = r.ball.y - gy, nl = Math.hypot(nx, ny) || 1; ctx.strokeStyle = 'rgba(255,230,120,.8)'; ctx.beginPath(); ctx.moveTo(r.ball.x, r.ball.y); ctx.lineTo(r.ball.x + nx / nl * 55, r.ball.y + ny / nl * 55); ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); const tx = -ny / nl, ty = nx / nl, sg = (dx * tx + dy * ty) >= 0 ? 1 : -1; ctx.moveTo(gx, gy); ctx.lineTo(gx + tx * sg * 34, gy + ty * sg * 34); ctx.stroke(); }
               ctx.restore();
             }
-            let tip = 8 + S.power * .5; if (S.mode === 'strike') { const e = S.anim * S.anim; tip = S.pullFrom * (1 - e); }
+            let tip = 8 + S.power * .5; if (S.mode === 'strike') { const e = S.anim * S.anim; tip = S.pullFrom * (1 - e); } else if (S.charging && S.power > 60) tip += (rnd() - .5) * (S.power - 60) / 40 * 3.5;
             if (!(S.mode === 'aim' && !human() && !S.cpu)) drawCue(a, tip);
           }
           // medidor de força (na madeira, à direita)
@@ -7529,12 +7571,13 @@
             ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(gx - 2, gy - 2, gw + 4, gh + 4);
             const lg = ctx.createLinearGradient(0, gy + gh, 0, gy); lg.addColorStop(0, '#22c55e'); lg.addColorStop(.55, '#facc15'); lg.addColorStop(1, '#ef4444');
             ctx.fillStyle = lg; ctx.fillRect(gx, gy + gh * (1 - f), gw, gh * f);
+            if (f > .6) { const k = (f - .6) / .4, pulse = .5 + .5 * Math.sin(performance.now() / (90 - 50 * k)); ctx.save(); ctx.shadowColor = 'rgba(255,60,30,' + (.4 + .6 * k) + ')'; ctx.shadowBlur = 8 + 18 * k * pulse; ctx.fillStyle = 'rgba(255,80,40,' + (.3 * k) + ')'; ctx.fillRect(gx, gy + gh * (1 - f), gw, gh * f); ctx.restore(); }
             ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1; for (let i = 0; i <= 10; i++) { const yy = gy + gh * i / 10; ctx.beginPath(); ctx.moveTo(gx, yy); ctx.lineTo(gx + (i % 5 ? 4 : 7), yy); ctx.stroke(); }
             ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText(Math.round(f * 100) + '%', gx + gw / 2, gy + gh + 16); ctx.textAlign = 'left';
           }
           // bandeja: bolas encaçapadas de cada jogador (mostra quem está na frente)
           ctx.textBaseline = 'alphabetic';
-          if (S.g[0]) {
+          if (kind === '8' && S.g[0]) {
             [0, 1].forEach(p => {
               const x0 = p === 0 ? 16 : W / 2 + 16, got = S.potted.filter(bl => grpOf(bl.n) === S.g[p]).sort((a, c2) => a.n - c2.n);
               ctx.font = 'bold 12px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = (S.turn === p && S.mode !== 'over') ? '#fcd34d' : 'rgba(255,235,200,.85)';
@@ -7546,17 +7589,21 @@
             ctx.strokeStyle = 'rgba(255,235,200,.18)'; ctx.beginPath(); ctx.moveTo(W / 2, 462); ctx.lineTo(W / 2, 498); ctx.stroke();
           } else {
             ctx.font = 'bold 12px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,235,200,.85)';
-            ctx.fillText(names[0] + ' × ' + names[1] + ' · mesa aberta (bolas encaçapadas: ' + S.potted.length + ')', 16, 472);
+            ctx.fillText(trayText(), 16, 472);
             S.potted.forEach((bl, i) => spr(bl, 27 + i * 21, 488));
           }
-          if (S.mode === 'over') { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(X0, 170, X1 - X0, 110); ctx.fillStyle = '#fcd34d'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'center'; ctx.fillText('🏆 ' + names[S.over] + ' venceu!', 405, 222); ctx.font = '15px Arial'; ctx.fillStyle = '#fff'; ctx.fillText(S.note || '', 405, 252); ctx.textAlign = 'left'; }
+          if (S.mode === 'over') { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(X0, 170, X1 - X0, 110); ctx.fillStyle = '#fcd34d'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'center'; ctx.fillText('🏆 ' + overTitle(), 405, 222); ctx.font = '15px Arial'; ctx.fillStyle = '#fff'; ctx.fillText(S.note || '', 405, 252); ctx.textAlign = 'left'; }
         }
+        const overTitle = () => kind === 'free' ? 'Mesa limpa!' : names[S.over] + ' venceu!';
+        const trayText = () => kind === '9' ? 'Bola 9 · bola da vez: ' + lowest() + ' · encaçapadas: ' + S.potted.length : kind === 'free' ? 'Treino livre · tacadas: ' + S.shots + ' · restam ' + balls().filter(bl => bl.n > 0 && !bl.in).length : names[0] + ' × ' + names[1] + ' · mesa aberta (bolas encaçapadas: ' + S.potted.length + ')';
         let lastTxt = '';
         function status() {
           let t;
-          if (S.mode === 'over') t = '🏆 ' + names[S.over] + ' venceu! ' + (S.note || '');
+          if (S.mode === 'over') t = '🏆 ' + overTitle() + ' ' + (S.note || '');
           else if (S.mode === 'place') t = names[S.turn] + ': bola na mão — ' + (human() ? 'clique na mesa para posicionar a branca' : 'posicionando…');
           else if (S.mode === 'rolling' || S.mode === 'strike') t = 'Bolas em movimento…';
+          else if (kind === 'free') t = 'Treino livre — tacadas: ' + S.shots;
+          else if (kind === '9') t = (S.brk ? 'Abertura — ' : '') + 'Vez de ' + names[S.turn] + ' — bola da vez: ' + lowest();
           else t = (S.brk ? 'Abertura — ' : '') + 'Vez de ' + names[S.turn] + (S.g[S.turn] ? ' (' + gName(S.g[S.turn]) + (S.shot ? '' : (targets(S.turn)[0] && targets(S.turn)[0].n === 8 ? ' — bola 8!' : '')) + ')' : ' (mesa aberta)');
           if (S.note && S.mode !== 'over' && S.mode !== 'rolling' && S.mode !== 'strike') t += ' · ' + S.note;
           if (t !== lastTxt) { lastTxt = t; stEl.textContent = t; }
@@ -7582,9 +7629,22 @@
         /* ---------- controles ---------- */
         const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
         const aimAt = (e) => { const p = pos(e), c = cue(); if (S.mode === 'aim' && human() && !c.in) S.ang = Math.atan2(p.y - c.y, p.x - c.x); else if (S.mode === 'place' && human()) S.ghost = { x: clamp(p.x, X0 + R, X1 - R), y: clamp(p.y, Y0 + R, Y1 - R) }; };
+        /* ---------- configurações ---------- */
+        const panel = b.querySelector('.pl-panel'), swEl = b.querySelector('.pl-sw'), cfgBtn = b.querySelector('.pl-cfg'), modesEl = b.querySelector('.pl-modes'); let panelOpen = false;
+        const setPanel = (v) => { panelOpen = v; panel.style.display = v ? 'block' : 'none'; if (v) endCharge(true); };
+        const applyLeg = () => {
+          const on = !n.plHide; stEl.style.display = on ? '' : 'none'; goBtn.textContent = on ? 'Segure para dar força · solte para tacar' : 'Tacar';
+          swEl.setAttribute('aria-checked', on ? 'true' : 'false'); swEl.style.background = on ? '#22c55e' : '#6b7280'; swEl.firstChild.style.left = on ? '22px' : '3px';
+        };
+        WG_KINDS.pool.styles.forEach((nm, i) => { const bt = document.createElement('button'); bt.textContent = (i === WS ? '● ' : '○ ') + nm; bt.style.cssText = 'text-align:left;border:1px solid ' + (i === WS ? '#fcd34d' : 'rgba(255,255,255,.25)') + ';background:' + (i === WS ? 'rgba(252,211,77,.18)' : 'transparent') + ';color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit'; bt.addEventListener('click', () => { if (i === WS) return; n.ws = i; saveData(); renderNotes(); }); modesEl.appendChild(bt); });
+        swEl.addEventListener('click', () => { n.plHide = !n.plHide; saveData(); applyLeg(); });
+        b.querySelector('.pl-x').addEventListener('click', () => setPanel(false));
+        cfgBtn.addEventListener('click', () => setPanel(!panelOpen));
+        applyLeg();
         cv.addEventListener('pointermove', aimAt);
         cv.addEventListener('contextmenu', (e) => { e.preventDefault(); endCharge(true); });
         cv.addEventListener('pointerdown', (e) => {
+          if (panelOpen) { setPanel(false); return; }
           if (e.button > 0) { endCharge(true); return; }   // botão esquerdo (ou toque): aponta, segura para dar força e solta para tacar
           b.focus(); aimAt(e);
           if (S.mode === 'place' && human() && S.ghost && placeOk(S.ghost.x, S.ghost.y)) { const c = cue(); c.in = false; c.x = S.ghost.x; c.y = S.ghost.y; c.vx = c.vy = 0; c.dirty = true; S.inHand = false; S.mode = 'aim'; S.ghost = null; S.note = ''; const t = targets(S.turn)[0]; if (t) S.ang = Math.atan2(t.y - c.y, t.x - c.x); return; }
@@ -7598,6 +7658,7 @@
         goBtn.addEventListener('pointercancel', () => endCharge(true));
         newBtn.addEventListener('click', () => { POOL[n.id] = S = newGame(); });
         b.addEventListener('keydown', (e) => {
+          if (e.target.closest('.pl-panel')) { if (e.key === 'Escape') setPanel(false); return; }
           if (e.key === 'Escape') { endCharge(true); return; }
           if (S.mode === 'aim' && human()) {
             if (e.key === 'ArrowLeft') { S.ang -= e.shiftKey ? .03 : .006; e.preventDefault(); }
@@ -7605,7 +7666,7 @@
             else if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); startCharge(); }
           }
         });
-        b.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endCharge(false); } });
+        b.addEventListener('keyup', (e) => { if (e.target.closest('.pl-panel')) return; if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endCharge(false); } });
         if (S.mode === 'rolling' || S.mode === 'strike') { S.mode = 'aim'; }
         raf = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(raf);
