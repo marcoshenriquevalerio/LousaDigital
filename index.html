@@ -6899,6 +6899,7 @@
       breakout: { name: 'Quebra-tijolos',    icon: 'fa-border-all',    w: 340, game: 1, styles: ['Branco', 'Amarelo', 'Rosa', 'Azul', 'Verde'] },
       flappy:   { name: 'Passarinho',        icon: 'fa-feather',       w: 300, game: 1, styles: ['Branco', 'Amarelo', 'Rosa', 'Azul', 'Verde'] },
       memory:   { name: 'Jogo da memória',   icon: 'fa-clone',         w: 300, game: 1, styles: ['Animais', 'Frutas', 'Formas'] },
+      pool:     { name: 'Sinuca (8 bolas)', icon: 'fa-circle-dot',    w: 540, game: 1, nomusic: 1, styles: ['Contra o computador', '2 jogadores'] },
       ttt:      { name: 'Jogo da velha',     icon: 'fa-hashtag',       w: 260, game: 1, styles: ['Contra o computador', '2 jogadores'] },
       timer:    { name: 'Temporizador',      icon: 'fa-hourglass-half', w: 300, styles: ['Ampulheta', 'Digital', 'Anel', 'Barra'] }
     };
@@ -6930,7 +6931,7 @@
       const bw = (byId('boardCanvas') || {}).offsetWidth || 800;
       board.nextZIndex += 1; selectedNoteId = id;
       const sp = spawnPos(d.w);
-      board.notes.push({ id, type: 'widget', wk: kind, ws: style, x: sp ? sp.x : Math.max(20, Math.min(bw / 2 - d.w / 2 + (Math.random() * 80 - 40), bw - d.w - 20)), y: sp ? sp.y : 80 + Math.random() * 80, width: d.w, zIndex: board.nextZIndex });
+      board.notes.push({ id, type: 'widget', wk: kind, ws: style, snd: !!d.nomusic, x: sp ? sp.x : Math.max(20, Math.min(bw / 2 - d.w / 2 + (Math.random() * 80 - 40), bw - d.w - 20)), y: sp ? sp.y : 80 + Math.random() * 80, width: d.w, zIndex: board.nextZIndex });
       byId('widgetMenu').classList.add('hidden');
       saveData(); renderNotes();
     };
@@ -7214,6 +7215,367 @@
         };
         draw(); return () => {};
       },
+      pool(b, n) {
+        const W = 810, H = 505, X0 = 45, Y0 = 45, X1 = 765, Y1 = 405, R = 9, SC = 2, FS = 6;
+        const cpuMode = (n.ws || 0) === 0, names = cpuMode ? ['Você', 'Computador'] : ['Jogador 1', 'Jogador 2'];
+        b.innerHTML = '<canvas width="' + (W * SC) + '" height="' + (H * SC) + '" class="edit-input" style="width:100%;display:block;touch-action:none;border-radius:10px;cursor:crosshair"></canvas>' +
+          '<div class="pl-st font-chalk edit-input" style="text-align:center;font-size:3.6cqw;min-height:1.4em;margin-top:4px"></div>' +
+          '<div class="edit-input" style="display:flex;align-items:center;gap:8px;margin-top:2px;font-size:3.2cqw"><span class="font-chalk">Força</span><input type="range" class="pl-pw" min="8" max="100" value="55" style="flex:1;min-width:0"><button class="wg-mini pl-go">Tacar</button><button class="wg-mini pl-new">Novo jogo</button></div>';
+        const cv = b.querySelector('canvas'), ctx = cv.getContext('2d'), stEl = b.querySelector('.pl-st'), pw = b.querySelector('.pl-pw'), goBtn = b.querySelector('.pl-go'), newBtn = b.querySelector('.pl-new');
+        const POOL = WG.pool || (WG.pool = {});
+        const COLORS = [[245, 243, 235], [245, 196, 0], [23, 67, 179], [215, 38, 30], [91, 42, 134], [242, 112, 26], [15, 123, 60], [122, 20, 36], [20, 20, 20]];
+        const POCKETS = [{ x: X0 - 2, y: Y0 - 2, r: 17.5, c: 1 }, { x: 405, y: Y0 - 4, r: 16, c: 0 }, { x: X1 + 2, y: Y0 - 2, r: 17.5, c: 1 }, { x: X0 - 2, y: Y1 + 2, r: 17.5, c: 1 }, { x: 405, y: Y1 + 4, r: 16, c: 0 }, { x: X1 + 2, y: Y1 + 2, r: 17.5, c: 1 }];
+        const clamp = (v, a, c) => Math.max(a, Math.min(c, v));
+        const rnd = Math.random;
+
+        /* ---------- matrizes de rotação (as bolas rolam de verdade: número e faixa giram) ---------- */
+        const rot = (ux, uy, uz, th) => { const c = Math.cos(th), s = Math.sin(th), t = 1 - c; return [t * ux * ux + c, t * ux * uy - s * uz, t * ux * uz + s * uy, t * ux * uy + s * uz, t * uy * uy + c, t * uy * uz - s * ux, t * ux * uz - s * uy, t * uy * uz + s * ux, t * uz * uz + c]; };
+        const mul = (a, c) => [a[0] * c[0] + a[1] * c[3] + a[2] * c[6], a[0] * c[1] + a[1] * c[4] + a[2] * c[7], a[0] * c[2] + a[1] * c[5] + a[2] * c[8], a[3] * c[0] + a[4] * c[3] + a[5] * c[6], a[3] * c[1] + a[4] * c[4] + a[5] * c[7], a[3] * c[2] + a[4] * c[5] + a[5] * c[8], a[6] * c[0] + a[7] * c[3] + a[8] * c[6], a[6] * c[1] + a[7] * c[4] + a[8] * c[7], a[6] * c[2] + a[7] * c[5] + a[8] * c[8]];
+
+        function mkBall(num, x, y) {
+          const sp = document.createElement('canvas'); sp.width = sp.height = Math.ceil(R * SC * 2) + 4;
+          const bl = { n: num, x, y, vx: 0, vy: 0, in: false, m: rot(0, 0, 1, rnd() * 6.283), dirty: true, cv: sp, cx: sp.getContext('2d') };
+          bl.img = bl.cx.createImageData(sp.width, sp.height); return bl;
+        }
+        function newGame() {
+          const S = { balls: [], turn: 0, g: [null, null], ang: 0, power: 55, mode: 'aim', note: '', inHand: false, potted: [], shot: null, over: -1, brk: true, anim: 0, pull: 0, ghost: null, cpu: null, lastT: 0 };
+          S.balls.push(mkBall(0, X0 + 180, 225));
+          const slots = []; for (let i = 0; i < 5; i++) for (let j = 0; j <= i; j++) slots.push([i, j]);
+          const nums = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15].sort(() => rnd() - .5);
+          const put = {}; put['2,1'] = 8;
+          // cantos de trás: uma lisa e uma listrada
+          const solids = nums.filter(v => v < 8), stripes = nums.filter(v => v > 8);
+          put['4,0'] = solids.pop(); put['4,4'] = stripes.pop();
+          const rest = solids.concat(stripes).sort(() => rnd() - .5);
+          slots.forEach(s => { const k = s[0] + ',' + s[1]; if (!put[k]) put[k] = rest.pop(); });
+          slots.forEach(s => { const x = 585 + s[0] * (R * 1.732 + .15), y = 225 + (s[1] - s[0] / 2) * (R * 2 + .2); S.balls.push(mkBall(put[s[0] + ',' + s[1]], x, y)); });
+          return S;
+        }
+        let S = POOL[n.id] || (POOL[n.id] = newGame());
+        const balls = () => S.balls, cue = () => S.balls[0];
+        const human = () => !(cpuMode && S.turn === 1);
+
+        /* ---------- sons ---------- */
+        let nbuf = null, sndCount = 0;
+        const ac = () => { if (!n.snd) return null; try { const c = WGA.ctx || (WGA.ctx = new (window.AudioContext || window.webkitAudioContext)()); if (c.state === 'suspended') c.resume(); return c; } catch (e) { return null; } };
+        const noiseBuf = (c) => { if (!nbuf || nbuf.sampleRate !== c.sampleRate) { nbuf = c.createBuffer(1, Math.floor(c.sampleRate * .6), c.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1; } return nbuf; };
+        function nz(c, t, dur, type, f0, f1, q, vol) {
+          const s = c.createBufferSource(); s.buffer = noiseBuf(c); const f = c.createBiquadFilter(); f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, t); if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+          const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(.006, dur / 3)); g.gain.exponentialRampToValueAtTime(0.0003, t + dur);
+          s.connect(f); f.connect(g); g.connect(c.destination); s.start(t, rnd() * .3, dur + .02);
+        }
+        function tn(c, t, dur, f0, f1, vol, type) {
+          const o = c.createOscillator(), g = c.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+          g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0003, t + dur); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02);
+        }
+        const sound = {
+          cue(p) { const c = ac(); if (!c) return; const t = c.currentTime, v = .25 + p * .5; nz(c, t, .03, 'bandpass', 2200, 1200, 1.2, v); tn(c, t, .1, 190, 70, v * .9); tn(c, t, .035, 3100, 1800, v * .35); },
+          ball(v) { if (sndCount++ > 3) return; const c = ac(); if (!c) return; const t = c.currentTime, g = Math.min(.55, .06 + v * .04), p = 2300 + rnd() * 700; tn(c, t, .05, p, p * .62, g); tn(c, t, .03, p * 1.7, p, g * .5); nz(c, t, .018, 'highpass', 3500, 0, .7, g * .8); tn(c, t, .07, 420, 260, g * .25); },
+          rail(v) { if (sndCount++ > 3) return; const c = ac(); if (!c) return; const t = c.currentTime, g = Math.min(.4, .05 + v * .03); nz(c, t, .1, 'lowpass', 520, 220, .8, g); tn(c, t, .08, 120, 70, g * .9); },
+          pocket(v) { const c = ac(); if (!c) return; const t = c.currentTime; nz(c, t, .38, 'bandpass', 1100, 320, 1.1, .2); tn(c, t + .1, .14, 85, 50, .35); nz(c, t + .16, .05, 'lowpass', 900, 0, .7, .22); tn(c, t + .17, .04, 1500, 900, .07); }
+        };
+
+        /* ---------- mesa (desenhada uma vez) ---------- */
+        function buildTable() {
+          const c = document.createElement('canvas'); c.width = W * SC; c.height = H * SC; const g = c.getContext('2d'); g.scale(SC, SC);
+          const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+          g.fillStyle = '#140d07'; g.fillRect(0, 0, W, H);
+          // moldura de madeira
+          let gr = g.createLinearGradient(0, 0, 0, 450); gr.addColorStop(0, '#8a5226'); gr.addColorStop(.5, '#63361a'); gr.addColorStop(1, '#4a2710');
+          rr(0, 0, W, 450, 20); g.fillStyle = gr; g.fill();
+          g.save(); rr(0, 0, W, 450, 20); g.clip();
+          for (let i = 0; i < 420; i++) { const y = rnd() * 450, x = rnd() * W, l = 40 + rnd() * 220; g.strokeStyle = 'rgba(' + (rnd() < .5 ? '25,10,2' : '190,120,60') + ',' + (.05 + rnd() * .12).toFixed(2) + ')'; g.lineWidth = .4 + rnd() * 1.2; g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + l / 3, y + rnd() * 3 - 1.5, x + 2 * l / 3, y + rnd() * 3 - 1.5, x + l, y + rnd() * 2 - 1); g.stroke(); }
+          g.restore();
+          rr(1.5, 1.5, W - 3, 447, 19); g.strokeStyle = 'rgba(255,225,180,.35)'; g.lineWidth = 2; g.stroke();
+          rr(14, 14, W - 28, 422, 10); g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2; g.stroke();
+          // borracha das tabelas
+          gr = g.createLinearGradient(0, 28, 0, 48); gr.addColorStop(0, '#0e6a38'); gr.addColorStop(1, '#07401f');
+          rr(29, 29, W - 58, 392, 6); g.fillStyle = '#0a5a2e'; g.fill();
+          // feltro
+          gr = g.createRadialGradient(405, 215, 40, 405, 225, 460); gr.addColorStop(0, '#1b9250'); gr.addColorStop(.55, '#0f6e3a'); gr.addColorStop(1, '#084a27');
+          g.fillStyle = gr; g.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+          for (let i = 0; i < 9000; i++) { g.fillStyle = rnd() < .5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.05)'; g.fillRect(X0 + rnd() * (X1 - X0), Y0 + rnd() * (Y1 - Y0), 1, 1); }
+          // sombra interna junto às tabelas
+          [[X0, Y0, X0, Y0 + 22], [X0, Y1, X0, Y1 - 22]].forEach(a => { gr = g.createLinearGradient(a[0], a[1], a[2], a[3]); gr.addColorStop(0, 'rgba(0,0,0,.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(X0, Math.min(a[1], a[3]), X1 - X0, 22); });
+          [[X0, X0 + 22], [X1, X1 - 22]].forEach(a => { gr = g.createLinearGradient(a[0], 0, a[1], 0); gr.addColorStop(0, 'rgba(0,0,0,.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(Math.min(a[0], a[1]), Y0, 22, Y1 - Y0); });
+          g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 2; g.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
+          g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1; g.beginPath(); g.moveTo(225, Y0); g.lineTo(225, Y1); g.stroke();
+          [[225, 225], [585, 225], [405, 225]].forEach(p => { g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.arc(p[0], p[1], 2.2, 0, 7); g.fill(); });
+          // diamantes de madrepérola
+          const dia = (x, y) => { g.save(); g.translate(x, y); g.rotate(.785); let d = g.createLinearGradient(-4, -4, 4, 4); d.addColorStop(0, '#fffdf3'); d.addColorStop(1, '#b8aa86'); g.fillStyle = d; g.fillRect(-3.4, -3.4, 6.8, 6.8); g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = .6; g.strokeRect(-3.4, -3.4, 6.8, 6.8); g.restore(); };
+          for (let i = 1; i < 8; i++) if (i !== 4) { dia(X0 + 720 * i / 8, 14); dia(X0 + 720 * i / 8, 436); }
+          for (let j = 1; j < 4; j++) { dia(14, Y0 + 360 * j / 4); dia(W - 14, Y0 + 360 * j / 4); }
+          // caçapas: couro, aro de latão e buraco fundo
+          POCKETS.forEach(p => {
+            const vr = p.r + 2.5, cx = p.x + (p.c ? (p.x < 405 ? -3 : 3) : 0), cy = p.y + (p.y < 225 ? -3.5 : 3.5);
+            g.beginPath(); g.arc(cx, cy, vr + 5.5, 0, 7); g.fillStyle = '#2a1608'; g.fill();
+            g.beginPath(); g.arc(cx, cy, vr + 5.5, 0, 7); g.strokeStyle = '#b8903f'; g.lineWidth = 1.6; g.stroke();
+            const hg = g.createRadialGradient(cx, cy, 2, cx, cy, vr); hg.addColorStop(0, '#000'); hg.addColorStop(.7, '#060606'); hg.addColorStop(1, '#1d1d1d');
+            g.beginPath(); g.arc(cx, cy, vr, 0, 7); g.fillStyle = hg; g.fill();
+            g.beginPath(); g.arc(cx, cy, vr, 0, 7); g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2; g.stroke();
+          });
+          // brilho de verniz nas madeiras
+          gr = g.createLinearGradient(0, 0, 0, 30); gr.addColorStop(0, 'rgba(255,240,210,.18)'); gr.addColorStop(1, 'rgba(255,240,210,0)'); rr(2, 2, W - 4, 28, 12); g.fillStyle = gr; g.fill();
+          // bandeja de bolas
+          gr = g.createLinearGradient(0, 452, 0, H); gr.addColorStop(0, '#2a1a0e'); gr.addColorStop(1, '#170d06'); rr(4, 456, W - 8, 46, 10); g.fillStyle = gr; g.fill();
+          rr(4, 456, W - 8, 46, 10); g.strokeStyle = 'rgba(255,220,170,.2)'; g.lineWidth = 1.5; g.stroke();
+          return c;
+        }
+        const TBL = buildTable();
+
+        /* ---------- bola: esfera sombreada pixel a pixel (gira de acordo com o rolamento) ---------- */
+        const LX = -.42, LY = -.55, LZ = .72, ll = Math.hypot(LX, LY, LZ), lx = LX / ll, ly = LY / ll, lz = LZ / ll;
+        let hx = lx, hy = ly, hz = lz + 1; const hl = Math.hypot(hx, hy, hz); hx /= hl; hy /= hl; hz /= hl;
+        function paint(bl) {
+          const sz = bl.cv.width, rr = R * SC, c = sz / 2, d = bl.img.data, m = bl.m, col = COLORS[bl.n > 8 ? bl.n - 8 : bl.n], stripe = bl.n > 8;
+          for (let py = 0; py < sz; py++) for (let px = 0; px < sz; px++) {
+            const x = (px + .5 - c) / rr, y = (py + .5 - c) / rr, d2 = x * x + y * y, i = (py * sz + px) * 4;
+            if (d2 > 1.06) { d[i + 3] = 0; continue; }
+            const z = Math.sqrt(Math.max(0, 1 - d2)), b0 = m[0] * x + m[3] * y + m[6] * z, b1 = m[1] * x + m[4] * y + m[7] * z, b2 = m[2] * x + m[5] * y + m[8] * z;
+            let r = col[0], g = col[1], bb = col[2];
+            if (bl.n > 0) {
+              if (stripe && Math.abs(b1) > .52) { r = 244; g = 242; bb = 234; }
+              const sp = clamp((Math.abs(b2) - .87) / .025, 0, 1); if (sp > 0) { r += (246 - r) * sp; g += (244 - g) * sp; bb += (236 - bb) * sp; }
+            }
+            const df = Math.max(0, x * lx + y * ly + z * lz), sh = (.3 + .8 * df) * (.78 + .22 * z), sp2 = Math.pow(Math.max(0, x * hx + y * hy + z * hz), 80);
+            d[i] = Math.min(255, r * sh + 255 * sp2 * .9); d[i + 1] = Math.min(255, g * sh + 255 * sp2 * .9); d[i + 2] = Math.min(255, bb * sh + 255 * sp2 * .9);
+            d[i + 3] = 255 * clamp((1.01 - Math.sqrt(d2)) * rr * .9 + .5, 0, 1);
+          }
+          bl.cx.putImageData(bl.img, 0, 0);
+          if (bl.n > 0) {
+            let ax = m[2], ay = m[5], az = m[8]; if (az < 0) { ax = -ax; ay = -ay; az = -az; }
+            if (az > .3) {
+              const o = bl.cx; o.save(); o.translate(c + ax * rr, c + ay * rr); const ra = Math.atan2(ay, ax); o.rotate(ra); o.scale(Math.max(.25, az), 1); o.rotate(Math.atan2(m[3], m[0]) - ra);
+              o.fillStyle = '#111'; o.font = 'bold ' + Math.round(rr * (bl.n > 9 ? .46 : .54)) + 'px Arial'; o.textAlign = 'center'; o.textBaseline = 'middle'; o.fillText(String(bl.n), 0, .5); o.restore();
+            }
+          }
+          bl.dirty = false;
+        }
+
+        /* ---------- taco: madeira, ponteira, giz, couro e cabo ---------- */
+        function drawCue(a, tip) {
+          const bl = cue(), L = 340; ctx.save(); ctx.translate(bl.x - Math.cos(a) * (R + tip), bl.y - Math.sin(a) * (R + tip)); ctx.rotate(a);
+          const poly = (x0, x1, w0, w1, fill) => { ctx.beginPath(); ctx.moveTo(x0, -w0); ctx.lineTo(x1, -w1); ctx.lineTo(x1, w1); ctx.lineTo(x0, w0); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); };
+          // sombra no feltro
+          ctx.save(); ctx.translate(3, 6); ctx.globalAlpha = .28; poly(-L, 0, 3.6, 1.35, '#000'); ctx.restore();
+          poly(-L, -262, 3.45, 3.15, '#2e1608');            // cabo (nogueira)
+          poly(-262, -208, 3.15, 2.95, '#17110e');          // empunhadura de couro/linho
+          for (let x = -258; x > -210; x -= 4) { ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(x, -3); ctx.lineTo(x + 3, 3); ctx.stroke(); }
+          poly(-208, -200, 2.95, 2.9, '#c9a24a');          // anel de latão
+          poly(-200, -14, 2.9, 1.5, '#e8c488');             // fuste de maple
+          poly(-14, -4.5, 1.5, 1.38, '#f6f1e4');            // ponteira
+          poly(-4.5, 0, 1.38, 1.3, '#3b86b8');              // sapatilha com giz azul
+          ctx.beginPath(); ctx.arc(0, 0, 1.3, -1.57, 1.57); ctx.fillStyle = '#4fa3d8'; ctx.fill();
+          poly(-L, -L + 5, 3.5, 3.5, '#0c0c0c');            // borracha na ponta do cabo
+          [[-285, '#f2e8c8'], [-296, '#f2e8c8'], [-307, '#f2e8c8']].forEach(v => { ctx.beginPath(); ctx.arc(v[0], 0, 1, 0, 7); ctx.fillStyle = v[1]; ctx.fill(); });
+          // sombreamento cilíndrico
+          const sg = ctx.createLinearGradient(0, -3.6, 0, 3.6); sg.addColorStop(0, 'rgba(255,255,255,.4)'); sg.addColorStop(.28, 'rgba(255,255,255,.1)'); sg.addColorStop(.6, 'rgba(0,0,0,0)'); sg.addColorStop(1, 'rgba(0,0,0,.5)');
+          ctx.beginPath(); ctx.moveTo(-L, -3.5); ctx.lineTo(0, -1.3); ctx.lineTo(0, 1.3); ctx.lineTo(-L, 3.5); ctx.closePath(); ctx.fillStyle = sg; ctx.fill();
+          ctx.restore();
+        }
+
+        /* ---------- física ---------- */
+        function rayCast(ox, oy, dx, dy) {
+          let best = 1e9, hit = null;
+          balls().forEach(bl => { if (bl.n === 0 || bl.in) return; const fx = bl.x - ox, fy = bl.y - oy, pr = fx * dx + fy * dy; if (pr <= 0) return; const p2 = fx * fx + fy * fy - pr * pr; if (p2 > 4 * R * R) return; const t = pr - Math.sqrt(4 * R * R - p2); if (t < best) { best = t; hit = bl; } });
+          let tw = 1e9; if (dx > 0) tw = Math.min(tw, (X1 - R - ox) / dx); if (dx < 0) tw = Math.min(tw, (X0 + R - ox) / dx); if (dy > 0) tw = Math.min(tw, (Y1 - R - oy) / dy); if (dy < 0) tw = Math.min(tw, (Y0 + R - oy) / dy);
+          if (tw < best) return { t: tw, ball: null }; return { t: best, ball: hit };
+        }
+        function physics() {
+          const bs = balls(); let any = false;
+          for (let s = 0; s < FS; s++) {
+            bs.forEach(bl => { if (!bl.in) { bl.x += bl.vx / FS; bl.y += bl.vy / FS; } });
+            for (let i = 0; i < bs.length; i++) { const a = bs[i]; if (a.in) continue; for (let j = i + 1; j < bs.length; j++) {
+              const c = bs[j]; if (c.in) continue; const dx = c.x - a.x, dy = c.y - a.y, d2 = dx * dx + dy * dy;
+              if (d2 < 4 * R * R && d2 > 0.0001) {
+                const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, ov = (2 * R - d) / 2; a.x -= nx * ov; a.y -= ny * ov; c.x += nx * ov; c.y += ny * ov;
+                const rel = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
+                if (rel > 0) { const p = rel * .98; a.vx -= p * nx; a.vy -= p * ny; c.vx += p * nx; c.vy += p * ny; if (rel > .25) { sound.ball(rel); if (S.shot) { S.shot.contact = true; if (S.shot.first === null && (a.n === 0 || c.n === 0)) S.shot.first = a.n === 0 ? c.n : a.n; } } }
+              } } }
+            bs.forEach(bl => {
+              if (bl.in) return;
+              for (const p of POCKETS) { if (Math.hypot(bl.x - p.x, bl.y - p.y) < p.r) { bl.in = true; bl.vx = bl.vy = 0; sound.pocket(); if (S.shot) { if (bl.n === 0) S.shot.cue = true; else S.shot.pot.push(bl.n); } return; } }
+              let hitV = 0;
+              if (bl.x < X0 + R) { bl.x = X0 + R; hitV = Math.abs(bl.vx); bl.vx = Math.abs(bl.vx) * .76; bl.vy *= .985; }
+              else if (bl.x > X1 - R) { bl.x = X1 - R; hitV = Math.abs(bl.vx); bl.vx = -Math.abs(bl.vx) * .76; bl.vy *= .985; }
+              if (bl.y < Y0 + R) { bl.y = Y0 + R; hitV = Math.max(hitV, Math.abs(bl.vy)); bl.vy = Math.abs(bl.vy) * .76; bl.vx *= .985; }
+              else if (bl.y > Y1 - R) { bl.y = Y1 - R; hitV = Math.max(hitV, Math.abs(bl.vy)); bl.vy = -Math.abs(bl.vy) * .76; bl.vx *= .985; }
+              if (hitV > .5) { sound.rail(hitV); if (S.shot && S.shot.contact) S.shot.rail = true; }
+            });
+          }
+          bs.forEach(bl => {
+            if (bl.in) return; const sp = Math.hypot(bl.vx, bl.vy);
+            if (sp > 0) {
+              const ns = sp * .9994 - .14; if (ns < .1) { bl.vx = bl.vy = 0; } else { const k = ns / sp; bl.vx *= k; bl.vy *= k; any = true;
+                const dx = bl.vx, dy = bl.vy, dl = Math.hypot(dx, dy); if (dl > 0) { bl.m = mul(rot(-dy / dl, dx / dl, 0, dl / R), bl.m); bl.dirty = true; } }
+            }
+          });
+          return any;
+        }
+
+        /* ---------- regras (sinuca de 8 bolas) ---------- */
+        const grpOf = (num) => num === 8 ? '8' : (num < 8 ? 'solid' : 'stripe');
+        const gName = (g) => g === 'solid' ? 'lisas' : 'listradas';
+        const remaining = (g) => balls().filter(bl => !bl.in && bl.n > 0 && bl.n !== 8 && grpOf(bl.n) === g);
+        function targets(p) { const g = S.g[p]; if (!g) return balls().filter(bl => !bl.in && bl.n > 0 && bl.n !== 8); const r = remaining(g); return r.length ? r : balls().filter(bl => !bl.in && bl.n === 8); }
+        function placeOk(x, y) { if (x < X0 + R || x > X1 - R || y < Y0 + R || y > Y1 - R) return false; return !balls().some(bl => bl.n !== 0 && !bl.in && Math.hypot(bl.x - x, bl.y - y) < 2 * R + .5); }
+        function respot8() { const e = balls().find(bl => bl.n === 8); e.in = false; e.vx = e.vy = 0; let x = 585, y = 225; while (!placeOk(x, y) && x < X1 - R) x += 2; e.x = x; e.y = y; e.dirty = true; }
+        function startShot() {
+          const g = S.g[S.turn]; S.shot = { first: null, rail: false, contact: false, cue: false, pot: [], cleared: !!g && remaining(g).length === 0 };
+          const bl = cue(); const v = 2 + S.power / 100 * 26; bl.vx = Math.cos(S.sAng) * v; bl.vy = Math.sin(S.sAng) * v; sound.cue(S.power / 100); S.mode = 'rolling';
+        }
+        function resolve() {
+          const sh = S.shot, p = S.turn, me = names[p], other = names[1 - p]; let foul = '', over = -1, msg = '';
+          if (sh.cue) foul = 'a branca caiu na caçapa';
+          else if (sh.first === null) foul = 'não encostou em nenhuma bola';
+          else if (!S.brk) {
+            const g = S.g[p], f = sh.first;
+            if (g) { if (sh.cleared) { if (f !== 8) foul = 'devia bater primeiro na bola 8'; } else if (grpOf(f) !== g) foul = 'bateu primeiro na bola errada'; }
+            else if (f === 8) foul = 'bateu primeiro na bola 8';
+          }
+          if (!foul && !sh.pot.length && !sh.rail) foul = 'nenhuma bola tocou a tabela';
+          const had8 = sh.pot.indexOf(8) >= 0;
+          if (had8) {
+            if (S.brk) { respot8(); }
+            else { const win = !foul && sh.cleared; over = win ? p : 1 - p; msg = win ? me + ' encaçapou a bola 8!' : (foul ? me + ' fez falta ao encaçapar a bola 8.' : me + ' encaçapou a bola 8 antes da hora.'); }
+          }
+          sh.pot.forEach(v => { if (v !== 8) { const bl = balls().find(x => x.n === v); S.potted.push(bl); } });
+          if (over < 0) {
+            const objs = sh.pot.filter(v => v !== 8);
+            if (!S.brk && !S.g[p] && !foul && objs.length) { S.g[p] = grpOf(objs[0]); S.g[1 - p] = S.g[p] === 'solid' ? 'stripe' : 'solid'; msg = me + ' ficou com as ' + gName(S.g[p]) + '.'; }
+            const keep = !foul && (S.brk ? objs.length > 0 : objs.some(v => grpOf(v) === S.g[p]));
+            if (foul) { msg = 'Falta de ' + me + ': ' + foul + '. Bola na mão para ' + other + '.'; S.turn = 1 - p; S.inHand = true; const c = cue(); c.in = true; c.vx = c.vy = 0; }
+            else if (!keep) { S.turn = 1 - p; if (!msg) msg = ''; }
+            else if (!msg) msg = me + ' joga de novo.';
+          } else { S.over = over; }
+          S.brk = false; S.shot = null; S.note = msg; S.cpu = null;
+          if (over >= 0) { S.mode = 'over'; return; }
+          if (S.inHand) { S.mode = 'place'; if (!human()) cpuPlace(); else S.ghost = { x: 225, y: 225 }; }
+          else S.mode = 'aim';
+          if (S.mode === 'aim' && human()) { const t = targets(S.turn)[0]; if (t) S.ang = Math.atan2(t.y - cue().y, t.x - cue().x); }
+        }
+
+        /* ---------- computador ---------- */
+        function blocked(ax, ay, bx, by, skip) {
+          const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+          return balls().some(bl => { if (bl.in || skip.indexOf(bl.n) >= 0) return false; const t = clamp(((bl.x - ax) * dx + (bl.y - ay) * dy) / l2, 0, 1); return Math.hypot(ax + t * dx - bl.x, ay + t * dy - bl.y) < 2 * R - .6; });
+        }
+        function planShot(cx, cy) {
+          let best = null;
+          if (S.brk) return { ang: Math.atan2(225 - cy, 585 - cx), power: 98, score: 1 };
+          const ts = targets(S.turn);
+          ts.forEach(t => POCKETS.forEach(pk => {
+            const tx = pk.x, ty = pk.y, dx = tx - t.x, dy = ty - t.y, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl;
+            const gx = t.x - ux * 2 * R, gy = t.y - uy * 2 * R; if (gx < X0 + R || gx > X1 - R || gy < Y0 + R || gy > Y1 - R) return;
+            let ax = 405 - tx, ay = 225 - ty; if (!pk.c) { ax = 0; ay = ty < 225 ? 1 : -1; } const al = Math.hypot(ax, ay) || 1, ca = -(ux * ax + uy * ay) / al;   // ângulo de entrada na caçapa
+            if (ca < (pk.c ? .5 : .62)) return;
+            const cdx = gx - cx, cdy = gy - cy, cl = Math.hypot(cdx, cdy); if (cl < 1) return;
+            const cut = (cdx * ux + cdy * uy) / cl; if (cut < .25) return;
+            if (blocked(cx, cy, gx, gy, [0, t.n]) || blocked(t.x, t.y, tx, ty, [0, t.n])) return;
+            const score = Math.pow(cut, 1.4) * ca / (1 + (cl + dl) / 520);
+            if (!best || score > best.score) best = { ang: Math.atan2(cdy, cdx), power: clamp(((Math.sqrt(2 * .14 * (cl + dl * 1.6)) + 1.6) - 2) / 26 * 100, 24, 100), score };
+          }));
+          if (!best) {
+            let tg = null, bd = 1e9; ts.forEach(t => { const d = Math.hypot(t.x - cx, t.y - cy) + (blocked(cx, cy, t.x, t.y, [0, t.n]) ? 400 : 0); if (d < bd) { bd = d; tg = t; } });
+            best = tg ? { ang: Math.atan2(tg.y - cy, tg.x - cx), power: 38, score: 0 } : { ang: 0, power: 40, score: 0 };
+          }
+          best.ang += (rnd() + rnd() - 1) * .018; best.power = clamp(best.power + (rnd() - .5) * 8, 20, 100);
+          return best;
+        }
+        function cpuPlace() {
+          let bp = { x: 225, y: 225 }, bsx = -1;
+          for (let x = X0 + 40; x < X1 - 30; x += 36) for (let y = Y0 + 36; y < Y1 - 30; y += 36) { if (!placeOk(x, y)) continue; const pl = planShot(x, y); if (pl.score > bsx) { bsx = pl.score; bp = { x, y }; } }
+          const c = cue(); c.in = false; c.x = bp.x; c.y = bp.y; c.vx = c.vy = 0; c.dirty = true; S.inHand = false; S.mode = 'aim'; S.cpu = null;
+        }
+        function cpuTick() {
+          if (!S.cpu) { const c = cue(); S.cpu = { t: 0, plan: planShot(c.x, c.y) }; S.power = S.cpu.plan.power; pw.value = S.power; }
+          const q = S.cpu; q.t++;
+          let d = q.plan.ang - S.ang; while (d > Math.PI) d -= 6.283; while (d < -Math.PI) d += 6.283;
+          S.ang += clamp(d, -.045, .045);
+          if (q.t > 55 && Math.abs(d) < .004) fire();
+        }
+        function fire() { if (S.mode !== 'aim') return; S.sAng = S.ang; S.mode = 'strike'; S.anim = 0; S.pullFrom = 8 + S.power * .5; S.cpu = null; }
+
+        /* ---------- desenho ---------- */
+        function draw() {
+          ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.drawImage(TBL, 0, 0, W, H);
+          const bs = balls();
+          bs.forEach(bl => { if (bl.in) return; const g = ctx.createRadialGradient(bl.x + 2.5, bl.y + 3.5, 1, bl.x + 2.5, bl.y + 3.5, R * 1.25); g.addColorStop(0, 'rgba(0,0,0,.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bl.x + 2.5, bl.y + 3.5, R * 1.25, 0, 7); ctx.fill(); });
+          const spr = (bl, x, y) => { if (bl.dirty) paint(bl); const h = bl.cv.width / SC / 2; ctx.drawImage(bl.cv, x - h, y - h, h * 2, h * 2); };
+          bs.forEach(bl => { if (!bl.in) spr(bl, bl.x, bl.y); });
+          const c = cue();
+          if (S.mode === 'place' && human() && S.ghost) { ctx.globalAlpha = placeOk(S.ghost.x, S.ghost.y) ? .75 : .3; spr(c, S.ghost.x, S.ghost.y); ctx.globalAlpha = 1; }
+          if ((S.mode === 'aim' || S.mode === 'strike') && !c.in) {
+            const a = S.mode === 'strike' ? S.sAng : S.ang;
+            if (S.mode === 'aim' && human()) {
+              const dx = Math.cos(a), dy = Math.sin(a), r = rayCast(c.x, c.y, dx, dy), gx = c.x + dx * r.t, gy = c.y + dy * r.t;
+              ctx.save(); ctx.setLineDash([5, 6]); ctx.strokeStyle = 'rgba(255,255,255,.65)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(c.x + dx * R, c.y + dy * R); ctx.lineTo(gx, gy); ctx.stroke(); ctx.setLineDash([]);
+              ctx.beginPath(); ctx.arc(gx, gy, R, 0, 7); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.stroke();
+              if (r.ball) { const nx = r.ball.x - gx, ny = r.ball.y - gy, nl = Math.hypot(nx, ny) || 1; ctx.strokeStyle = 'rgba(255,230,120,.8)'; ctx.beginPath(); ctx.moveTo(r.ball.x, r.ball.y); ctx.lineTo(r.ball.x + nx / nl * 55, r.ball.y + ny / nl * 55); ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); const tx = -ny / nl, ty = nx / nl, sg = (dx * tx + dy * ty) >= 0 ? 1 : -1; ctx.moveTo(gx, gy); ctx.lineTo(gx + tx * sg * 34, gy + ty * sg * 34); ctx.stroke(); }
+              ctx.restore();
+            }
+            let tip = 8 + S.power * .5; if (S.mode === 'strike') { const e = S.anim * S.anim; tip = S.pullFrom * (1 - e); }
+            if (!(S.mode === 'aim' && !human() && !S.cpu)) drawCue(a, tip);
+          }
+          // bandeja: bolas encaçapadas
+          S.potted.forEach((bl, i) => spr(bl, 28 + i * 21, 479));
+          ctx.fillStyle = 'rgba(255,235,200,.75)'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'right';
+          const lab = (p) => names[p] + (S.g[p] ? ': ' + gName(S.g[p]) : '');
+          ctx.fillText(lab(0) + '  ·  ' + lab(1), W - 12, 496); ctx.textAlign = 'left';
+          if (S.mode === 'over') { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(X0, 170, X1 - X0, 110); ctx.fillStyle = '#fcd34d'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'center'; ctx.fillText('🏆 ' + names[S.over] + ' venceu!', 405, 222); ctx.font = '15px Arial'; ctx.fillStyle = '#fff'; ctx.fillText(S.note || '', 405, 252); ctx.textAlign = 'left'; }
+        }
+        let lastTxt = '';
+        function status() {
+          let t;
+          if (S.mode === 'over') t = '🏆 ' + names[S.over] + ' venceu! ' + (S.note || '');
+          else if (S.mode === 'place') t = names[S.turn] + ': bola na mão — ' + (human() ? 'clique na mesa para posicionar a branca' : 'posicionando…');
+          else if (S.mode === 'rolling' || S.mode === 'strike') t = 'Bolas em movimento…';
+          else t = (S.brk ? 'Abertura — ' : '') + 'Vez de ' + names[S.turn] + (S.g[S.turn] ? ' (' + gName(S.g[S.turn]) + (S.shot ? '' : (targets(S.turn)[0] && targets(S.turn)[0].n === 8 ? ' — bola 8!' : '')) + ')' : ' (mesa aberta)');
+          if (S.note && S.mode !== 'over' && S.mode !== 'rolling' && S.mode !== 'strike') t += ' · ' + S.note;
+          if (t !== lastTxt) { lastTxt = t; stEl.textContent = t; }
+          const can = S.mode === 'aim' && human(); goBtn.disabled = !can; goBtn.style.opacity = can ? 1 : .4;
+        }
+
+        /* ---------- laço principal (passo fixo de 1/60 s) ---------- */
+        function update() {
+          sndCount = 0;
+          if (S.mode === 'rolling') { const mv = physics(); if (!mv && !balls().some(bl => !bl.in && (bl.vx || bl.vy))) resolve(); }
+          else if (S.mode === 'strike') { S.anim += 1 / 9; if (S.anim >= 1) startShot(); }
+          else if (S.mode === 'aim' && !human()) cpuTick();
+        }
+        let raf = 0, last = 0, acc = 0;
+        const loop = (now) => {
+          if (!b.isConnected) return;
+          if (!last) last = now; acc += Math.min(100, now - last); last = now;
+          while (acc >= 16.667) { update(); acc -= 16.667; }
+          draw(); status(); raf = requestAnimationFrame(loop);
+        };
+
+        /* ---------- controles ---------- */
+        const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
+        const aimAt = (e) => { const p = pos(e), c = cue(); if (S.mode === 'aim' && human() && !c.in) S.ang = Math.atan2(p.y - c.y, p.x - c.x); else if (S.mode === 'place' && human()) S.ghost = { x: clamp(p.x, X0 + R, X1 - R), y: clamp(p.y, Y0 + R, Y1 - R) }; };
+        cv.addEventListener('pointermove', aimAt);
+        cv.addEventListener('pointerdown', (e) => {
+          b.focus(); aimAt(e);
+          if (S.mode === 'place' && human() && S.ghost && placeOk(S.ghost.x, S.ghost.y)) { const c = cue(); c.in = false; c.x = S.ghost.x; c.y = S.ghost.y; c.vx = c.vy = 0; c.dirty = true; S.inHand = false; S.mode = 'aim'; S.ghost = null; S.note = ''; const t = targets(S.turn)[0]; if (t) S.ang = Math.atan2(t.y - c.y, t.x - c.x); }
+        });
+        pw.addEventListener('input', () => { S.power = +pw.value; });
+        pw.value = S.power;
+        goBtn.addEventListener('click', () => { if (S.mode === 'aim' && human()) { S.power = +pw.value; fire(); } });
+        newBtn.addEventListener('click', () => { POOL[n.id] = S = newGame(); S.power = +pw.value; });
+        b.addEventListener('keydown', (e) => {
+          if (S.mode === 'aim' && human()) {
+            if (e.key === 'ArrowLeft') { S.ang -= e.shiftKey ? .03 : .006; e.preventDefault(); }
+            else if (e.key === 'ArrowRight') { S.ang += e.shiftKey ? .03 : .006; e.preventDefault(); }
+            else if (e.key === 'ArrowUp') { pw.value = S.power = Math.min(100, S.power + 4); e.preventDefault(); }
+            else if (e.key === 'ArrowDown') { pw.value = S.power = Math.max(8, S.power - 4); e.preventDefault(); }
+            else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); S.power = +pw.value; fire(); }
+          }
+        });
+        if (S.mode === 'rolling' || S.mode === 'strike') { S.mode = 'aim'; }
+        raf = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(raf);
+      },
       timer(b, n) {
         const cfg = tmCfg(n), id = n.id, ink = wgInk(), sand = isMarker() ? '#d97706' : '#fcd34d', sty = n.ws || 0;
         const s = TM.st[id] || (TM.st[id] = { ph: 'idle', paused: false, left: 0 });
@@ -7374,13 +7736,13 @@
     const WG_TUNE = [262, 330, 392, 330, 294, 349, 440, 349, 262, 330, 392, 523, 494, 392, 330, 294];
     function wgMusic(n, on) {
       clearInterval(WGA.music[n.id]); delete WGA.music[n.id];
-      if (!on) return; let i = 0;
+      if (!on || (WG_KINDS[n.wk] || {}).nomusic) return; let i = 0;
       WGA.music[n.id] = setInterval(() => { if (!byId('wgb_' + n.id)) { clearInterval(WGA.music[n.id]); return; } wgTone(n, WG_TUNE[i++ % WG_TUNE.length], 0.2, 'triangle', 0.03); }, 230);
     }
     window.wgSnd = function (id) {
       const n = findNote(id); if (!n) return; n.snd = !n.snd; saveData();
       const bt = byId('wgs_' + id); if (bt) bt.innerHTML = `<i class="fa-solid ${n.snd ? 'fa-volume-high' : 'fa-volume-xmark'}"></i>`;
-      wgMusic(n, n.snd); if (n.snd) wgTone(n, 660, .1);
+      wgMusic(n, n.snd); if (n.snd && !(WG_KINDS[n.wk] || {}).nomusic) wgTone(n, 660, .1);
     };
     window.wgBorder = function (id) {
       const n = findNote(id); if (!n) return; n.nb = !n.nb; saveData();
