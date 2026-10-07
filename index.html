@@ -181,6 +181,7 @@
     .style-wrapper:not(.is-selected) { touch-action: none; cursor: grab; }
     /* Texto livre no modo só-mover: a caixa não captura o clique; quem decide é o teste de acerto no texto (JS) */
     .chalk-note.ck-text:not(.is-selected) { pointer-events: none; }
+    .chalk-note.ck-ghost:not(.is-selected), .chalk-note.ck-ghost:not(.is-selected) .bend-pt, .chalk-note.ck-ghost:not(.is-selected) .bend-mid { pointer-events: none; }
     #boardCanvas { touch-action: none; }
     .chalk-note:not(.is-selected) input,
     .chalk-note:not(.is-selected) textarea,
@@ -1599,6 +1600,7 @@
     function initDragAndDrop(element, noteId) {
       /* A peça inteira é a alça: dá para arrastar clicando em qualquer área vazia dela */
       const onPointerDown = (e, force) => {
+        if (e.type === 'touchstart' && activeDrag) return;
         if (e.type === 'pointerdown' && e.pointerType === 'mouse' && e.button !== 0) return;
         if (!force && (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select') || e.target.closest('.resize-handle') || e.target.closest('.resize-corner') || e.target.closest('.bend-pt') || e.target.closest('.bend-mid') || e.target.closest('.edit-input'))) {
           return;
@@ -1660,39 +1662,150 @@
       }
       return out;
     }
-    function ckTextHit(x, y) {
-      const PAD = 8;
-      let best = null, bz = -1;
-      document.querySelectorAll('#notesContainer .chalk-note.ck-text:not(.is-selected)').forEach(el => {
-        const er = el.getBoundingClientRect();
-        if (x < er.left || x > er.right || y < er.top || y > er.bottom) return;
-        const ta = el.querySelector('textarea');
-        if (!ta) return;
-        const rects = ckTextLineRects(ta);
-        let hit = !rects || !rects.length;   // texto vazio: a caixa toda
-        if (!hit) hit = rects.some(q => x >= q.l - PAD && x <= q.r + PAD && y >= q.t - PAD && y <= q.b + PAD);
-        if (!hit) return;
-        const z = parseInt(el.style.zIndex, 10) || 0;
-        if (z > bz) { bz = z; best = el; }
-      });
-      return best;
+    /* ---------- "pegar o que estou vendo" ----------
+       Cada peça só conta onde existe algo VISÍVEL dela (traço de seta/forma, letras, imagem, fundo...).
+       Áreas vazias/invisíveis de uma peça deixam passar o toque para a peça que está de fato visível ali. */
+    const CK_NOHIT = '.eraser, .chalkstick, #boardQuote, button, input, textarea, select, .bend-pt, .bend-mid, .resize-handle, .resize-corner, .edit-input';
+    const ckZ = (el) => parseInt(el.style.zIndex, 10) || 0;
+
+    function ckTextHitOne(el, x, y) {
+      const ta = el.querySelector('textarea');
+      if (!ta) return false;
+      const rects = ckTextLineRects(ta), PAD = 8;
+      if (!rects || !rects.length) return true;   // texto vazio: a caixa toda
+      return rects.some(q => x >= q.l - PAD && x <= q.r + PAD && y >= q.t - PAD && y <= q.b + PAD);
     }
-    /* Resolve qual texto livre está de fato sob o ponteiro (respeitando a ordem de camadas) */
+
+    /* seta/forma: acerta só perto do traço (tolerância de ~10px na tela) */
+    function ckShapeHitOne(el, x, y) {
+      const svg = el.querySelector('.shape-svg');
+      if (!svg || !svg.getScreenCTM) return false;
+      const m = svg.getScreenCTM();
+      if (!m) return false;
+      const pt = new DOMPoint(x, y).matrixTransform(m.inverse());
+      const tol = 10 / (Math.hypot(m.a, m.b) || 1);
+      const els = svg.querySelectorAll('g[stroke="currentColor"]:not([opacity]) > *');
+      for (const g of els) {
+        if (typeof g.isPointInStroke !== 'function') continue;
+        const base = parseFloat(getComputedStyle(g).strokeWidth) || 3.6;
+        g.style.setProperty('stroke-width', (base + tol * 2) + 'px', 'important');
+        g.style.setProperty('stroke-dasharray', 'none', 'important');
+        let ok = false;
+        try { ok = g.isPointInStroke(pt); } catch (err) {}
+        g.style.removeProperty('stroke-width');
+        g.style.removeProperty('stroke-dasharray');
+        if (ok) return true;
+      }
+      return false;
+    }
+
+    /* qualquer outra peça: percorre o que ela realmente desenha (imagem, fundo, borda, texto) */
+    function ckPaintsAt(root, x, y) {
+      const PAD = 6;
+      const near = (r) => x >= r.left - PAD && x <= r.right + PAD && y >= r.top - PAD && y <= r.bottom + PAD;
+      const colored = (c) => {
+        if (!c || c === 'transparent') return false;
+        const mm = /rgba?\(([^)]+)\)/.exec(c);
+        if (!mm) return true;
+        const q = mm[1].split(',').map(v => parseFloat(v));
+        return q.length < 4 || q[3] > 0.05;
+      };
+      const borderOf = (cs) => {
+        let bw = 0;
+        ['Top', 'Right', 'Bottom', 'Left'].forEach(sd => {
+          if (cs['border' + sd + 'Style'] !== 'none' && colored(cs['border' + sd + 'Color'])) bw = Math.max(bw, parseFloat(cs['border' + sd + 'Width']) || 0);
+        });
+        return bw;
+      };
+      const band = (r, bw) => near(r) && !(x > r.left + bw + PAD && x < r.right - bw - PAD && y > r.top + bw + PAD && y < r.bottom - bw - PAD);
+      let found = false;
+      const walk = (n) => {
+        if (found || n.nodeType !== 1) return;
+        const tag = n.tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style') return;
+        const cs = getComputedStyle(n);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.05) return;
+        const r = n.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+          if ((tag === 'img' || tag === 'canvas' || tag === 'video') && inside) { found = true; return; }
+          if (['path', 'rect', 'ellipse', 'circle', 'polygon', 'polyline', 'line'].indexOf(tag) >= 0) {
+            const hasStroke = cs.stroke !== 'none' && (parseFloat(cs.strokeWidth) || 0) > 0, hasFill = cs.fill !== 'none';
+            if ((hasStroke || hasFill) && near(r)) { found = true; return; }
+          }
+          if (tag === 'textarea') {
+            if (n.value && (ckTextLineRects(n) || []).some(q => x >= q.l - PAD && x <= q.r + PAD && y >= q.t - PAD && y <= q.b + PAD)) { found = true; return; }
+          } else if (tag === 'input') {
+            const ty = (n.type || 'text').toLowerCase();
+            if (ty === 'text' || ty === 'search' || ty === 'number') {
+              if (n.value) {
+                const c2 = document.createElement('canvas').getContext('2d');
+                c2.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+                const tw = c2.measureText(n.value).width * (n.offsetWidth ? r.width / n.offsetWidth : 1);
+                const l = r.left + (parseFloat(cs.paddingLeft) || 0);
+                if (x >= l - PAD && x <= l + tw + PAD && y >= r.top && y <= r.bottom) { found = true; return; }
+              }
+            } else if (inside) { found = true; return; }
+          }
+          if (inside && (colored(cs.backgroundColor) || cs.backgroundImage !== 'none')) { found = true; return; }
+          const bw = borderOf(cs);
+          if (bw > 0 && band(r, bw)) { found = true; return; }
+          ['::before', '::after'].forEach(ps => {
+            if (found) return;
+            const p = getComputedStyle(n, ps);
+            if (!p || p.content === 'none' || p.content === 'normal' || p.display === 'none' || parseFloat(p.opacity) < 0.05) return;
+            if (inside && (colored(p.backgroundColor) || p.backgroundImage !== 'none')) { found = true; return; }
+            const pb = borderOf(p);
+            if (pb > 0 && band(r, pb)) found = true;
+          });
+          if (found) return;
+        }
+        for (const node of n.childNodes) {
+          if (node.nodeType === 3 && node.nodeValue.trim()) {
+            const rg = document.createRange();
+            rg.selectNodeContents(node);
+            for (const q of rg.getClientRects()) if (q.width > 0 && near(q)) { found = true; return; }
+          }
+        }
+        for (const c of n.children) { walk(c); if (found) return; }
+      };
+      walk(root);
+      return found;
+    }
+
+    /* há algo visível desta peça sob o ponteiro? */
+    function ckPieceHit(el, x, y) {
+      if (el.classList.contains('is-selected')) return true;   // peça ativa: a caixa toda vale
+      if (el.classList.contains('ck-text')) return ckTextHitOne(el, x, y);
+      if (el.classList.contains('ck-ghost')) return ckShapeHitOne(el, x, y);
+      return ckPaintsAt(el, x, y);
+    }
+
+    /* Descobre qual peça está de fato visível sob o ponteiro (respeitando a ordem de camadas).
+       Devolve null quando o fluxo normal do navegador já pega a peça certa. */
     function ckResolveTextHit(e) {
       const t = e.target;
       if (!t || !t.closest || !t.closest('#boardCanvas')) return null;
-      if (t.closest('.eraser, .chalkstick, #boardQuote, button, input, textarea, select, .bend-pt, .bend-mid, .resize-handle, .resize-corner, .edit-input')) return null;
-      const hit = ckTextHit(e.clientX, e.clientY);
-      if (!hit) return null;
+      if (t.closest(CK_NOHIT)) return null;
+      const x = e.clientX, y = e.clientY;
       const nat = t.closest('.chalk-note');
-      if (nat && nat !== hit && (parseInt(nat.style.zIndex, 10) || 0) > (parseInt(hit.style.zIndex, 10) || 0)) return null;
-      return hit;
+      const cands = Array.from(document.querySelectorAll('#notesContainer .chalk-note')).filter(el => {
+        const r = el.getBoundingClientRect();
+        return x >= r.left - 12 && x <= r.right + 12 && y >= r.top - 12 && y <= r.bottom + 12;
+      }).sort((a, b) => ckZ(b) - ckZ(a));
+      for (const el of cands) {
+        if (!ckPieceHit(el, x, y)) continue;
+        return el === nat ? null : el;
+      }
+      return null;
     }
     document.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       const hit = ckResolveTextHit(e);
       if (!hit) return;
       e.__ckHit = hit;
+      /* peça comum que estava por baixo de uma área vazia de outra: a peça de cima não pode agarrar o toque */
+      if (!hit.classList.contains('ck-text') && !hit.classList.contains('ck-ghost')) e.stopPropagation();
       if (hit._startDrag) hit._startDrag(e);
     }, true);
     let ckCurRaf = 0;
@@ -2397,7 +2510,7 @@
       const op = note.op && +note.op < 100 ? Math.max(0.1, +note.op / 100) : 1;
       if (an.indexOf('draw') >= 0) d = d.replace(/<(path|rect|ellipse|polygon)\b/g, '<$1 pathLength="1"');
       let aOpen = '', aClose = '';
-      ['float', 'pulse', 'wiggle', 'blink'].forEach(a => { if (an.indexOf(a) >= 0) { aOpen += `<g class="sh-an sh-an-${a}">`; aClose += '</g>'; } });
+      ['pulse', 'blink'].forEach(a => { if (an.indexOf(a) >= 0) { aOpen += `<g class="sh-an sh-an-${a}">`; aClose += '</g>'; } });
       const dr = an.indexOf('draw') >= 0 ? ' class="sh-draw"' : '';
       const dash = note.dash ? ` stroke-dasharray="${(11 * k).toFixed(1)} ${(9 * k).toFixed(1)}"` : '';
 
@@ -2519,7 +2632,7 @@
 
     /* ----- pop-up de estilo da forma/seta (centro da tela, com pré-visualização) ----- */
     let shapeStyleId = null, shapeStyleSaveT = null;
-    const SHAPE_ANIMS = [['blink', 'Pisca'], ['draw', 'Rabisca e volta'], ['pulse', 'Pulsa'], ['wiggle', 'Balança'], ['float', 'Flutua']];
+    const SHAPE_ANIMS = [['blink', 'Pisca'], ['draw', 'Rabisca e volta'], ['pulse', 'Pulsa']];
     function shapeStylePreview(note) {
       const box = byId('ssmPreview'); if (!box) return;
       const w = Math.round(note.width || 160), h = Math.round(note.height || 80), rot = note.rotation || 0;
@@ -2835,6 +2948,7 @@
         wrapper.style.width = `${note.width || 320}px`;
         wrapper.style.zIndex = noteZ(note);
         if (note.type === 'chalktext') wrapper.classList.add('ck-text');
+        if (note.type === 'shape') wrapper.classList.add('ck-ghost');   // setas e formas só "pegam" onde há traço visível
         if (isChalk && note.id === selectedNoteId) wrapper.classList.add('is-selected');
         if (note.type === 'shape') {
           wrapper.style.height = `${note.height || 80}px`;
@@ -4702,12 +4816,14 @@
       const rect = (rx, ry, rw, rh) => x.fillRect(rx, ry, rw, rh);
 
       if (note.type === 'shape') {
-        target.querySelectorAll('g[stroke-width="3.6"] > *').forEach(g => {
+        /* traço principal da forma (a espessura varia com o tamanho/estilo, então não dá para procurar por um valor fixo) */
+        target.querySelectorAll('g[stroke="currentColor"]:not([opacity]) > *').forEach(g => {
           if (typeof g.getTotalLength !== 'function') return;
-          const L = g.getTotalLength();
-          for (let t = 0; t <= L; t += 3) {
+          const sw = parseFloat(g.parentNode.getAttribute('stroke-width')) || 3.6, rad = Math.max(1.2, sw / 2);
+          const L = g.getTotalLength(), stepL = Math.max(1.5, rad);
+          for (let t = 0; t <= L; t += stepL) {
             const pt = g.getPointAtLength(t);
-            x.beginPath(); x.arc(pt.x, pt.y, 3.4, 0, 6.2832); x.fill();
+            x.beginPath(); x.arc(pt.x, pt.y, rad, 0, 6.2832); x.fill();
           }
         });
       } else {
@@ -4758,7 +4874,7 @@
           if (B[i + 3] > 128) alive[c]++;
         }
       }
-      for (let c = 0; c < tot.length; c++) if (tot[c] > 0 && alive[c] >= 10 && alive[c] / tot[c] > 0.3) return true;
+      for (let c = 0; c < tot.length; c++) if (tot[c] > 0 && alive[c] >= Math.min(10, Math.max(3, tot[c] * 0.5)) && alive[c] / tot[c] > 0.3) return true;
       return false;
     }
 
