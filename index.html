@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Quadro Verde Escolar Vintage - Lousa Interativa</title>
   
   <!-- Tailwind CSS CDN -->
@@ -396,7 +396,7 @@
     .tb-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .tb-spacer { flex: 1; }
     .tb { width: 36px; height: 36px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.35); transition: transform .12s ease, background .2s ease; }
-    .tb:hover { transform: translateY(-1px); }
+    @media (hover: hover) { .tb:hover { transform: translateY(-1px); } }
     .tb:active { transform: scale(.92); }
     .tb-label { display: none; }
     .mob-only, #moreBtn { display: none !important; }
@@ -696,6 +696,38 @@
     .lk-row.on { border-color: #34d399; background: rgba(5,150,105,.18); color: #ecfdf5; }
     .lk-state { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: #292524; white-space: nowrap; }
     .lk-row.on .lk-state { background: #059669; color: #fff; }
+
+    /* =========================================================================
+       AJUSTES PARA CELULAR (toque) + card de finanças recolhível
+       ========================================================================= */
+    html, body { overscroll-behavior: none; }
+    * { -webkit-tap-highlight-color: transparent; }
+    #topbar button, #showHeaderBtn, #finDock button, #widgetMenu button, #shapeMenu button, #stickerMenu button { touch-action: manipulation; }
+    #widgetMenu, #shapeMenu { max-height: calc(100dvh - 90px) !important; }
+    #notifPanel { max-height: calc(100dvh - 80px); }
+    div[class*="max-h-[9"][class*="vh]"] { max-height: 92dvh !important; }
+
+    @media (max-width: 899px) {
+      /* os 9 botões da barra sempre cabem na largura da tela (antes o "⋯" ficava cortado em telas de 360px) */
+      #topbar { --tb-s: min(40px, calc((100vw - 52px) / 9)); }
+      #toolGroup { gap: 4px; }
+      #toolGroup .tb { width: var(--tb-s); height: var(--tb-s); font-size: clamp(12px, calc(var(--tb-s) * .4), 16px); }
+      /* menu "mais" nunca passa da tela; rola por dentro se precisar */
+      #moreGroup { max-height: calc(100dvh - var(--bar-h) - 16px); overflow-y: auto; overscroll-behavior: contain; }
+      #moreGroup .nav-pill { flex-wrap: wrap; }
+      /* o arrastar da lousa é feito por JavaScript (initTouchPan) */
+      #boardViewport { touch-action: none; overscroll-behavior: contain; }
+    }
+
+    /* Card de finanças: começa recolhido; a setinha abre e fecha */
+    #finDock { padding: 4px; }
+    #finDock.open { padding: 5px 8px 5px 5px; }
+    .fin-dock-toggle { padding: 6px 10px; }
+    .fin-dock-chev { font-size: 12px; transition: transform .2s ease; }
+    #finDock.open .fin-dock-chev { transform: rotate(180deg); }
+    #finDock.open .fin-dock-sack { display: none; }
+    .fin-dock-body { display: none; align-items: center; gap: 6px; }
+    #finDock.open .fin-dock-body { display: flex; }
   </style>
 </head>
 <body class="bg-stone-900 font-sans-ui text-stone-100 flex flex-col overflow-hidden select-none" style="height:100vh;height:100dvh;">
@@ -1027,11 +1059,14 @@
 
   <!-- FINANÇAS: botões que aparecem só nas lousas de finanças -->
   <div id="finDock">
+    <button id="finDockToggle" class="fin-dock-btn fin-dock-toggle" onclick="toggleFinDock()" title="Mostrar opções de finanças" aria-expanded="false"><i class="fa-solid fa-sack-dollar fin-dock-sack"></i><i class="fa-solid fa-chevron-right fin-dock-chev"></i></button>
+    <div id="finDockBody" class="fin-dock-body">
     <span class="fin-dock-title"><i class="fa-solid fa-sack-dollar"></i> <span class="fin-dock-label">Finanças</span></span>
     <button class="fin-dock-btn" onclick="finOpenTable()" title="Adicionar uma tabela de lançamentos"><i class="fa-solid fa-table-list"></i> Tabela</button>
     <button class="fin-dock-btn" onclick="finOpenCards()" title="Adicionar cards (escolha quais)"><i class="fa-solid fa-wallet"></i> Cards</button>
     <button class="fin-dock-btn" onclick="openFinChartModal()" title="Montar um gráfico"><i class="fa-solid fa-chart-column"></i> Gráficos</button>
     <button class="fin-dock-btn" onclick="openFinLinkModal()" title="Ligar esta lousa a outras lousas de finanças"><i class="fa-solid fa-link"></i> Ligar</button>
+    </div>
   </div>
   <datalist id="finDestList"></datalist>
 
@@ -1883,8 +1918,9 @@
       
       const boardEl = document.getElementById('boardCanvas');
       const boardWidth = boardEl ? boardEl.offsetWidth : 800;
-      const posX = Math.max(20, Math.min(boardWidth / 2 - 150 + (Math.random() * 80 - 40), boardWidth - 340));
-      const posY = 50 + (Math.random() * 60);
+      const sp = spawnPos(type === 'chalktext' ? 360 : 320);
+      const posX = sp ? sp.x : Math.max(20, Math.min(boardWidth / 2 - 150 + (Math.random() * 80 - 40), boardWidth - 340));
+      const posY = sp ? sp.y : 50 + (Math.random() * 60);
 
       board.nextZIndex += 1;
 
@@ -2456,8 +2492,9 @@
 
       const boardEl = document.getElementById('boardCanvas');
       const boardWidth = boardEl ? boardEl.offsetWidth : 800;
-      const posX = Math.max(20, Math.min(boardWidth / 2 - def.w / 2 + (Math.random() * 80 - 40), boardWidth - def.w - 20));
-      const posY = 80 + (Math.random() * 80);
+      const sp = spawnPos(def.w);
+      const posX = sp ? sp.x : Math.max(20, Math.min(boardWidth / 2 - def.w / 2 + (Math.random() * 80 - 40), boardWidth - def.w - 20));
+      const posY = sp ? sp.y : 80 + (Math.random() * 80);
 
       board.nextZIndex += 1;
 
@@ -3022,6 +3059,10 @@
     function toggleFullscreen() {
       const btn = document.getElementById('fullscreenBtn');
       if (!document.fullscreenElement) {
+        if (!document.documentElement.requestFullscreen) {
+          showCustomDialog({ title: 'Tela cheia', message: 'Este navegador não libera tela cheia. No iPhone, toque em Compartilhar no Safari e escolha “Adicionar à Tela de Início” para abrir a lousa em tela cheia.' });
+          return;
+        }
         document.documentElement.requestFullscreen().then(() => {
           if (btn) btn.innerHTML = '<i class="fa-solid fa-compress"></i><span class="tb-label">Tela cheia</span>';
         }).catch(err => console.log(err));
@@ -3764,6 +3805,7 @@
       const boardEl = byId('boardCanvas');
       const boardWidth = boardEl ? boardEl.offsetWidth : 800;
       const width = 300;
+      const sp = spawnPos(width);
       const id = 'note_' + Date.now();
       board.nextZIndex += 1;
 
@@ -3775,8 +3817,8 @@
         width,
         showCaption: !!withCaption,
         caption: '',
-        x: Math.max(20, Math.min(boardWidth / 2 - width / 2 + (Math.random() * 80 - 40), boardWidth - width - 40)),
-        y: 60 + Math.random() * 60,
+        x: sp ? sp.x : Math.max(20, Math.min(boardWidth / 2 - width / 2 + (Math.random() * 80 - 40), boardWidth - width - 40)),
+        y: sp ? sp.y : 60 + Math.random() * 60,
         zIndex: board.nextZIndex
       });
 
@@ -4080,11 +4122,65 @@
     new ResizeObserver(() => relayoutAll()).observe(byId('boardViewport'));
     window.addEventListener('resize', relayoutAll);
 
+    /* Celular em pé: peça nova nasce dentro da área que está na tela (antes nascia no meio da lousa inteira, fora da vista) */
+    function spawnPos(w) {
+      if (!isMobileBar()) return null;
+      const vp = byId('boardViewport'), mn = byId('boardCanvas');
+      if (!vp || !mn) return null;
+      if (vp.scrollWidth <= vp.clientWidth + 2 && vp.scrollHeight <= vp.clientHeight + 2) return null;   // deitado: lousa inteira, comportamento normal
+      const sc = boardScale || 1;
+      const vl = vp.scrollLeft / sc, vt = vp.scrollTop / sc, vw = vp.clientWidth / sc;
+      const x = vl + Math.max(10, (vw - w) / 2 + (Math.random() * 30 - 15));
+      return { x: Math.max(10, Math.min(x, mn.offsetWidth - w - 10)), y: vt + 40 + Math.random() * 50 };
+    }
+
     function visibleCenter() {
       const vp = byId('boardViewport'), mn = byId('boardCanvas');
       if (!isMobileBar()) return { x: mn.offsetWidth / 2, y: 180 };
       return { x: (vp.scrollLeft + vp.clientWidth / 2) / boardScale, y: (vp.scrollTop + vp.clientHeight / 2) / boardScale };
     }
+
+    /* ===== Celular em pé: arrastar a lousa com o dedo por qualquer área vazia ===== */
+    (function initTouchPan() {
+      const vp = byId('boardViewport');
+      if (!vp) return;
+      const BLOCK = '.chalk-note, .eraser, .chalkstick, #boardQuote, button, input, textarea, select, a, label, .bend-pt, .bend-mid, .resize-handle, .resize-corner, .edit-input';
+      let pan = null, vx = 0, vy = 0, raf = 0;
+      const canPan = () => isMobileBar() && (vp.scrollWidth > vp.clientWidth + 2 || vp.scrollHeight > vp.clientHeight + 2);
+      const stopMomentum = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+      vp.addEventListener('pointerdown', (e) => {
+        stopMomentum();
+        if (e.pointerType === 'mouse' || !e.isPrimary || !canPan()) return;
+        if (e.target.closest && e.target.closest(BLOCK)) return;
+        if (typeof ckResolveTextHit === 'function' && ckResolveTextHit(e)) return;   // texto livre: quem arrasta é o texto
+        pan = { id: e.pointerId, x: e.clientX, y: e.clientY, sl: vp.scrollLeft, st: vp.scrollTop, moved: false, lx: e.clientX, ly: e.clientY, lt: performance.now() };
+        vx = vy = 0;
+      });
+      document.addEventListener('pointermove', (e) => {
+        if (!pan || e.pointerId !== pan.id) return;
+        const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+        if (!pan.moved && Math.hypot(dx, dy) < 6) return;
+        pan.moved = true;
+        vp.scrollLeft = pan.sl - dx; vp.scrollTop = pan.st - dy;
+        const now = performance.now(), dt = Math.max(1, now - pan.lt);
+        vx = (e.clientX - pan.lx) / dt * 16; vy = (e.clientY - pan.ly) / dt * 16;
+        pan.lx = e.clientX; pan.ly = e.clientY; pan.lt = now;
+      });
+      const end = (e) => {
+        if (!pan || (e && e.pointerId !== pan.id)) return;
+        const moved = pan.moved; pan = null;
+        if (!moved) return;
+        const step = () => {
+          vx *= 0.94; vy *= 0.94;
+          if (Math.abs(vx) < 0.3 && Math.abs(vy) < 0.3) { raf = 0; return; }
+          vp.scrollLeft -= vx; vp.scrollTop -= vy;
+          raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+      };
+      document.addEventListener('pointerup', end);
+      document.addEventListener('pointercancel', end);
+    })();
 
     /* ===== Tarefas: tamanho do texto ===== */
     function changeListSize(id, delta) {
@@ -5565,6 +5661,14 @@
       const r = vp.getBoundingClientRect();
       d.style.top = (r.top + 8) + 'px'; d.style.left = (r.left + 8) + 'px';
     }
+    function toggleFinDock(force) {
+      const d = byId('finDock'); if (!d) return;
+      const open = (force === undefined) ? !d.classList.contains('open') : !!force;
+      d.classList.toggle('open', open);
+      const b = byId('finDockToggle');
+      if (b) { b.setAttribute('aria-expanded', open ? 'true' : 'false'); b.title = open ? 'Ocultar opções de finanças' : 'Mostrar opções de finanças'; }
+      placeFinDock();
+    }
     function updateFinDock() {
       const on = finIsFinance(), d = byId('finDock');
       if (d) d.classList.toggle('on', on);
@@ -6572,7 +6676,9 @@
       const r = e.currentTarget.getBoundingClientRect();
       m.classList.remove('hidden');
       m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
-      m.style.top = (r.bottom + 6) + 'px';
+      const mh = m.offsetHeight || 260;
+      const below = r.bottom + 6 + mh < innerHeight - 8;
+      m.style.top = (below ? r.bottom + 6 : Math.max(8, r.top - mh - 6)) + 'px';
     };
     document.addEventListener('click', (e) => { const m = byId('widgetMenu'); if (m && !e.target.closest('#widgetMenu')) m.classList.add('hidden'); });
 
@@ -6580,7 +6686,8 @@
       const board = getActiveBoard(), d = WG_KINDS[kind], id = 'note_' + Date.now();
       const bw = (byId('boardCanvas') || {}).offsetWidth || 800;
       board.nextZIndex += 1; selectedNoteId = id;
-      board.notes.push({ id, type: 'widget', wk: kind, ws: style, x: Math.max(20, Math.min(bw / 2 - d.w / 2 + (Math.random() * 80 - 40), bw - d.w - 20)), y: 80 + Math.random() * 80, width: d.w, zIndex: board.nextZIndex });
+      const sp = spawnPos(d.w);
+      board.notes.push({ id, type: 'widget', wk: kind, ws: style, x: sp ? sp.x : Math.max(20, Math.min(bw / 2 - d.w / 2 + (Math.random() * 80 - 40), bw - d.w - 20)), y: sp ? sp.y : 80 + Math.random() * 80, width: d.w, zIndex: board.nextZIndex });
       byId('widgetMenu').classList.add('hidden');
       saveData(); renderNotes();
     };
