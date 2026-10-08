@@ -1457,9 +1457,11 @@
     let lastToggled = null;
 
     /* saveData agora grava no cache local (por usuário) e agenda o envio ao Firebase */
+    window.rtcBusy = () => !!window.__rtcBusy && performance.now() - window.__rtcBusy < 1500;   // sinuca ao vivo em andamento: adia gravações pesadas
     function saveData() {
       if (!appReady || !currentUser) return;
       appData.updatedAt = Date.now();
+      if (window.rtcBusy && window.rtcBusy()) { clearTimeout(window.__lsT); window.__lsT = setTimeout(saveData, 700); return; }
       try {
         localStorage.setItem(localKey(), JSON.stringify(appData));
       } catch (e) {
@@ -3667,6 +3669,7 @@
     async function flushCloudSave() {
       if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
       if (!window.FB || !currentUser || !appReady) return;
+      if (window.rtcBusy && window.rtcBusy()) { saveTimer = setTimeout(flushCloudSave, 700); return; }
       setSyncStatus('saving');
       try {
         await FB.saveAppData(cloudView());
@@ -7466,7 +7469,7 @@
           rr(4, 456, W - 8, 75, 10); g.strokeStyle = 'rgba(255,220,170,.2)'; g.lineWidth = 1.5; g.stroke();
           return c;
         }
-        const TBL = buildTable();
+        const TBL = WG.poolTbl || (WG.poolTbl = buildTable());
 
         /* ---------- bola: esfera sombreada pixel a pixel (gira de acordo com o rolamento) ---------- */
         const LX = -.42, LY = -.55, LZ = .72, ll = Math.hypot(LX, LY, LZ), lx = LX / ll, ly = LY / ll, lz = LZ / ll;
@@ -7708,10 +7711,12 @@
         function fire() { if (S.mode !== 'aim') return; S.sAng = S.ang; S.mode = 'strike'; S.anim = 0; S.pullFrom = 8 + S.power * .5; S.cpu = null; S.remote = false; publish(1); }
 
         /* ---------- desenho ---------- */
+        let SHD = null;
         function draw() {
           ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.drawImage(TBL, 0, 0, W, H);
           const bs = balls();
-          bs.forEach(bl => { if (bl.in) return; const g = ctx.createRadialGradient(bl.x + 2.5, bl.y + 3.5, 1, bl.x + 2.5, bl.y + 3.5, R * 1.25); g.addColorStop(0, 'rgba(0,0,0,.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bl.x + 2.5, bl.y + 3.5, R * 1.25, 0, 7); ctx.fill(); });
+          if (!SHD) { const q = Math.ceil(R * 2.6 * SC); SHD = document.createElement('canvas'); SHD.width = SHD.height = q; const g2 = SHD.getContext('2d'), m = q / 2, gg = g2.createRadialGradient(m, m, 1 * SC, m, m, R * 1.25 * SC); gg.addColorStop(0, 'rgba(0,0,0,.5)'); gg.addColorStop(1, 'rgba(0,0,0,0)'); g2.fillStyle = gg; g2.beginPath(); g2.arc(m, m, R * 1.25 * SC, 0, 7); g2.fill(); }
+          { const hs = SHD.width / SC / 2; bs.forEach(bl => { if (bl.in) return; ctx.drawImage(SHD, bl.x + 2.5 - hs, bl.y + 3.5 - hs, hs * 2, hs * 2); }); }
           const spr = (bl, x, y) => { if (bl.dirty) paint(bl); const h = bl.cv.width / SC / 2; ctx.drawImage(bl.cv, x - h, y - h, h * 2, h * 2); };
           bs.forEach(bl => { if (!bl.in) spr(bl, bl.x, bl.y); });
           const c = cue();
@@ -7808,7 +7813,7 @@
           if (!b.isConnected) return;
           if (!last) last = now; acc += Math.min(100, now - last); last = now;
           while (acc >= 16.667) { update(); acc -= 16.667; }
-          draw(); status(); sendAim(now); raf = requestAnimationFrame(loop);
+          draw(); status(); sendAim(now); window.__rtcBusy = (PN && PN.open && (S.mode === 'rolling' || S.mode === 'strike')) ? performance.now() : 0; raf = requestAnimationFrame(loop);
         };
 
         /* ---------- controles ---------- */
@@ -7891,6 +7896,7 @@
           if (pg.sa == null && S.remote && (S.mode === 'rolling' || S.mode === 'strike')) { S.pend = pg; S.seq = pg.seq; }
           else applySnap(pg, pg.sa != null, true);
         };
+        if (online) (WG.poolPg || (WG.poolPg = {}))[n.id] = ingest;
         if (PN) {
           PN.sid = brd.shared.sid; PN.rid = 'pool_' + n.id; PN.me = meUid(); PN.alive = () => !!findNote(n.id);
           PN.role = () => { const u = meUid(); return slotUid(0) === u ? 'host' : slotUid(1) === u ? 'guest' : ''; };
@@ -7912,7 +7918,7 @@
           } else if (isOwner()) { publish(0); announceStart(); }
         } else if (S.mode === 'rolling' || S.mode === 'strike') { S.mode = 'aim'; }
         raf = requestAnimationFrame(loop);
-        return () => cancelAnimationFrame(raf);
+        return () => { cancelAnimationFrame(raf); window.__rtcBusy = false; };
       },
       poolscore(b, n) {
         const cur = () => findNote(n.id) || n; let sig = '';
@@ -8547,11 +8553,16 @@
       if (!force && (data.rev || 0) <= (SH.rev[sid] || 0) && SH.rev[sid] !== undefined) return;
       SH.info[sid] = { ownerUid: data.ownerUid, ownerEmail: data.ownerEmail, members: data.members, memberEmails: data.memberEmails, invitedEmails: data.invitedEmails, profiles: data.memberProfiles || {} };
       if (data.members.indexOf(shMe().uid) < 0) { shDropLocalBoard(sid, 'Seu acesso a esta lousa foi encerrado.'); return; }
+      const poolSig = () => stable({ n: (b.notes || []).map(x => x.wk === 'pool' ? Object.assign({}, x, { pg: 0 }) : x), s: b.strokes, m: b.name, z: b.nextZIndex, f: b.fin });
+      const sigBefore = SH.base[sid] ? poolSig() : null;
       shMerge(b, data.content, SH.base[sid] || null);
+      const onlyPool = sigBefore !== null && sigBefore === poolSig() && (b.notes || []).some(x => x.wk === 'pool');
+      if (onlyPool) (b.notes || []).forEach(x => { if (x.wk === 'pool' && x.pg && WG.poolPg && WG.poolPg[x.id]) { try { WG.poolPg[x.id](x.pg); } catch (e) {} } });
       SH.rev[sid] = data.rev; SH.sig[sid] = stable(shNorm(data.content)); SH.base[sid] = shBase(data.content);
       shCacheLocal();
       const activeB = getActiveBoard();
-      if (activeB === b || activeB.kind === 'finance') shRender(); else updateBoardWidgetControls();
+      if (onlyPool) { /* só mudou a jogada da sinuca: ela é atualizada ao vivo, sem refazer a lousa */ }
+      else if (activeB === b || activeB.kind === 'finance') shRender(); else updateBoardWidgetControls();
       if (byId('shareModal') && !byId('shareModal').classList.contains('hidden')) renderShareModal();
       if (stable(shNorm(shContent(b))) !== SH.sig[sid]) shSchedule(sid, 80);   // sobrou algo meu para enviar
     }
@@ -8572,6 +8583,7 @@
     }
     async function shPush(sid) {
       const b = shBoard(sid); if (!b || !SH.on) return;
+      if (window.rtcBusy && window.rtcBusy()) { clearTimeout(SH.timers[sid]); SH.timers[sid] = setTimeout(() => shPush(sid), 700); return; }
       if (SH.pushing[sid]) { SH.again[sid] = true; return; }
       const content = shContent(b), sg = stable(shNorm(content));
       if (sg === SH.sig[sid]) return;
