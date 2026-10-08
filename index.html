@@ -7317,6 +7317,45 @@
           '<div class="pl-plrs"></div><div style="opacity:.7;margin:10px 0 5px"><small>Modo de jogo</small></div><div class="pl-modes" style="display:flex;flex-direction:column;gap:5px"></div></div></div>';
         const cv = b.querySelector('canvas'), ctx = cv.getContext('2d'), pw = { value: 55 }, goBtn = b.querySelector('.pl-go'), newBtn = b.querySelector('.pl-new');
         const POOL = WG.pool || (WG.pool = {}); let legend = '', legendOn = true;
+        /* ---------- tempo real entre os dois jogadores (WebRTC direto; a nuvem continua como reserva) ---------- */
+        const NETS = WG.pnet || (WG.pnet = {});
+        const PN = online && window.FB && FB.rtc ? (NETS[n.id] || (NETS[n.id] = { pc: null, dcs: {}, open: false, offerAt: 0, hb: 0, busy: false, tried: '', unsub: null, timer: 0 })) : null;
+        const pnSend = (obj, fast) => { if (!PN || !PN.open) return; const ch = fast ? (PN.dcs.a || PN.dcs.r) : PN.dcs.r; if (ch && ch.readyState === 'open') { try { ch.send(JSON.stringify(obj)); } catch (e) {} } };
+        const PN_CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+        const pnGather = (pc) => new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, 2500); pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }; });
+        const pnClose = (P) => { try { P.unsub && P.unsub(); } catch (e) {} P.unsub = null; try { P.pc && P.pc.close(); } catch (e) {} P.pc = null; P.dcs = {}; P.open = false; };
+        const pnWire = (P, pc, dc) => {
+          P.dcs[dc.label] = dc;
+          dc.onopen = () => { if (dc.label === 'r') { P.open = true; P.hb = Date.now(); } };
+          dc.onclose = () => { if (dc.label === 'r' && P.pc === pc) P.open = false; };
+          dc.onmessage = (e) => { try { P.onmsg && P.onmsg(JSON.parse(e.data)); } catch (er) {} };
+        };
+        const pnMk = (P) => { pnClose(P); const pc = new RTCPeerConnection(PN_CFG); P.pc = pc; pc.onconnectionstatechange = () => { if (P.pc === pc && /failed|closed|disconnected/.test(pc.connectionState)) P.open = false; }; return pc; };
+        async function pnTick(P) {
+          if (P.busy) return;
+          const role = P.role ? P.role() : '';
+          if (!P.alive()) { clearInterval(P.timer); P.timer = 0; pnClose(P); return; }
+          if (!role) { pnClose(P); return; }
+          if (P.open && P.pc && P.dcs.r && P.dcs.r.readyState === 'open') { if (role === 'host' && Date.now() - P.hb > 15000) { P.hb = Date.now(); FB.rtc.update(P.sid, P.rid, { t: Date.now() }).catch(() => {}); } return; }
+          P.open = false; P.busy = true;
+          try {
+            if (role === 'host') {
+              if (!P.pc || Date.now() - P.offerAt > 20000 || /failed|closed/.test(P.pc.connectionState)) {
+                const pc = pnMk(P); pnWire(P, pc, pc.createDataChannel('r', { ordered: true })); pnWire(P, pc, pc.createDataChannel('a', { ordered: false, maxRetransmits: 0 }));
+                await pc.setLocalDescription(await pc.createOffer()); await pnGather(pc);
+                await FB.rtc.set(P.sid, P.rid, { host: P.me, offer: JSON.stringify(pc.localDescription), state: 'open', t: Date.now() }); P.offerAt = Date.now();
+                P.unsub = FB.rtc.watch(P.sid, P.rid, (r) => { if (r && r.answer && !P.answered && P.pc === pc) { P.answered = true; pc.setRemoteDescription(JSON.parse(r.answer)).catch(() => {}); } }); P.answered = false;
+              }
+            } else {
+              const d = await FB.rtc.get(P.sid, P.rid);
+              if (d && d.state === 'open' && d.host !== P.me && d.offer && Date.now() - (d.t || 0) < 30000 && d.offer !== P.tried) {
+                P.tried = d.offer; const pc = pnMk(P); pc.ondatachannel = (e) => pnWire(P, pc, e.channel);
+                await pc.setRemoteDescription(JSON.parse(d.offer)); await pc.setLocalDescription(await pc.createAnswer()); await pnGather(pc);
+                await FB.rtc.update(P.sid, P.rid, { answer: JSON.stringify(pc.localDescription), state: 'joined', guest: P.me });
+              }
+            }
+          } catch (e) { console.warn('Sinuca online (tempo real):', e); } finally { P.busy = false; }
+        }
         const COLORS = [[245, 243, 235], [245, 196, 0], [23, 67, 179], [215, 38, 30], [91, 42, 134], [242, 112, 26], [15, 123, 60], [122, 20, 36], [20, 20, 20]];
         // x,y = centro do buraco desenhado; vr = raio visual; r = raio de captura (a bola cai quando o centro dela entra aqui)
         const POCKETS = [{ x: X0 - 5, y: Y0 - 5.5, r: 22, vr: 20, c: 1 }, { x: 405, y: Y0 - 7.5, r: 20, vr: 18.5, c: 0 }, { x: X1 + 5, y: Y0 - 5.5, r: 22, vr: 20, c: 1 }, { x: X0 - 5, y: Y1 + 5.5, r: 22, vr: 20, c: 1 }, { x: 405, y: Y1 + 7.5, r: 20, vr: 18.5, c: 0 }, { x: X1 + 5, y: Y1 + 5.5, r: 22, vr: 20, c: 1 }];
@@ -7583,7 +7622,7 @@
           const bs = []; balls().forEach(bl => bs.push(bl.n, +bl.x.toFixed(2), +bl.y.toFixed(2), bl.in ? 1 : 0));
           const pg = { k: kind, seq: ++S.seq, gid: S.gid, t: S.turn, g0: S.g[0] || '', g1: S.g[1] || '', m: S.mode === 'over' ? 'over' : S.mode === 'place' ? 'place' : 'aim', ih: S.inHand ? 1 : 0, brk: S.brk ? 1 : 0, ov: S.over, nt: S.note || '', sh: S.shots | 0, pt: S.potted.map(bl => bl.n), b: bs };
           if (withShot) { pg.sa = +S.sAng.toFixed(4); pg.sp = +S.power.toFixed(2); }
-          cur().pg = pg; saveData();
+          cur().pg = pg; pnSend({ t: 'pg', pg }); saveData();
         }
         function applySnap(pg, replay, notify) {
           if (S.gid !== pg.gid) { S.scored = false; S.won = ''; plHideWin(); }
@@ -7674,21 +7713,22 @@
           const spr = (bl, x, y) => { if (bl.dirty) paint(bl); const h = bl.cv.width / SC / 2; ctx.drawImage(bl.cv, x - h, y - h, h * 2, h * 2); };
           bs.forEach(bl => { if (!bl.in) spr(bl, bl.x, bl.y); });
           const c = cue();
-          if (S.mode === 'place' && human() && S.ghost) { ctx.globalAlpha = placeOk(S.ghost.x, S.ghost.y) ? .75 : .3; spr(c, S.ghost.x, S.ghost.y); ctx.globalAlpha = 1; }
-          if ((S.mode === 'strike' || (S.mode === 'aim' && (human() || isCpu()))) && !c.in) {
-            const a = S.mode === 'strike' ? S.sAng : S.ang;
-            if (S.mode === 'aim' && human()) {
+          if (S.mode === 'place' && (human() || online) && S.ghost) { ctx.globalAlpha = placeOk(S.ghost.x, S.ghost.y) ? .75 : .3; spr(c, S.ghost.x, S.ghost.y); ctx.globalAlpha = 1; }
+          const RA = ra();
+          if ((S.mode === 'strike' || (S.mode === 'aim' && (human() || isCpu())) || RA) && !c.in) {
+            const a = S.mode === 'strike' ? S.sAng : (RA ? RA.a : S.ang);
+            if (S.mode === 'aim' && (human() || RA)) {
               const dx = Math.cos(a), dy = Math.sin(a), r = rayCast(c.x, c.y, dx, dy), gx = c.x + dx * r.t, gy = c.y + dy * r.t;
               ctx.save(); ctx.setLineDash([5, 6]); ctx.strokeStyle = 'rgba(255,255,255,.65)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(c.x + dx * R, c.y + dy * R); ctx.lineTo(gx, gy); ctx.stroke(); ctx.setLineDash([]);
               ctx.beginPath(); ctx.arc(gx, gy, R, 0, 7); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.stroke();
               if (r.ball) { const nx = r.ball.x - gx, ny = r.ball.y - gy, nl = Math.hypot(nx, ny) || 1; ctx.strokeStyle = 'rgba(255,230,120,.8)'; ctx.beginPath(); ctx.moveTo(r.ball.x, r.ball.y); ctx.lineTo(r.ball.x + nx / nl * 55, r.ball.y + ny / nl * 55); ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); const tx = -ny / nl, ty = nx / nl, sg = (dx * tx + dy * ty) >= 0 ? 1 : -1; ctx.moveTo(gx, gy); ctx.lineTo(gx + tx * sg * 34, gy + ty * sg * 34); ctx.stroke(); }
               ctx.restore();
             }
-            let tip = 8 + S.power * .5; if (S.mode === 'strike') { const e = S.anim * S.anim; tip = S.pullFrom * (1 - e); } else if (S.charging && S.power > 60) tip += (rnd() - .5) * (S.power - 60) / 40 * 3.5;
+            let tip = 8 + S.power * .5; if (S.mode === 'strike') { const e = S.anim * S.anim; tip = S.pullFrom * (1 - e); } else if ((S.charging || (RA && RA.c)) && S.power > 60) tip += (rnd() - .5) * (S.power - 60) / 40 * 3.5;
             if (!(S.mode === 'aim' && isCpu() && !S.cpu)) drawCue(a, tip);
           }
           // medidor de força (na madeira, à direita)
-          if (S.mode === 'strike' || (S.mode === 'aim' && (human() || isCpu()))) {
+          if (S.mode === 'strike' || (S.mode === 'aim' && (human() || isCpu())) || RA) {
             const gx = 789, gy = 70, gw = 12, gh = 300, f = clamp((S.power - 8) / 92, 0, 1);
             ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(gx - 2, gy - 2, gw + 4, gh + 4);
             const lg = ctx.createLinearGradient(0, gy + gh, 0, gy); lg.addColorStop(0, '#22c55e'); lg.addColorStop(.55, '#facc15'); lg.addColorStop(1, '#ef4444');
@@ -7737,6 +7777,16 @@
           const can = S.mode === 'aim' && mine; goBtn.style.opacity = can ? (S.charging ? .75 : 1) : .4; goBtn.style.pointerEvents = can ? 'auto' : 'none';
         }
 
+        const ra = () => (S.mode === 'aim' && online && !human() && S.ra && S.ra.g === S.gid && S.ra.u === S.turn && performance.now() - S.ra.at < 2500) ? S.ra : null;
+        let lastK = '', lastAt = 0;
+        function sendAim(now) {
+          if (!online || !PN || !PN.open || !human()) return;
+          let m = null;
+          if (S.mode === 'aim' && !cue().in) m = { t: 'aim', a: +S.ang.toFixed(4), p: +S.power.toFixed(1), c: S.charging ? 1 : 0, g: S.gid, u: S.turn };
+          else if (S.mode === 'place' && S.ghost) m = { t: 'gh', x: +S.ghost.x.toFixed(1), y: +S.ghost.y.toFixed(1) };
+          if (!m) return; const k = JSON.stringify(m);
+          if (k !== lastK || now - lastAt > 350) { lastK = k; lastAt = now; pnSend(m, 1); }
+        }
         /* ---------- laço principal (passo fixo de 1/60 s) ---------- */
         function update() {
           sndCount = 0;
@@ -7756,7 +7806,7 @@
           if (!b.isConnected) return;
           if (!last) last = now; acc += Math.min(100, now - last); last = now;
           while (acc >= 16.667) { update(); acc -= 16.667; }
-          draw(); status(); raf = requestAnimationFrame(loop);
+          draw(); status(); sendAim(now); raf = requestAnimationFrame(loop);
         };
 
         /* ---------- controles ---------- */
@@ -7832,6 +7882,23 @@
         b.addEventListener('keyup', (e) => { if (e.target.closest('.pl-panel')) return; if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endCharge(false); } });
         S.charging = false;
         if (S.cfgOpen) { S.cfgOpen = false; setPanel(true); }
+        const ingest = (pg) => {
+          if (!pg || pg.k !== kind || (pg.seq | 0) <= (S.seq | 0)) return;
+          cur().pg = pg;
+          if (pg.sa == null && S.remote && (S.mode === 'rolling' || S.mode === 'strike')) { S.pend = pg; S.seq = pg.seq; }
+          else applySnap(pg, pg.sa != null, true);
+        };
+        if (PN) {
+          PN.sid = brd.shared.sid; PN.rid = 'pool_' + n.id; PN.me = meUid(); PN.alive = () => !!findNote(n.id);
+          PN.role = () => { const u = meUid(); return slotUid(0) === u ? 'host' : slotUid(1) === u ? 'guest' : ''; };
+          PN.onmsg = (m) => {
+            if (m.t === 'pg') ingest(m.pg);
+            else if (m.t === 'aim') { if (!human() && S.gid === m.g && S.turn === m.u) { S.ra = { a: m.a, p: m.p, c: m.c, g: m.g, u: m.u, at: performance.now() }; if (S.mode === 'aim') { S.ang = m.a; S.power = m.p; } } }
+            else if (m.t === 'gh') { if (!human() && S.mode === 'place') S.ghost = { x: m.x, y: m.y }; }
+          };
+          if (!PN.timer) { PN.timer = setInterval(() => pnTick(PN), 2500); }
+          pnTick(PN);
+        }
         if (online) {
           const pg = cur().pg;   // estado oficial da partida (vem da lousa); quem chega agora entra no jogo andando
           if (pg && pg.k === kind) {
