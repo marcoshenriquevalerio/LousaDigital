@@ -7318,7 +7318,7 @@
           '<div class="pl-panel edit-input" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto;min-width:min(86%,300px);max-width:94%;max-height:94%;overflow-y:auto;border:0;background:rgba(18,12,8,.96);color:#fff;border-radius:14px;padding:12px 14px;font-size:max(13px,2.8cqw);box-shadow:0 8px 28px rgba(0,0,0,.65);z-index:5;text-align:left">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:10px"><b style="font-size:1.15em">Configurações</b><button class="pl-x" title="Fechar" style="border:0;background:transparent;color:#fff;font-size:1.2em;cursor:pointer;padding:0 4px">✕</button></div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Legendas e dicas<br><small style="opacity:.65">mensagens na barra de baixo da mesa</small></span><button class="pl-sw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
-          '<div class="pl-vrow" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Aviso falado<br><small style="opacity:.65">fala "Sua vez" com o seu nome</small></span><button class="pl-vsw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
+          '<div class="pl-vrow" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Aviso sonoro<br><small style="opacity:.65">toca um sinal quando a vez passa para você</small></span><button class="pl-vsw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
           '<div class="pl-sbrow" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Placar<br><small style="opacity:.65">fica solto na lousa; só zera quando você zerar</small></span><button class="pl-sbsw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
           '<div class="pl-plrs"></div><div style="opacity:.7;margin:10px 0 5px"><small>Modo de jogo</small></div><div class="pl-modes" style="display:flex;flex-direction:column;gap:5px"></div></div></div>';
         const cv = b.querySelector('canvas'), ctx = cv.getContext('2d'), pw = { value: 55 }, goBtn = b.querySelector('.pl-go'), newBtn = b.querySelector('.pl-new');
@@ -7632,6 +7632,7 @@
         }
         function announceStart() { if (cpuMode || kind === 'free' || S.mode === 'over') return; plShowWin(plWho(cur(), S.turn), 'QUEM COMEÇA', '', false, 'COMEÇA', 4200); }
         function applySnap(pg, replay, notify) {
+          if (notify) maybeChime(pg);
           if (notify && S.gid !== pg.gid && !pg.sh && pg.brk && pg.m !== 'over') setTimeout(announceStart, 0);
           if (S.gid !== pg.gid) { S.scored = false; S.won = ''; plHideWin(); }
           S.gid = pg.gid; S.seq = pg.seq; S.turn = pg.t | 0; S.g = [pg.g0 || null, pg.g1 || null]; S.inHand = !!pg.ih; S.brk = !!pg.brk; S.over = pg.ov == null ? -1 : pg.ov; S.note = pg.nt || ''; S.shots = pg.sh | 0;
@@ -7771,22 +7772,28 @@
         }
         const overTitle = () => kind === 'free' ? 'Mesa limpa!' : names[S.over] + ' venceu!';
         const trayText = () => kind === '9' ? 'Bola 9 · bola da vez: ' + lowest() + ' · encaçapadas: ' + S.potted.length : kind === 'free' ? 'Treino livre · tacadas: ' + S.shots + ' · restam ' + balls().filter(bl => bl.n > 0 && !bl.in).length : names[0] + ' × ' + names[1] + ' · mesa aberta (bolas encaçapadas: ' + S.potted.length + ')';
-        function speakTurn() {
-          if (!online || !(S.mode === 'aim' || S.mode === 'place')) return;
-          const key = S.gid + '|' + S.turn;
-          if (S.spk === key) return;
-          const first = S.spk === undefined; S.spk = key;
-          if (cur().plNoVoice || !human()) return;
-          if (first && !(S.shots === 0 && S.brk)) return;   // ao abrir a página no meio da partida não fala
+        function chime() {
           try {
-            const ss = window.speechSynthesis; if (!ss) return; const nm = names[S.turn] || '';
-            const u = new SpeechSynthesisUtterance('Sua vez, ' + nm); u.lang = 'pt-BR'; u.rate = 1;
-            const v = ss.getVoices().find(x => /^pt[-_]BR/i.test(x.lang)) || ss.getVoices().find(x => /^pt/i.test(x.lang)); if (v) u.voice = v;
-            ss.cancel(); ss.speak(u);
+            const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+            const ac = WG.pac || (WG.pac = new AC()); if (ac.state === 'suspended') ac.resume();
+            const t0 = ac.currentTime + .02;
+            [[880, 0], [1318.5, .13]].forEach(([f, d]) => {
+              const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f;
+              g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(.28, t0 + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + d + .45);
+              o.connect(g); g.connect(ac.destination); o.start(t0 + d); o.stop(t0 + d + .5);
+            });
           } catch (e) {}
         }
+        // toca assim que o resultado oficial diz que a vez passou para mim (não espera as bolas pararem na minha tela)
+        function maybeChime(pg) {
+          if (!online || !pg || cur().plNoVoice || pg.sa != null || pg.m === 'over') return;
+          if (slotUid(pg.t | 0) !== meUid()) return;
+          const key = pg.gid + '|' + pg.t + '|' + (pg.sh | 0); if (S.chk === key) return;
+          const turnChanged = S.gid !== pg.gid ? (!(pg.sh | 0) && !!pg.brk) : S.turn !== (pg.t | 0);
+          if (!turnChanged) return;
+          S.chk = key; chime();
+        }
         function status() {
-          speakTurn();
           let t; const mine = human(), who = online && mine ? 'Sua vez' : 'Vez de ' + names[S.turn];
           if (S.mode === 'over') t = overTitle() + ' ' + (S.note || '');
           else if (S.mode === 'wait') t = 'Aguardando o resultado da jogada…';
@@ -7920,7 +7927,7 @@
         const ingest = (pg) => {
           if (!pg || pg.k !== kind || (pg.seq | 0) <= (S.seq | 0)) return;
           cur().pg = pg;
-          if (pg.sa == null && S.remote && (S.mode === 'rolling' || S.mode === 'strike')) { S.pend = pg; S.seq = pg.seq; }
+          if (pg.sa == null && S.remote && (S.mode === 'rolling' || S.mode === 'strike')) { maybeChime(pg); S.pend = pg; S.seq = pg.seq; }
           else applySnap(pg, pg.sa != null, true);
         };
         if (online) (WG.poolPg || (WG.poolPg = {}))[n.id] = ingest;
@@ -7946,7 +7953,7 @@
           const pg = cur().pg;   // estado oficial da partida (vem da lousa); quem chega agora entra no jogo andando
           if (pg && pg.k === kind) {
             if ((pg.seq | 0) > (S.seq | 0)) {
-              if (pg.sa == null && S.remote && (S.mode === 'rolling' || S.mode === 'strike')) { S.pend = pg; S.seq = pg.seq; }   // ainda vendo a jogada: o resultado entra quando as bolas pararem
+              if (pg.sa == null && S.remote && (S.mode === 'rolling' || S.mode === 'strike')) { maybeChime(pg); S.pend = pg; S.seq = pg.seq; }   // ainda vendo a jogada: o resultado entra quando as bolas pararem
               else applySnap(pg, !fresh && pg.sa != null, !fresh);
             }
           } else if (isOwner()) { publish(0); announceStart(); }
