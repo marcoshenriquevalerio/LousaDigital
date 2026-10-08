@@ -1837,8 +1837,10 @@
       const hit = ckResolveTextHit(e);
       if (!hit) return;
       e.__ckHit = hit;
-      /* peça comum que estava por baixo de uma área vazia de outra: a peça de cima não pode agarrar o toque */
-      if (!hit.classList.contains('ck-text') && !hit.classList.contains('ck-ghost')) e.stopPropagation();
+      /* peça que está de fato visível sob o ponteiro (seta, forma, texto, qualquer uma) mas o toque caiu na caixa vazia de OUTRA peça:
+         a outra peça não pode agarrar o toque, senão ela sobrescreve o arraste e a seta/forma não se move */
+      const ckNat = e.target && e.target.closest ? e.target.closest('.chalk-note') : null;
+      if (ckNat || (!hit.classList.contains('ck-text') && !hit.classList.contains('ck-ghost'))) e.stopPropagation();
       if (hit._startDrag) hit._startDrag(e);
     }, true);
     let ckCurRaf = 0;
