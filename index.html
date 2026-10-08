@@ -7306,11 +7306,13 @@
         draw(); return () => {};
       },
       pool(b, n) {
-        const W = 810, H = 535, X0 = 45, Y0 = 45, X1 = 765, Y1 = 405, R = 9, SC = 2, FS = 6;
+        const W = 810, H = 535, X0 = 45, Y0 = 45, X1 = 765, Y1 = 405, R = 9, SC = (window.devicePixelRatio || 1) >= 1.5 ? 2 : 1, FS = 6;
         const WS = n.ws || 0, kind = WS < 2 ? '8' : WS < 4 ? '9' : 'free', cpuMode = WS === 0 || WS === 2;
         const cur = () => findNote(n.id) || n, brd = getActiveBoard(), shared = !!(brd.shared && brd.shared.sid), online = shared && !cpuMode && kind !== 'free';   // lousa compartilhada + 2 jogadores = partida entre as pessoas
         const meUid = () => { const m = plMe(); return m ? m.uid : 'local'; }, isOwner = () => !shared || plOwnerUid(brd) === meUid(), slotUid = (p) => plSlots(cur())[p];
-        const names = { get 0() { return kind === 'free' || cpuMode ? ['Você', 'Computador'][0] : plWho(cur(), 0).name; }, get 1() { return kind === 'free' ? 'Você' : cpuMode ? 'Computador' : plWho(cur(), 1).name; } };
+        const nmC = { t: -1e9, v: ['Você', 'Computador'] };
+        const nmCalc = () => { const t = performance.now(); if (t - nmC.t > 400) { nmC.t = t; nmC.v = [kind === 'free' || cpuMode ? 'Você' : plWho(cur(), 0).name, kind === 'free' ? 'Você' : cpuMode ? 'Computador' : plWho(cur(), 1).name]; } return nmC.v; };
+        const names = { get 0() { return nmCalc()[0]; }, get 1() { return nmCalc()[1]; } };
         b.innerHTML = '<div style="position:relative"><canvas width="' + (W * SC) + '" height="' + (H * SC) + '" class="edit-input" style="width:100%;display:block;touch-action:none;border-radius:10px;cursor:crosshair;border:0"></canvas>' +
           '<div class="edit-input" style="position:absolute;right:2.2%;bottom:1.4%;width:auto;border:0;padding:0;height:6.6%;min-height:22px;display:flex;gap:5px;align-items:stretch"><button class="pl-go" title="Segure para dar força e solte para tacar" style="border:1px solid rgba(252,211,77,.55);background:rgba(0,0,0,.38);color:#fde68a;border-radius:7px;padding:0 7px;font:600 max(10px,2.1cqw) Arial,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;touch-action:none;user-select:none;-webkit-user-select:none"><i class="fa-solid fa-bullseye"></i>Tacar</button><button class="pl-cfg" title="Configurações" style="border:1px solid rgba(252,211,77,.55);background:rgba(0,0,0,.38);color:#fde68a;border-radius:7px;padding:0 7px;font:600 max(10px,2.1cqw) Arial,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;touch-action:none;user-select:none;-webkit-user-select:none"><i class="fa-solid fa-gear"></i></button><button class="pl-new" title="Novo jogo" style="border:1px solid rgba(252,211,77,.55);background:rgba(0,0,0,.38);color:#fde68a;border-radius:7px;padding:0 7px;font:600 max(10px,2.1cqw) Arial,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;touch-action:none;user-select:none;-webkit-user-select:none"><i class="fa-solid fa-rotate-right"></i>Novo jogo</button></div>' +
           '<div class="pl-panel edit-input" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto;min-width:min(86%,300px);max-width:94%;max-height:94%;overflow-y:auto;border:0;background:rgba(18,12,8,.96);color:#fff;border-radius:14px;padding:12px 14px;font-size:max(13px,2.8cqw);box-shadow:0 8px 28px rgba(0,0,0,.65);z-index:5;text-align:left">' +
@@ -7469,7 +7471,7 @@
           rr(4, 456, W - 8, 75, 10); g.strokeStyle = 'rgba(255,220,170,.2)'; g.lineWidth = 1.5; g.stroke();
           return c;
         }
-        const TBL = WG.poolTbl || (WG.poolTbl = buildTable());
+        const TBL = (WG.poolTbl && WG.poolTblSC === SC) ? WG.poolTbl : (WG.poolTblSC = SC, WG.poolTbl = buildTable());
 
         /* ---------- bola: esfera sombreada pixel a pixel (gira de acordo com o rolamento) ---------- */
         const LX = -.42, LY = -.55, LZ = .72, ll = Math.hypot(LX, LY, LZ), lx = LX / ll, ly = LY / ll, lz = LZ / ll;
@@ -7711,13 +7713,14 @@
         function fire() { if (S.mode !== 'aim') return; S.sAng = S.ang; S.mode = 'strike'; S.anim = 0; S.pullFrom = 8 + S.power * .5; S.cpu = null; S.remote = false; publish(1); }
 
         /* ---------- desenho ---------- */
-        let SHD = null;
+        let SHD = null, FR = 0;
         function draw() {
+          FR++;
           ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.drawImage(TBL, 0, 0, W, H);
           const bs = balls();
           if (!SHD) { const q = Math.ceil(R * 2.6 * SC); SHD = document.createElement('canvas'); SHD.width = SHD.height = q; const g2 = SHD.getContext('2d'), m = q / 2, gg = g2.createRadialGradient(m, m, 1 * SC, m, m, R * 1.25 * SC); gg.addColorStop(0, 'rgba(0,0,0,.5)'); gg.addColorStop(1, 'rgba(0,0,0,0)'); g2.fillStyle = gg; g2.beginPath(); g2.arc(m, m, R * 1.25 * SC, 0, 7); g2.fill(); }
           { const hs = SHD.width / SC / 2; bs.forEach(bl => { if (bl.in) return; ctx.drawImage(SHD, bl.x + 2.5 - hs, bl.y + 3.5 - hs, hs * 2, hs * 2); }); }
-          const spr = (bl, x, y) => { if (bl.dirty) paint(bl); const h = bl.cv.width / SC / 2; ctx.drawImage(bl.cv, x - h, y - h, h * 2, h * 2); };
+          const spr = (bl, x, y) => { if (bl.dirty && (bl.pf === undefined || FR - bl.pf >= 2)) { paint(bl); bl.pf = FR; } const h = bl.cv.width / SC / 2; ctx.drawImage(bl.cv, x - h, y - h, h * 2, h * 2); };
           bs.forEach(bl => { if (!bl.in) spr(bl, bl.x, bl.y); });
           const c = cue();
           if (S.mode === 'place' && (human() || online) && S.ghost) { ctx.globalAlpha = placeOk(S.ghost.x, S.ghost.y) ? .75 : .3; spr(c, S.ghost.x, S.ghost.y); ctx.globalAlpha = 1; }
@@ -8553,12 +8556,13 @@
       if (!force && (data.rev || 0) <= (SH.rev[sid] || 0) && SH.rev[sid] !== undefined) return;
       SH.info[sid] = { ownerUid: data.ownerUid, ownerEmail: data.ownerEmail, members: data.members, memberEmails: data.memberEmails, invitedEmails: data.invitedEmails, profiles: data.memberProfiles || {} };
       if (data.members.indexOf(shMe().uid) < 0) { shDropLocalBoard(sid, 'Seu acesso a esta lousa foi encerrado.'); return; }
-      const poolSig = () => stable({ n: (b.notes || []).map(x => x.wk === 'pool' ? Object.assign({}, x, { pg: 0 }) : x), s: b.strokes, m: b.name, z: b.nextZIndex, f: b.fin });
-      const sigBefore = SH.base[sid] ? poolSig() : null;
-      shMerge(b, data.content, SH.base[sid] || null);
-      const onlyPool = sigBefore !== null && sigBefore === poolSig() && (b.notes || []).some(x => x.wk === 'pool');
-      if (onlyPool) (b.notes || []).forEach(x => { if (x.wk === 'pool' && x.pg && WG.poolPg && WG.poolPg[x.id]) { try { WG.poolPg[x.id](x.pg); } catch (e) {} } });
-      SH.rev[sid] = data.rev; SH.sig[sid] = stable(shNorm(data.content)); SH.base[sid] = shBase(data.content);
+      const oldBase = SH.base[sid] || null, newBase = shBase(data.content);
+      shMerge(b, data.content, oldBase);
+      const sameMap = (x, y, ign) => { const kx = Object.keys(x), ky = Object.keys(y); if (kx.length !== ky.length) return false; return kx.every(k => { if (x[k] === y[k]) return true; if (!ign || !ign[k]) return false; try { const p = JSON.parse(x[k]), q = JSON.parse(y[k]); delete p.pg; delete q.pg; return stable(p) === stable(q); } catch (er) { return false; } }); };
+      const poolIds = {}; (b.notes || []).forEach(x => { if (x.wk === 'pool') poolIds[x.id] = 1; });
+      const onlyPool = !!oldBase && Object.keys(poolIds).length > 0 && sameMap(oldBase.notes, newBase.notes, poolIds) && sameMap(oldBase.strokes, newBase.strokes) && sameMap(oldBase.rows, newBase.rows) && stable(oldBase.f) === stable(newBase.f);
+      if (onlyPool) (b.notes || []).forEach(x => { if (x.wk === 'pool' && x.pg && WG.poolPg && WG.poolPg[x.id]) { try { WG.poolPg[x.id](x.pg); } catch (er) {} } });
+      SH.rev[sid] = data.rev; SH.sig[sid] = stable(shNorm(data.content)); SH.base[sid] = newBase;
       shCacheLocal();
       const activeB = getActiveBoard();
       if (onlyPool) { /* só mudou a jogada da sinuca: ela é atualizada ao vivo, sem refazer a lousa */ }
