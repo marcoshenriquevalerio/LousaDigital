@@ -1803,8 +1803,8 @@
     }
 
     /* há algo visível desta peça sob o ponteiro? */
-    function ckPieceHit(el, x, y) {
-      if (el.classList.contains('is-selected')) return true;   // peça ativa: a caixa toda vale
+    function ckPieceHit(el, x, y, strict) {
+      if (!strict && el.classList.contains('is-selected')) return true;   // peça ativa: a caixa toda vale (só quando nada mais está visível ali)
       if (el.classList.contains('ck-text')) return ckTextHitOne(el, x, y);
       if (el.classList.contains('ck-ghost')) return ckShapeHitOne(el, x, y);
       return ckPaintsAt(el, x, y);
@@ -1822,8 +1822,12 @@
         const r = el.getBoundingClientRect();
         return x >= r.left - 12 && x <= r.right + 12 && y >= r.top - 12 && y <= r.bottom + 12;
       }).sort((a, b) => ckZ(b) - ckZ(a));
-      for (const el of cands) {
-        if (!ckPieceHit(el, x, y)) continue;
+      for (const el of cands) {   // 1º: o que está de fato visível sob o ponteiro (mesmo que a peça de cima esteja selecionada)
+        if (!ckPieceHit(el, x, y, true)) continue;
+        return el === nat ? null : el;
+      }
+      for (const el of cands) {   // 2º: nada visível: a caixa inteira da peça selecionada
+        if (!el.classList.contains('is-selected')) continue;
         return el === nat ? null : el;
       }
       return null;
@@ -5111,30 +5115,68 @@
     /* ---------- arrastar o apagador ---------- */
     (function initEraser() {
       const el = byId('eraser');
+      /* mesma regra do giz: carregando o apagador não apaga; parou (sem sair do lugar) por CK_HOLD_MS → começa a apagar; mexeu → recomeça a contagem */
+      function holdBarShow(d, ms) {
+        const bar = byId('chalkHold'); if (!bar) return;
+        if (bar.parentNode !== el.parentNode) el.parentNode.appendChild(bar);
+        const { w } = eraserDims(), bw = 38, bh = 4;
+        bar.style.width = bw + 'px'; bar.style.height = bh + 'px';
+        bar.style.left = (d.px + w / 2 - bw / 2) + 'px'; bar.style.top = Math.max(2, d.py - 10) + 'px';
+        bar.style.setProperty('--ckd', ms + 'ms');
+        bar.classList.remove('on'); void bar.offsetWidth; bar.classList.add('on');
+      }
+      function holdBarHide() { const bar = byId('chalkHold'); if (bar) bar.classList.remove('on'); }
+      function armStill(d) {
+        clearTimeout(d.stillT); clearTimeout(d.holdT); holdBarHide();
+        d.ax = d.lx; d.ay = d.ly;
+        d.stillT = setTimeout(() => {
+          if (eraserDrag !== d || d.erasing || eraserPlace) return;
+          if (CK_HOLD_MS >= 300) holdBarShow(d, CK_HOLD_MS);
+          d.holdT = setTimeout(() => {
+            if (eraserDrag !== d || d.erasing || eraserPlace) return;
+            holdBarHide(); startErase(d);
+          }, CK_HOLD_MS);
+        }, 0);
+      }
+      function startErase(d) {
+        d.erasing = true; eraserSnd.start(d.lx, d.ly);
+        eraserSweep(d.px, d.py, d.px, d.py, d.touched);
+        armPause(d);
+      }
+      /* pausa apagando (sem soltar): para de apagar; para voltar a apagar é preciso mover e parar de novo */
+      function armPause(d) {
+        clearTimeout(d.pauseT); d.cx = d.lx; d.cy = d.ly;
+        d.pauseT = setTimeout(() => {
+          if (eraserDrag !== d || !d.erasing) return;
+          d.erasing = false; eraserSnd.stop(); d.ax = d.lx; d.ay = d.ly;
+        }, CK_HOLD_MS);
+      }
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault(); e.stopPropagation();
         const r = el.getBoundingClientRect();
         eraserDrag = {
           pid: e.pointerId, ox: (e.clientX - r.left) / boardScale, oy: (e.clientY - r.top) / boardScale,
           sx: e.clientX, sy: e.clientY, px: parseFloat(el.style.left) || 0, py: parseFloat(el.style.top) || 0,
-          moved: false, touched: new Set()
+          moved: false, touched: new Set(), erasing: false, lx: e.clientX, ly: e.clientY, ax: e.clientX, ay: e.clientY, cx: e.clientX, cy: e.clientY, stillT: 0, holdT: 0, pauseT: 0
         };
         el.style.transition = 'none';
         el.classList.add('is-erasing');
-        if (!eraserPlace) eraserSnd.start(e.clientX, e.clientY);
         try { el.setPointerCapture(e.pointerId); } catch (err) {}
+        if (!eraserPlace) armStill(eraserDrag);   // igual ao giz: só apaga depois de uma pausa rápida
       });
       el.addEventListener('pointermove', (e) => {
         const d = eraserDrag;
         if (!d || e.pointerId !== d.pid) return;
         e.preventDefault();
+        d.lx = e.clientX; d.ly = e.clientY;
         if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 5) return;
         d.moved = true;
         const mn = byId('boardCanvas'), cr = mn.getBoundingClientRect(), { w, h } = eraserDims();
         const x = Math.max(0, Math.min((e.clientX - cr.left) / boardScale - d.ox, mn.clientWidth - w));
         const y = Math.max(0, Math.min((e.clientY - cr.top) / boardScale - d.oy, mn.clientHeight - h));
         el.style.left = x + 'px'; el.style.top = y + 'px';
-        if (!eraserPlace) {
+        if (!eraserPlace && d.erasing) {
+          if (Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > CK_STILL_PX) armPause(d);
           const hit = eraserSweep(d.px, d.py, x, y, d.touched);
           eraserSnd.move(e.clientX, e.clientY, hit);
           const now = performance.now();
@@ -5144,11 +5186,13 @@
             for (let i = 0; i < k; i++) spawnPuff(x + w * (0.15 + Math.random() * 0.7), y + h * (0.55 + Math.random() * 0.4));
           }
         }
+        else if (!eraserPlace && Math.hypot(e.clientX - d.ax, e.clientY - d.ay) > CK_STILL_PX) { d.px = x; d.py = y; armStill(d); }   // carregando: saiu do lugar, a espera recomeça
         d.px = x; d.py = y;
       });
       const end = (e) => {
         const d = eraserDrag;
         if (!d || (e && e.pointerId !== d.pid)) return;
+        clearTimeout(d.stillT); clearTimeout(d.holdT); clearTimeout(d.pauseT); holdBarHide();
         eraserDrag = null;
         eraserSnd.stop();
         el.classList.remove('is-erasing');
