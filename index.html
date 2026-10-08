@@ -7318,11 +7318,14 @@
           '<div class="pl-panel edit-input" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto;min-width:min(86%,300px);max-width:94%;max-height:94%;overflow-y:auto;border:0;background:rgba(18,12,8,.96);color:#fff;border-radius:14px;padding:12px 14px;font-size:max(13px,2.8cqw);box-shadow:0 8px 28px rgba(0,0,0,.65);z-index:5;text-align:left">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:10px"><b style="font-size:1.15em">Configurações</b><button class="pl-x" title="Fechar" style="border:0;background:transparent;color:#fff;font-size:1.2em;cursor:pointer;padding:0 4px">✕</button></div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Legendas e dicas<br><small style="opacity:.65">mensagens na barra de baixo da mesa</small></span><button class="pl-sw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Modo leve<br><small style="opacity:.65">para aparelho lento: menos detalhe, mais fluidez (só neste aparelho)</small></span><button class="pl-lsw" role="switch" aria-checked="false" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
           '<div class="pl-vrow" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Aviso sonoro<br><small style="opacity:.65">toca um sinal quando a vez passa para você</small></span><button class="pl-vsw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
           '<div class="pl-sbrow" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Placar<br><small style="opacity:.65">fica solto na lousa; só zera quando você zerar</small></span><button class="pl-sbsw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
           '<div class="pl-plrs"></div><div style="opacity:.7;margin:10px 0 5px"><small>Modo de jogo</small></div><div class="pl-modes" style="display:flex;flex-direction:column;gap:5px"></div></div></div>';
         const cv = b.querySelector('canvas'), ctx = cv.getContext('2d'), pw = { value: 55 }, goBtn = b.querySelector('.pl-go'), newBtn = b.querySelector('.pl-new');
         const POOL = WG.pool || (WG.pool = {}); let legend = '', legendOn = true;
+        let lite = false; try { lite = localStorage.getItem('poolLite') === '1'; } catch (e) {}
+        let LS = SC;   // resolução real do desenho (o modo leve usa 1x, que é bem mais rápido)
         /* ---------- tempo real entre os dois jogadores (WebRTC direto; a nuvem continua como reserva) ---------- */
         const NETS = WG.pnet || (WG.pnet = {});
         const PN = online && window.FB && FB.rtc ? (NETS[n.id] || (NETS[n.id] = { pc: null, dcs: {}, open: false, offerAt: 0, hb: 0, busy: false, tried: '', unsub: null, timer: 0 })) : null;
@@ -7718,11 +7721,11 @@
         let SHD = null, FR = 0;
         function draw() {
           FR++;
-          ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.drawImage(TBL, 0, 0, W, H);
+          ctx.setTransform(LS, 0, 0, LS, 0, 0); ctx.drawImage(TBL, 0, 0, W, H);
           const bs = balls();
           if (!SHD) { const q = Math.ceil(R * 2.6 * SC); SHD = document.createElement('canvas'); SHD.width = SHD.height = q; const g2 = SHD.getContext('2d'), m = q / 2, gg = g2.createRadialGradient(m, m, 1 * SC, m, m, R * 1.25 * SC); gg.addColorStop(0, 'rgba(0,0,0,.5)'); gg.addColorStop(1, 'rgba(0,0,0,0)'); g2.fillStyle = gg; g2.beginPath(); g2.arc(m, m, R * 1.25 * SC, 0, 7); g2.fill(); }
           { const hs = SHD.width / SC / 2; bs.forEach(bl => { if (bl.in) return; ctx.drawImage(SHD, bl.x + 2.5 - hs, bl.y + 3.5 - hs, hs * 2, hs * 2); }); }
-          const spr = (bl, x, y) => { if (bl.dirty && (bl.pf === undefined || FR - bl.pf >= 2)) { paint(bl); bl.pf = FR; } const h = bl.cv.width / SC / 2; ctx.drawImage(bl.cv, x - h, y - h, h * 2, h * 2); };
+          const spr = (bl, x, y) => { if (bl.dirty && (bl.pf === undefined || FR - bl.pf >= (lite ? 3 : 2))) { paint(bl); bl.pf = FR; } const h = bl.cv.width / SC / 2; ctx.drawImage(bl.cv, x - h, y - h, h * 2, h * 2); };
           bs.forEach(bl => { if (!bl.in) spr(bl, bl.x, bl.y); });
           const c = cue();
           if (S.mode === 'place' && (human() || online) && S.ghost) { ctx.globalAlpha = placeOk(S.ghost.x, S.ghost.y) ? .75 : .3; spr(c, S.ghost.x, S.ghost.y); ctx.globalAlpha = 1; }
@@ -7745,7 +7748,7 @@
             ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(gx - 2, gy - 2, gw + 4, gh + 4);
             const lg = ctx.createLinearGradient(0, gy + gh, 0, gy); lg.addColorStop(0, '#22c55e'); lg.addColorStop(.55, '#facc15'); lg.addColorStop(1, '#ef4444');
             ctx.fillStyle = lg; ctx.fillRect(gx, gy + gh * (1 - f), gw, gh * f);
-            if (f > .6) { const k = (f - .6) / .4, pulse = .5 + .5 * Math.sin(performance.now() / (90 - 50 * k)); ctx.save(); ctx.shadowColor = 'rgba(255,60,30,' + (.4 + .6 * k) + ')'; ctx.shadowBlur = 8 + 18 * k * pulse; ctx.fillStyle = 'rgba(255,80,40,' + (.3 * k) + ')'; ctx.fillRect(gx, gy + gh * (1 - f), gw, gh * f); ctx.restore(); }
+            if (f > .6 && !lite) { const k = (f - .6) / .4, pulse = .5 + .5 * Math.sin(performance.now() / (90 - 50 * k)); ctx.save(); ctx.shadowColor = 'rgba(255,60,30,' + (.4 + .6 * k) + ')'; ctx.shadowBlur = 8 + 18 * k * pulse; ctx.fillStyle = 'rgba(255,80,40,' + (.3 * k) + ')'; ctx.fillRect(gx, gy + gh * (1 - f), gw, gh * f); ctx.restore(); }
             ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1; for (let i = 0; i <= 10; i++) { const yy = gy + gh * i / 10; ctx.beginPath(); ctx.moveTo(gx, yy); ctx.lineTo(gx + (i % 5 ? 4 : 7), yy); ctx.stroke(); }
             ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText(Math.round(f * 100) + '%', gx + gw / 2, gy + gh + 16); ctx.textAlign = 'left';
           }
@@ -7810,8 +7813,16 @@
           const can = S.mode === 'aim' && mine; goBtn.style.opacity = can ? (S.charging ? .75 : 1) : .4; goBtn.style.pointerEvents = can ? 'auto' : 'none';
         }
 
+        const applyLite = () => { LS = lite ? 1 : SC; if (cv.width !== W * LS) { cv.width = W * LS; cv.height = H * LS; } };
+        applyLite();
+        let fq = 0, fs = 0, fl = 0;
+        function perfWatch(now) {   // se o aparelho não acompanha (muitos quadros lentos), liga o modo leve sozinho
+          if (!fl) { fl = now; return; } const d = now - fl; fl = now; if (lite || d > 400) return;
+          fq++; if (d > 32) fs++;
+          if (fq >= 90) { if (fs > 22) { lite = true; try { localStorage.setItem('poolLite', '1'); } catch (e) {} applyLite(); try { setSw(liteEl, true); } catch (e) {} } fq = fs = 0; }
+        }
         const ra = () => (S.mode === 'aim' && online && !human() && S.ra && S.ra.g === S.gid && S.ra.u === S.turn && performance.now() - S.ra.at < 2500) ? S.ra : null;
-        let lastK = '', lastAt = 0, sq = 0, rq = 0, lastSm = 0;
+        let lastK = '', lastAt = 0, lastSm = 0; const SS = WG.pss || (WG.pss = Math.random().toString(36).slice(2, 8));
         function smoothRemote(now) {
           const dt = lastSm ? Math.min(100, now - lastSm) : 16; lastSm = now; if (human()) return;
           const k = 1 - Math.exp(-dt / 38), r = S.ra;
@@ -7821,9 +7832,9 @@
         function sendAim(now) {
           if (!online || !PN || !PN.open || !human()) return;
           let m = null;
-          if (S.mode === 'aim' && !cue().in) m = { t: 'aim', q: ++sq, a: +S.ang.toFixed(4), p: +S.power.toFixed(1), c: S.charging ? 1 : 0, g: S.gid, u: S.turn };
-          else if (S.mode === 'place' && S.ghost) m = { t: 'gh', q: ++sq, x: +S.ghost.x.toFixed(1), y: +S.ghost.y.toFixed(1) };
-          if (!m) return; const k = JSON.stringify(Object.assign({}, m, { q: 0 }));
+          if (S.mode === 'aim' && !cue().in) m = { t: 'aim', s: SS, q: (WG.psq = (WG.psq || 0) + 1), a: +S.ang.toFixed(4), p: +S.power.toFixed(1), c: S.charging ? 1 : 0, g: S.gid, u: S.turn };
+          else if (S.mode === 'place' && S.ghost) m = { t: 'gh', s: SS, q: (WG.psq = (WG.psq || 0) + 1), x: +S.ghost.x.toFixed(1), y: +S.ghost.y.toFixed(1) };
+          if (!m) return; const k = JSON.stringify(Object.assign({}, m, { q: 0, s: 0 }));
           if (k !== lastK || now - lastAt > 350) { lastK = k; lastAt = now; pnSend(m, 1); }
         }
         /* ---------- laço principal (passo fixo de 1/60 s) ---------- */
@@ -7843,9 +7854,9 @@
         let raf = 0, last = 0, acc = 0;
         const loop = (now) => {
           if (!b.isConnected) return;
-          if (!last) last = now; acc += Math.min(100, now - last); last = now;
+          if (!last) last = now; acc += Math.min(50, now - last); last = now;
           while (acc >= 16.667) { update(); acc -= 16.667; }
-          smoothRemote(now); draw(); status(); sendAim(now); window.__rtcBusy = (PN && PN.open && (S.mode === 'rolling' || S.mode === 'strike')) ? performance.now() : 0; raf = requestAnimationFrame(loop);
+          smoothRemote(now); draw(); perfWatch(now); status(); sendAim(now); window.__rtcBusy = (PN && PN.open && (S.mode === 'rolling' || S.mode === 'strike')) ? performance.now() : 0; raf = requestAnimationFrame(loop);
         };
 
         /* ---------- controles ---------- */
@@ -7858,6 +7869,8 @@
         const sbNote = () => getActiveBoard().notes.find(x => x.type === 'widget' && x.wk === 'poolscore' && x.pid === n.id);
         const vEl = b.querySelector('.pl-vsw'); if (!online) b.querySelector('.pl-vrow').style.display = 'none';
         const applyLeg = () => { legendOn = !cur().plHide; setSw(swEl, legendOn); setSw(sbEl, !!sbNote()); setSw(vEl, !cur().plNoVoice); };
+        const liteEl = b.querySelector('.pl-lsw'); setSw(liteEl, lite);
+        liteEl.addEventListener('click', () => { lite = !lite; try { localStorage.setItem('poolLite', lite ? '1' : '0'); } catch (e) {} applyLite(); setSw(liteEl, lite); });
         vEl.addEventListener('click', () => { const c = cur(); c.plNoVoice = !c.plNoVoice; saveData(); applyLeg(); });
         const reopen = () => { S.cfgOpen = true; renderNotes(); };
         WG_KINDS.pool.styles.forEach((nm, i) => { const bt = document.createElement('button'); bt.textContent = (i === WS ? '● ' : '○ ') + nm; bt.style.cssText = 'text-align:left;border:1px solid ' + (i === WS ? '#fcd34d' : 'rgba(255,255,255,.25)') + ';background:' + (i === WS ? 'rgba(252,211,77,.18)' : 'transparent') + ';color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit'; bt.addEventListener('click', () => { if (i === WS) return; const c = cur(); c.ws = i; delete c.pg; saveData(); reopen(); }); modesEl.appendChild(bt); });
@@ -7939,12 +7952,12 @@
             else if (m.t === 'aim') {
               if (!human() && S.gid === m.g && S.turn === m.u) {
                 const t = performance.now(), r = S.ra;
-                if (r && r.g === m.g && r.u === m.u) { if (m.q && m.q < r.q) return; r.a = m.a; r.p = m.p; r.c = m.c; r.q = m.q; r.at = t; }
-                else S.ra = { a: m.a, p: m.p, c: m.c, g: m.g, u: m.u, q: m.q, at: t, da: m.a, dp: m.p };
+                if (r && r.g === m.g && r.u === m.u) { if (m.q && r.s === m.s && m.q < r.q) return; r.a = m.a; r.p = m.p; r.c = m.c; r.q = m.q; r.s = m.s; r.at = t; }
+                else S.ra = { a: m.a, p: m.p, c: m.c, g: m.g, u: m.u, q: m.q, s: m.s, at: t, da: m.a, dp: m.p };
                 if (S.mode === 'aim' && S.ra.da === m.a && !r) { S.ang = m.a; S.power = m.p; }
               }
             }
-            else if (m.t === 'gh') { if (!human() && S.mode === 'place') { if (m.q && m.q < rq) return; rq = m.q; S.gt = { x: m.x, y: m.y }; if (!S.ghost) S.ghost = { x: m.x, y: m.y }; } }
+            else if (m.t === 'gh') { if (!human() && S.mode === 'place') { if (m.q && S.rqs === m.s && m.q < S.rq) return; S.rq = m.q; S.rqs = m.s; S.gt = { x: m.x, y: m.y }; if (!S.ghost) S.ghost = { x: m.x, y: m.y }; } }
           };
           if (!PN.timer) { PN.timer = setInterval(() => pnTick(PN), 2500); }
           pnTick(PN);
@@ -8589,6 +8602,7 @@
     }
 
     function shApplyRemote(sid, data, force) {
+      if (!force && window.rtcBusy && window.rtcBusy()) { SH.defer = SH.defer || {}; clearTimeout(SH.defer[sid]); SH.defer[sid] = setTimeout(() => shApplyRemote(sid, data, false), 600); return; }   // sinuca ao vivo rolando: aplica logo depois
       const b = shBoard(sid); if (!b) return;
       shSetInfo(sid, data);
       if (!force && (data.rev || 0) <= (SH.rev[sid] || 0) && SH.rev[sid] !== undefined) return;
