@@ -7318,6 +7318,7 @@
           '<div class="pl-panel edit-input" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto;min-width:min(86%,300px);max-width:94%;max-height:94%;overflow-y:auto;border:0;background:rgba(18,12,8,.96);color:#fff;border-radius:14px;padding:12px 14px;font-size:max(13px,2.8cqw);box-shadow:0 8px 28px rgba(0,0,0,.65);z-index:5;text-align:left">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:10px"><b style="font-size:1.15em">Configurações</b><button class="pl-x" title="Fechar" style="border:0;background:transparent;color:#fff;font-size:1.2em;cursor:pointer;padding:0 4px">✕</button></div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Legendas e dicas<br><small style="opacity:.65">mensagens na barra de baixo da mesa</small></span><button class="pl-sw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
+          '<div class="pl-vrow" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Aviso falado<br><small style="opacity:.65">fala "Sua vez" com o seu nome</small></span><button class="pl-vsw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
           '<div class="pl-sbrow" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px"><span>Placar<br><small style="opacity:.65">fica solto na lousa; só zera quando você zerar</small></span><button class="pl-sbsw" role="switch" aria-checked="true" style="flex:none;width:44px;height:25px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;transition:background .2s"><span style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:left .2s"></span></button></div>' +
           '<div class="pl-plrs"></div><div style="opacity:.7;margin:10px 0 5px"><small>Modo de jogo</small></div><div class="pl-modes" style="display:flex;flex-direction:column;gap:5px"></div></div></div>';
         const cv = b.querySelector('canvas'), ctx = cv.getContext('2d'), pw = { value: 55 }, goBtn = b.querySelector('.pl-go'), newBtn = b.querySelector('.pl-new');
@@ -7726,7 +7727,7 @@
           if (S.mode === 'place' && (human() || online) && S.ghost) { ctx.globalAlpha = placeOk(S.ghost.x, S.ghost.y) ? .75 : .3; spr(c, S.ghost.x, S.ghost.y); ctx.globalAlpha = 1; }
           const RA = ra();
           if ((S.mode === 'strike' || (S.mode === 'aim' && (human() || isCpu())) || RA) && !c.in) {
-            const a = S.mode === 'strike' ? S.sAng : (RA ? RA.a : S.ang);
+            const a = S.mode === 'strike' ? S.sAng : (RA ? RA.da : S.ang);
             if (S.mode === 'aim' && (human() || RA)) {
               const dx = Math.cos(a), dy = Math.sin(a), r = rayCast(c.x, c.y, dx, dy), gx = c.x + dx * r.t, gy = c.y + dy * r.t;
               ctx.save(); ctx.setLineDash([5, 6]); ctx.strokeStyle = 'rgba(255,255,255,.65)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(c.x + dx * R, c.y + dy * R); ctx.lineTo(gx, gy); ctx.stroke(); ctx.setLineDash([]);
@@ -7770,7 +7771,22 @@
         }
         const overTitle = () => kind === 'free' ? 'Mesa limpa!' : names[S.over] + ' venceu!';
         const trayText = () => kind === '9' ? 'Bola 9 · bola da vez: ' + lowest() + ' · encaçapadas: ' + S.potted.length : kind === 'free' ? 'Treino livre · tacadas: ' + S.shots + ' · restam ' + balls().filter(bl => bl.n > 0 && !bl.in).length : names[0] + ' × ' + names[1] + ' · mesa aberta (bolas encaçapadas: ' + S.potted.length + ')';
+        function speakTurn() {
+          if (!online || !(S.mode === 'aim' || S.mode === 'place')) return;
+          const key = S.gid + '|' + S.turn;
+          if (S.spk === key) return;
+          const first = S.spk === undefined; S.spk = key;
+          if (cur().plNoVoice || !human()) return;
+          if (first && !(S.shots === 0 && S.brk)) return;   // ao abrir a página no meio da partida não fala
+          try {
+            const ss = window.speechSynthesis; if (!ss) return; const nm = names[S.turn] || '';
+            const u = new SpeechSynthesisUtterance('Sua vez, ' + nm); u.lang = 'pt-BR'; u.rate = 1;
+            const v = ss.getVoices().find(x => /^pt[-_]BR/i.test(x.lang)) || ss.getVoices().find(x => /^pt/i.test(x.lang)); if (v) u.voice = v;
+            ss.cancel(); ss.speak(u);
+          } catch (e) {}
+        }
         function status() {
+          speakTurn();
           let t; const mine = human(), who = online && mine ? 'Sua vez' : 'Vez de ' + names[S.turn];
           if (S.mode === 'over') t = overTitle() + ' ' + (S.note || '');
           else if (S.mode === 'wait') t = 'Aguardando o resultado da jogada…';
@@ -7788,13 +7804,19 @@
         }
 
         const ra = () => (S.mode === 'aim' && online && !human() && S.ra && S.ra.g === S.gid && S.ra.u === S.turn && performance.now() - S.ra.at < 2500) ? S.ra : null;
-        let lastK = '', lastAt = 0;
+        let lastK = '', lastAt = 0, sq = 0, rq = 0, lastSm = 0;
+        function smoothRemote(now) {
+          const dt = lastSm ? Math.min(100, now - lastSm) : 16; lastSm = now; if (human()) return;
+          const k = 1 - Math.exp(-dt / 38), r = S.ra;
+          if (S.mode === 'aim' && r && r.da !== undefined) { let d = r.a - r.da; while (d > Math.PI) d -= 6.283185; while (d < -Math.PI) d += 6.283185; r.da += d * k; r.dp += (r.p - r.dp) * k; S.ang = r.da; S.power = r.dp; }
+          else if (S.mode === 'place' && S.ghost && S.gt) { S.ghost.x += (S.gt.x - S.ghost.x) * k; S.ghost.y += (S.gt.y - S.ghost.y) * k; }
+        }
         function sendAim(now) {
           if (!online || !PN || !PN.open || !human()) return;
           let m = null;
-          if (S.mode === 'aim' && !cue().in) m = { t: 'aim', a: +S.ang.toFixed(4), p: +S.power.toFixed(1), c: S.charging ? 1 : 0, g: S.gid, u: S.turn };
-          else if (S.mode === 'place' && S.ghost) m = { t: 'gh', x: +S.ghost.x.toFixed(1), y: +S.ghost.y.toFixed(1) };
-          if (!m) return; const k = JSON.stringify(m);
+          if (S.mode === 'aim' && !cue().in) m = { t: 'aim', q: ++sq, a: +S.ang.toFixed(4), p: +S.power.toFixed(1), c: S.charging ? 1 : 0, g: S.gid, u: S.turn };
+          else if (S.mode === 'place' && S.ghost) m = { t: 'gh', q: ++sq, x: +S.ghost.x.toFixed(1), y: +S.ghost.y.toFixed(1) };
+          if (!m) return; const k = JSON.stringify(Object.assign({}, m, { q: 0 }));
           if (k !== lastK || now - lastAt > 350) { lastK = k; lastAt = now; pnSend(m, 1); }
         }
         /* ---------- laço principal (passo fixo de 1/60 s) ---------- */
@@ -7816,7 +7838,7 @@
           if (!b.isConnected) return;
           if (!last) last = now; acc += Math.min(100, now - last); last = now;
           while (acc >= 16.667) { update(); acc -= 16.667; }
-          draw(); status(); sendAim(now); window.__rtcBusy = (PN && PN.open && (S.mode === 'rolling' || S.mode === 'strike')) ? performance.now() : 0; raf = requestAnimationFrame(loop);
+          smoothRemote(now); draw(); status(); sendAim(now); window.__rtcBusy = (PN && PN.open && (S.mode === 'rolling' || S.mode === 'strike')) ? performance.now() : 0; raf = requestAnimationFrame(loop);
         };
 
         /* ---------- controles ---------- */
@@ -7827,7 +7849,9 @@
         const setPanel = (v) => { panelOpen = v; panel.style.display = v ? 'block' : 'none'; if (v) endCharge(true); };
         const setSw = (el, on) => { el.setAttribute('aria-checked', on ? 'true' : 'false'); el.style.background = on ? '#22c55e' : '#6b7280'; el.firstChild.style.left = on ? '22px' : '3px'; };
         const sbNote = () => getActiveBoard().notes.find(x => x.type === 'widget' && x.wk === 'poolscore' && x.pid === n.id);
-        const applyLeg = () => { legendOn = !cur().plHide; setSw(swEl, legendOn); setSw(sbEl, !!sbNote()); };
+        const vEl = b.querySelector('.pl-vsw'); if (!online) b.querySelector('.pl-vrow').style.display = 'none';
+        const applyLeg = () => { legendOn = !cur().plHide; setSw(swEl, legendOn); setSw(sbEl, !!sbNote()); setSw(vEl, !cur().plNoVoice); };
+        vEl.addEventListener('click', () => { const c = cur(); c.plNoVoice = !c.plNoVoice; saveData(); applyLeg(); });
         const reopen = () => { S.cfgOpen = true; renderNotes(); };
         WG_KINDS.pool.styles.forEach((nm, i) => { const bt = document.createElement('button'); bt.textContent = (i === WS ? '● ' : '○ ') + nm; bt.style.cssText = 'text-align:left;border:1px solid ' + (i === WS ? '#fcd34d' : 'rgba(255,255,255,.25)') + ';background:' + (i === WS ? 'rgba(252,211,77,.18)' : 'transparent') + ';color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit'; bt.addEventListener('click', () => { if (i === WS) return; const c = cur(); c.ws = i; delete c.pg; saveData(); reopen(); }); modesEl.appendChild(bt); });
         if (kind === 'free') b.querySelector('.pl-sbrow').style.display = 'none';
@@ -7905,8 +7929,15 @@
           PN.role = () => { const u = meUid(); return slotUid(0) === u ? 'host' : slotUid(1) === u ? 'guest' : ''; };
           PN.onmsg = (m) => {
             if (m.t === 'pg') ingest(m.pg);
-            else if (m.t === 'aim') { if (!human() && S.gid === m.g && S.turn === m.u) { S.ra = { a: m.a, p: m.p, c: m.c, g: m.g, u: m.u, at: performance.now() }; if (S.mode === 'aim') { S.ang = m.a; S.power = m.p; } } }
-            else if (m.t === 'gh') { if (!human() && S.mode === 'place') S.ghost = { x: m.x, y: m.y }; }
+            else if (m.t === 'aim') {
+              if (!human() && S.gid === m.g && S.turn === m.u) {
+                const t = performance.now(), r = S.ra;
+                if (r && r.g === m.g && r.u === m.u) { if (m.q && m.q < r.q) return; r.a = m.a; r.p = m.p; r.c = m.c; r.q = m.q; r.at = t; }
+                else S.ra = { a: m.a, p: m.p, c: m.c, g: m.g, u: m.u, q: m.q, at: t, da: m.a, dp: m.p };
+                if (S.mode === 'aim' && S.ra.da === m.a && !r) { S.ang = m.a; S.power = m.p; }
+              }
+            }
+            else if (m.t === 'gh') { if (!human() && S.mode === 'place') { if (m.q && m.q < rq) return; rq = m.q; S.gt = { x: m.x, y: m.y }; if (!S.ghost) S.ghost = { x: m.x, y: m.y }; } }
           };
           if (!PN.timer) { PN.timer = setInterval(() => pnTick(PN), 2500); }
           pnTick(PN);
